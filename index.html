@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Assistant Demo</title>
+  <title>Realtime Transcription Demo</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,14 +16,14 @@
       margin: 5px;
       cursor: pointer;
     }
-    #transcription, #suggestions {
+    #transcription {
       margin-top: 20px;
       padding: 10px;
       border: 1px solid #ccc;
       min-height: 50px;
       white-space: pre-wrap;
     }
-    iframe {
+    #meetingFrame {
       width: 800px; 
       height: 450px; 
       border: 1px solid #ccc;
@@ -33,28 +33,21 @@
   </style>
 </head>
 <body>
-  <h1>Virtual Assistant Demo</h1>
+  <h1>Realtime Transcription Demo</h1>
 
   <div class="buttons">
-    <!-- Bouton pour capturer l'audio de l'ordinateur (onglet/fenêtre) -->
-    <button id="captureButton">Start System Capture</button>
+    <button id="startMic">Start Mic</button>
+    <button id="stopMic">Stop Mic</button>
 
-    <!-- Bouton pour capturer le micro -->
-    <button id="micButton">Start Mic</button>
-
-    <!-- Bouton pour générer les suggestions de réponse -->
-    <button id="suggestionButton">Generate Suggestions</button>
+    <button id="startSystem">Start System Audio</button>
+    <button id="stopSystem">Stop System Audio</button>
   </div>
 
-  <!-- Affiche la transcription audio (micro ou système) -->
-  <div id="transcription">Transcription will appear here...</div>
+  <div id="transcription">Transcription appears here in realtime...</div>
 
-  <!-- Affiche les suggestions de l'assistant -->
-  <div id="suggestions">Suggestions will appear here...</div>
-
-  <!-- WebView / iframe pour afficher la réunion -->
+  <!-- Affichage d'une réunion vidéo ou autre ressource -->
   <iframe id="meetingFrame" src="https://example.com"></iframe>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
