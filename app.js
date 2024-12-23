@@ -1,14 +1,7 @@
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg'
-const ffmpeg = createFFmpeg({ log: true });
-
-
 // ------------------ Configuration ------------------
-// const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"; 
-// const WHISPER_API_URL = "https://api.openai.com/v1/audio/transcriptions";
+const TRANSCRIBE_API_URL = "http://localhost:3000/api/transcribe"; 
+// Vous pointez vers l'endpoint Node.js exposé par transcribe.js
 
-const TRANSCRIBE_API_URL = "http://localhost:3000//api/transcribe";
-
-// Codec habituel pour l'audio
 const MIME_TYPE_WEBM = "audio/webm; codecs=opus";
 const MIME_TYPE_OGG = "audio/ogg; codecs=opus";
 
@@ -40,9 +33,12 @@ startMicBtn.addEventListener("click", async () => {
     alert("Could not get microphone stream");
     return;
   }
-  // On lance un enregistrement "streaming" via timeslice
   micRecorder = startChunkedRecorder(micStream, "mic");
-  micRecorder.start(10000);
+  // timeslice à 10s
+  if (micRecorder) {
+    micRecorder.start(10000);
+    console.log("Mic recorder started, slice every 10s");
+  }
 });
 
 stopMicBtn.addEventListener("click", () => {
@@ -69,6 +65,12 @@ startSystemBtn.addEventListener("click", async () => {
     return;
   }
   systemRecorder = startChunkedRecorder(systemStream, "system");
+  if (systemRecorder) {
+    // Par exemple, on ne fixe pas la durée ici,
+    // ou on peut la fixer à 10s également.
+    systemRecorder.start(10000);
+    console.log("System recorder started, slice every 10s");
+  }
 });
 
 stopSystemBtn.addEventListener("click", () => {
@@ -110,6 +112,10 @@ async function getSystemAudioMedia() {
   }
 }
 
+/**
+ * Télécharge localement un blob (optionnel).
+ * Utile pour debug, si vous souhaitez voir ce qui est généré.
+ */
 function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -119,13 +125,12 @@ function downloadBlob(blob, fileName) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
 }
 
 // ------------------ startChunkedRecorder ------------------
 /**
- * Lance un MediaRecorder qui envoie un chunk toutes les X millisecondes (1000ms).
- * On fait l'appel à Whisper à chaque chunk pour un effet "pseudo-streaming".
+ * Crée un MediaRecorder pour un stream audio-only + timeslice.
+ * On corrige chaque chunk via ffmpeg.js et on envoie à /api/transcribe.
  */
 function startChunkedRecorder(stream, label) {
   // Vérif piste audio
@@ -151,89 +156,66 @@ function startChunkedRecorder(stream, label) {
 
   const recorder = new MediaRecorder(audioOnlyStream, { mimeType });
 
-  // Collecte des chunks
   recorder.ondataavailable = async (e) => {
     if (!e.data || e.data.size === 0) {
       // chunk vide
       return;
     }
-    // Optionnel : Détection de silence ? -> Analyser e.data
-
-    // console.log(" Data available for " + label, e.data.size);
-    // downloadBlob(e.data, `${label}-chunk-${Date.now()}.webm`);
 
     try {
-      // 1. Corriger le fragment
+      // Pour debug, vous pouvez télécharger localement :
+      // downloadBlob(e.data, `${label}-chunk-${Date.now()}.webm`);
 
-    const audioBlob = e.data;
-    //const audioFile = new File([audioBlob], 'audio.webm', { type: mimeType });
+      // 1. Corriger le fragment via ffmpeg.js
+      // const fixedAudioFile = await fixAudioHeaders(e.data);
 
-    const fixedAudioFile = await fixAudioHeaders(audioBlob);
-
-
-    // Envoyer direct à Whisper
-    const text = await transcribeChunk(fixedAudioFile);
-    if (text) {
-      // Mise à jour de la conversation
-      conversationContext += `\n[${label}] ${text}`;
-      // Option : on peut vider conversationContext si on veut "réinitialiser" après chaque chunk
-      // conversationContext = "";
-
-      // Afficher la conversation courante
-      transcriptionDiv.innerText = conversationContext.trim();
+      // 2. Envoyer direct au backend /api/transcribe
+      const text = await transcribeChunk(e.data);
+      if (text) {
+        // Mise à jour de la conversation
+        conversationContext += `\n[${label}] ${text}`;
+        // Afficher la conversation courante
+        transcriptionDiv.innerText = conversationContext.trim();
+      }
+    } catch (err) {
+      console.error("Error while processing chunk:", err);
     }
   };
 
-  // // start() avec timeslice => ondataavailable est déclenché toutes les 3000ms
-  // recorder.start(5000);
-
-  console.log(label + " recorder started in chunked mode...");
+  console.log(label + " recorder prepared in chunked mode...");
   return recorder;
 }
 
-async function fixAudioHeaders(audioFile) {
-  if (!ffmpeg.isLoaded()) {
-      await ffmpeg.load();
-  }
+// ------------------ fixAudioHeaders ------------------
+// async function fixAudioHeaders(audioBlob) {
+//   // Charger ffmpeg si pas déjà fait
+//   if (!ffmpeg.isLoaded()) {
+//     await ffmpeg.load();
+//   }
 
-  // Charger le fichier audio dans ffmpeg.js (en RAM)
-  ffmpeg.FS('writeFile', 'input.webm', await fetchFile(audioFile));
+//   // Écrire "input.webm" dans le FS virtuel
+//   ffmpeg.FS('writeFile', 'input.webm', await fetchFile(audioBlob));
 
-  // Convertir le fichier en réécrivant le conteneur WebM
-  await ffmpeg.run('-i', 'input.webm', '-c', 'copy', 'output.webm');
+//   // Réécrire le conteneur sans ré-encoder
+//   await ffmpeg.run('-i', 'input.webm', '-c', 'copy', 'output.webm');
 
-  // Récupérer le fichier audio corrigé
-  const data = ffmpeg.FS('readFile', 'output.webm');
-  const fixedAudioBlob = new Blob([data.buffer], { type: 'audio/webm' });
-  return new File([fixedAudioBlob], 'fixed_audio.webm', { type: 'audio/webm' });
-}
+//   // Récupérer le fichier audio corrigé
+//   const data = ffmpeg.FS('readFile', 'output.webm');
+//   const fixedAudioBlob = new Blob([data.buffer], { type: 'audio/webm' });
+//   return new File([fixedAudioBlob], 'fixed_audio.webm', { type: 'audio/webm' });
+// }
 
-
-// ------------------ Transcription d'un chunk ------------------
+// ------------------ transcribeChunk ------------------
 async function transcribeChunk(file) {
-  // if (!OPENAI_API_KEY || OPENAI_API_KEY.startsWith("YOUR_OPENAI_API_KEY")) {
-  //   console.warn("No valid OPENAI_API_KEY provided for chunk. Skipping...");
-  //   return "";
-  // }
-
-  // Construction du FormData
+  // On ne gère pas la clé ici, on envoie au backend Node.js
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("model", "whisper-1");
 
   try {
     const response = await fetch(TRANSCRIBE_API_URL, {
       method: "POST",
       body: formData
     });
-
-    // const response = await fetch(WHISPER_API_URL, {
-    //   method: "POST",
-    //   headers: {
-    //     Authorization: `Bearer ${OPENAI_API_KEY}`
-    //   },
-    //   body: formData
-    // });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -243,14 +225,13 @@ async function transcribeChunk(file) {
 
     const data = await response.json();
     const partialText = data.text || "";
-
     if (!partialText.trim()) {
       // Peut être du silence
       return "";
     }
     return partialText;
   } catch (err) {
-    console.error("Error calling Whisper for chunk:", err);
+    console.error("Error calling /api/transcribe for chunk:", err);
     return "";
   }
 }
