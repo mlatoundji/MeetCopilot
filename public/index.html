@@ -1,20 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <title>Google STT w/ sox (Opus to PCM)</title>
+  <meta charset="UTF-8" />
+  <title>Assistant Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .buttons {
+      margin-bottom: 1em;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #transcription, #suggestions {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      min-height: 200px;
+      white-space: pre-wrap;
+    }
+    iframe {
+      width: 800px; 
+      height: 450px; 
+      border: 1px solid #ccc;
+      margin-top: 20px;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-  <h1>Google STT (Opus -> PCM via sox)</h1>
+  <h1>Virtual Assistant Demo</h1>
 
-  <button id="startMic">Start Mic</button>
-  <button id="stopMic">Stop Mic</button>
+  <div class="buttons">
+    <!-- Bouton pour capturer l'audio de l'ordinateur (onglet/fenêtre) -->
+    <button id="captureButton">Start System Capture</button>
 
-  <button id="startSystem">Start System Audio</button>
-  <button id="stopSystem">Stop System Audio</button>
+    <!-- Bouton pour capturer le micro -->
+    <button id="micButton">Start Mic</button>
 
-  <div id="transcription"></div>
+    <!-- Bouton pour générer les suggestions de réponse -->
+    <button id="suggestionButton">Generate Suggestions</button>
+  </div>
 
-  <script type="module" src="main.js"></script>
+  <!-- Affiche la transcription audio (micro ou système) -->
+  <div id="transcription">Transcription will appear here...</div>
+
+  <!-- Affiche les suggestions de l'assistant -->
+  <div id="suggestions">Suggestions will appear here...</div>
+
+  <!-- WebView / iframe pour afficher la réunion -->
+  <iframe id="meetingFrame" src="https://example.com"></iframe>
+
+  <script src="main.js"></script>
 </body>
 </html>

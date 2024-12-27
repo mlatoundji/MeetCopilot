@@ -1,129 +1,295 @@
-// main.js
-// Gère le WebSocket, l'AudioContext + AudioWorklet, convertit Float32->Int16 et envoie à NodeJS
+// ----------------- Configuration -----------------
+const SUGGESTIONS_API_URL = "http://localhost:3000/suggestions";
+const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
+const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/whisper";
 
-let ws = null;
-let audioContext = null;
-let workletNode = null;
-let currentStream = null;
-let transcriptionDiv;
 
-window.addEventListener('DOMContentLoaded', () => {
-  transcriptionDiv = document.getElementById('transcription');
+const MIME_TYPE_WEBM = "audio/webm; codecs=opus";
+const MIME_TYPE_OGG = "audio/ogg; codecs=opus";
 
-  const startMicBtn = document.getElementById('startMic');
-  const stopMicBtn = document.getElementById('stopMic');
-  const startSystemBtn = document.getElementById('startSystem');
-  const stopSystemBtn = document.getElementById('stopSystem');
+// ----------------- Éléments du DOM -----------------
+const captureButton = document.getElementById("captureButton");
+const micButton = document.getElementById("micButton");
+const suggestionButton = document.getElementById("suggestionButton");
+const transcriptionDiv = document.getElementById("transcription");
+const suggestionsDiv = document.getElementById("suggestions");
+const meetingFrame = document.getElementById("meetingFrame");
 
-  startMicBtn.onclick = () => startCapture('mic');
-  stopMicBtn.onclick = stopCapture;
-  startSystemBtn.onclick = () => startCapture('system');
-  stopSystemBtn.onclick = stopCapture;
+// ----------------- Variables globales -----------------
+let systemMediaStream = null;
+let micMediaStream = null;
+let mediaRecorder = null;
+let isSystemRecording = false;
+let isMicRecording = false;
+let chunks = [];
+let timeslice = 5000;
+
+let UserMicName = "UserMic"
+let SystemAudioName = "SystemAudio"
+
+// Pseudo-contexte stockant la conversation
+let conversationContext = `
+[System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
+Informations sur la réunion : Utilisateur [${UserMicName}]; Interlocuteur : [${SystemAudioName}].
+Suivez la conversation. 
+`;
+
+let suggestionText;
+
+// ----------------- Fonctions utilitaires -----------------
+
+/**
+ * Récupère l'audio de l'onglet/fenêtre (et vidéo) via getDisplayMedia.
+ * L'utilisateur doit sélectionner la fenêtre/onglet et cocher "Partager l'audio".
+ */
+async function getSystemAudioMedia() {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      audio: true,
+      video: true
+    });
+    return stream;
+  } catch (err) {
+    console.error("Error in getSystemAudioMedia:", err);
+    return null;
+  }
+}
+
+/**
+ * Récupère l'audio du micro local via getUserMedia.
+ */
+async function getMicMedia() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false
+    });
+    return stream;
+  } catch (err) {
+    console.error("Error in getUserMedia:", err);
+    return null;
+  }
+}
+
+/**
+ * Télécharge localement un blob en créant un lien temporaire.
+ */
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Lance un MediaRecorder sur un flux audio-only (filtre la piste audio).
+ * callback sera appelé après l'arrêt pour traiter le blob.
+ */
+function startMediaRecorder(stream, callback) {
+  // Filtrer la piste audio
+  const audioTracks = stream.getAudioTracks();
+  if (!audioTracks || audioTracks.length === 0) {
+    alert("No audio track found. Make sure you've allowed audio capture.");
+    return null;
+  }
+
+  // Créer un flux ne contenant que la piste audio
+  const audioOnlyStream = new MediaStream();
+  audioTracks.forEach(track => audioOnlyStream.addTrack(track));
+
+  // Vérification mime
+  let mimeType = MIME_TYPE_WEBM;
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = MIME_TYPE_OGG;
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      alert("No supported mimeType found (webm/ogg).");
+      return null;
+    }
+  }
+
+  // Démarrer l'enregistrement
+  const recorder = new MediaRecorder(audioOnlyStream, { mimeType });
+  chunks = [];
+  let stop = false;
+
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0 && !stop) {
+      chunks.push(e.data);
+      blob = new Blob(chunks, { type: mimeType });
+      callback(blob);
+      //downloadBlob(blob, "recorded_audio.webm");
+      stop = true;
+      recorder.stop();
+    }
+
+  };
+
+  recorder.onstop = async () => {
+    // if (chunks.length === 0) {
+    //   console.log("No chunks recorded.");
+    //   // callback(null);
+    //   return;
+    // }
+    // const blob = new Blob(chunks, { type: mimeType });
+    // Télécharger localement (optionnel)
+    // downloadBlob(blob, "recorded_audio.webm");
+    // callback(blob);
+    if(stream != null)
+    {    
+      chunks = [];
+      stop = false;
+      recorder.start(timeslice);
+    }
+
+  };
+
+  // recorder.start();
+  recorder.start(timeslice);
+  return recorder;
+}
+
+// ----------------- Gestion du bouton System Capture -----------------
+captureButton.addEventListener("click", async () => {
+  if (!isSystemRecording) {
+    systemMediaStream = await getSystemAudioMedia();
+    if (systemMediaStream) {
+      // Lance l'enregistrement
+      mediaRecorder = startMediaRecorder(systemMediaStream, async (blob) => {
+      if (blob) {
+          // Transcription via Whisper
+          const text = await transcribeViaWhisper(blob);
+          if (text) {
+            conversationContext += `\n[${SystemAudioName}] ${text}`;
+            transcriptionDiv.innerText = conversationContext;
+          }
+      }
+      });
+      if (mediaRecorder) {
+        isSystemRecording = true;
+        captureButton.innerText = "Stop System Capture";
+      }
+    }
+  } else {
+    systemMediaStream?.getTracks().forEach(t => t.stop());
+    systemMediaStream = null;
+    isSystemRecording = false;
+    if (mediaRecorder) mediaRecorder.stop();
+    captureButton.innerText = "Start System Capture";
+  }
 });
 
-async function startCapture(mode) {
-  if (audioContext) {
-    console.warn('Already capturing audio');
-    return;
-  }
-  // 1) Ouvrir la WS
-  ws = new WebSocket(`ws://localhost:3000/transcribe`);
-  ws.onopen = () => {
-    console.log('WS opened, capturing:', mode);
-  };
-  ws.onerror = (err) => {
-    console.error('WS error:', err);
-  };
-  ws.onmessage = (msg) => {
-    const data = JSON.parse(msg.data);
-    if (data.transcript) {
-      const text = data.isFinal ? '(final) ' : '(partial) ';
-      transcriptionDiv.innerText += `\n${text}${data.transcript}`;
-    } else if (data.error) {
-      console.error('Backend error:', data.error);
+// ----------------- Gestion du bouton Micro Capture -----------------
+micButton.addEventListener("click", async () => {
+  if (!isMicRecording) {
+    micMediaStream = await getMicMedia();
+    if (micMediaStream) {
+      mediaRecorder = startMediaRecorder(micMediaStream, async (blob) => {
+        if (blob) {
+          // Transcription via Whisper
+          const text = await transcribeViaWhisper(blob);
+          if (text) {
+            conversationContext += `\n[${UserMicName}] ${text}`;
+            transcriptionDiv.innerText = conversationContext;
+          }
+        }
+      });
+      if (mediaRecorder) {
+        isMicRecording = true;
+        micButton.innerText = "Stop Mic";
+      }
     }
-  };
-  ws.onclose = () => {
-    console.log('WS closed');
-  };
+  } else {
+    isMicRecording = false;
+    micMediaStream?.getTracks().forEach(t => t.stop());
+    micMediaStream = null;
+    if (mediaRecorder) mediaRecorder.stop();
+    micButton.innerText = "Start Mic";
+  }
+});
 
-  // 2) getUserMedia ou getDisplayMedia
-  let stream;
+// ----------------- Génération de suggestions -----------------
+suggestionButton.addEventListener("click", async () => {
+  suggestionText = await generateSuggestions(conversationContext);
+  if (suggestionText?.length > 0) {
+    suggestionsDiv.innerHTML = suggestionText+"\n\n";
+  } else {
+    suggestionsDiv.innerText = "No suggestions generated.";
+  }
+});
+
+/**
+ * Envoie le blob à l’API Whisper pour transcription.
+ */
+async function transcribeViaWhisper(blob) {
+  const formData = new FormData();
+  formData.append('audio', blob);
+
   try {
-    if (mode === 'system') {
-      // Capture audio système (l'utilisateur doit partager un onglet/fenêtre et cocher "Share audio")
-      stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-    } else {
-      // micro
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    }
+    const response = await fetch(TRANSCRIBE_WHISPER_API_URL, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+    return data.transcription || '';
   } catch (err) {
-    console.error('Error capturing audio:', err);
-    return;
+    console.error('Error calling Whisper endpoint:', err);
+    return '';
   }
-  currentStream = stream;
+}
 
-  // 3) Créer un AudioContext à 16 kHz
-  audioContext = new AudioContext({ sampleRate: 16000 });
-  await audioContext.audioWorklet.addModule('./recorderWorklet.js');
+/**
+ * Envoie le blob à l’API AssemblyAI pour transcription.
+ */
+async function transcribeViaAssemblyAI(blob) {
+  const formData = new FormData();
+  formData.append('audio', blob);
 
-  // 4) Créer le node
-  workletNode = new AudioWorkletNode(audioContext, 'pcm-recorder-processor');
+  try {
+    const response = await fetch(TRANSCRIBE_ASSEMBLYAI_API_URL, {
+      method: 'POST',
+      body: formData,
+    });
 
-  // 5) À chaque buffer Float32, on le convertit en Int16, on l'envoie
-  workletNode.port.onmessage = (event) => {
-    const float32Array = event.data;
-    const int16Array = float32ToInt16(float32Array);
-    const base64data = arrayBufferToBase64(int16Array.buffer);
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ audio_data: base64data }));
+    const data = await response.json();
+    return data.transcription || '';
+  } catch (err) {
+    console.error('Error calling AssemblyAI endpoint:', err);
+    return '';
+  }
+}
+
+/**
+ * Appelle l’API ChatGPT (ou GPT-4) pour générer des suggestions de réponse
+ * par rapport à la "dernière question" trouvée dans la conversation.
+ */
+async function generateSuggestions(context) {
+
+  if (!context || typeof context !== 'string') {
+    console.warn("Invalid context provided:", context);
+    return "No suggestions";
+  }
+  try {
+    const response = await fetch(SUGGESTIONS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ context }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn("Suggestion error:", response.status, errorText);
+      return "No suggestions";
     }
-  };
-
-  // 6) Connecter la source
-  const source = audioContext.createMediaStreamSource(stream);
-  source.connect(workletNode).connect(audioContext.destination);
-
-  console.log('Capture started:', mode);
-}
-
-function stopCapture() {
-  if (workletNode) {
-    workletNode.disconnect();
-    workletNode = null;
+    const data = await response.json();
+    return data.suggestions || 'No suggestions found';
+  } catch (err) {
+    console.error('Error calling Whisper endpoint:', err);
+    return 'Error';
   }
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
-  }
-  if (currentStream) {
-    currentStream.getTracks().forEach(t => t.stop());
-    currentStream = null;
-  }
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-  transcriptionDiv.innerText += '\n[Stopped]';
-  console.log('Capture stopped');
-}
-
-// -- Fonctions utilitaires --
-
-function float32ToInt16(float32Array) {
-  const int16Array = new Int16Array(float32Array.length);
-  for (let i = 0; i < float32Array.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32Array[i]));
-    int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-  return int16Array;
-}
-
-function arrayBufferToBase64(buffer) {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
