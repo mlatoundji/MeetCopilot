@@ -2,31 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Realtime Transcription (AssemblyAI) + Suggestions</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #transcription, #suggestions {
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      padding: 10px;
-      min-height: 50px;
-    }
-  </style>
+  <title>Google STT w/ sox (Opus to PCM)</title>
 </head>
 <body>
-  <h1>Realtime Transcription (AssemblyAI) + Suggestions</h1>
+  <h1>Google STT (Opus -> PCM via sox)</h1>
 
-  <button id="startMicBtn">Start Mic</button>
-  <button id="stopMicBtn">Stop Mic</button>
+  <button id="startMic">Start Mic</button>
+  <button id="stopMic">Stop Mic</button>
 
-  <button id="startSystemBtn">Start System Audio</button>
-  <button id="stopSystemBtn">Stop System Audio</button>
+  <button id="startSystem">Start System Audio</button>
+  <button id="stopSystem">Stop System Audio</button>
 
-  <button id="requestSuggestionBtn">Get Suggestions</button>
+  <div id="transcription"></div>
 
-  <div id="transcription">Transcription appears here...</div>
-  <div id="suggestions">Suggestions appear here...</div>
-
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
