@@ -1,104 +1,53 @@
 // server.js
-// Exemple de backend NodeJS pour Google Cloud Speech-to-Text, conversion Opus->PCM via sox
+// Backend NodeJS pour Google Cloud Speech-to-Text, recevant des paquets LINEAR16 (Int16) en temps réel.
 
-import express from "express";
-import { WebSocketServer } from "ws";
-import http from "http";
-import dotenv from "dotenv";
-import cors from "cors";
-import { spawn } from "child_process";
-import { v4 as uuidv4 } from "uuid";
-import speech from "@google-cloud/speech";
-import ffmpeg from "fluent-ffmpeg";
-import stream from "stream";
-
+import express from 'express';
+import { WebSocketServer } from 'ws';
+import http from 'http';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import speech from '@google-cloud/speech';
 
 dotenv.config();
 
-
-
 const speechClient = new speech.SpeechClient(); // Google Cloud Speech client
+
 const app = express();
 app.use(cors());
-app.use(express.static('public')); // Sert le dossier public
+app.use(express.static('public')); // Sert le dossier public (index.html, main.js, etc.)
 
 // Crée un serveur HTTP
 const server = http.createServer(app);
 
 // WebSocketServer sur /transcribe
-const wss = new WebSocketServer({ server, path: "/transcribe" });
+const wss = new WebSocketServer({ server, path: '/transcribe' });
 
 // Configuration Google
 function getSpeechRequestConfig() {
   return {
     config: {
-      encoding: 'LINEAR16',       // On va fournir du PCM brut
-      sampleRateHertz: 16000,     // sox sortira du 16 kHz
-      languageCode: 'fr-FR',      // À adapter (ex: 'en-US', 'fr-FR')
+      encoding: 'LINEAR16',
+      sampleRateHertz: 16000, // correspond à l'audioContext côté front
+      languageCode: 'fr-FR',  // ou 'en-US' selon vos besoins
     },
-    interimResults: false          // Reçoit des résultats partiels
+    interimResults: true, // ou false si vous ne voulez que du final
   };
 }
 
 // Gestion des connexions WS
-wss.on("connection", (ws) => {
-  console.log("New client connected for transcription.");
+wss.on('connection', (ws) => {
+  console.log('New client connected for transcription.');
 
-  // 1) On spawn sox pour conversion Opus -> PCM
-  //    -t opus => Type entrée opus
-  //    - => stdin
-  //    -t raw => sortie en format brut
-  //    -r 16000 => sample rate 16k
-  //    -e signed-integer -b 16 => PCM 16 bits
-  //    -c 1 => mono
-  //    - => stdout
-  // const sox = spawn("sox", [
-  //   "-t", "wav",
-  //   "-",
-  //   "-t", "raw",
-  //   "-r", "16000",
-  //   "-e", "signed-integer",
-  //   "-b", "16",
-  //   "-c", "1",
-  //   "-"
-  // ]);
-
-  // let soxClosed = false;
-
-  // sox.on("error", (err) => {
-  //   console.error("Sox error:", err);
-  //   ws.send(JSON.stringify({ error: `Sox error: ${err.message}` }));
-  //   soxClosed = true;
-  // });
-
-  // sox.on("close", (code, signal) => {
-  //   console.log(`Sox process closed with code ${code} and signal ${signal}`);
-  //   soxClosed = true;
-  // });
-
-  // // sox.on("error", (err) => {
-  // //   console.error("Sox error:", err);
-  // //   ws.send(JSON.stringify({ error: `Sox error: ${err.message}` }));
-  // // });
-
-  // sox.stderr.on("data", (data) => {
-  //   console.error(`Sox stderr: ${data}`);
-  // });
-
-  // sox.stdout.on("data", (data) => {
-  //   console.log("Sox output data size:", data.length);
-  // });
-
-  // 2) On crée le flux streamingRecognize
+  // On crée un flux streamingRecognize
   const requestConfig = getSpeechRequestConfig();
   const recognizeStream = speechClient
     .streamingRecognize(requestConfig)
-    .on("error", (err) => {
-      console.error("streamingRecognize error:", err);
+    .on('error', (err) => {
+      console.error('streamingRecognize error:', err);
       ws.send(JSON.stringify({ error: err.message }));
     })
-    .on("data", (data) => {
-      console.log("DATA RECEIVED:", data);
+    .on('data', (data) => {
       // data.results[0].alternatives[0].transcript
       if (data.results?.[0]) {
         const transcript = data.results[0].alternatives[0].transcript;
@@ -108,95 +57,30 @@ wss.on("connection", (ws) => {
       }
     });
 
-    recognizeStream.on("data", (data) => {
-      console.log("RecognizeStream data size:", data.length);
-    });
-
-  // La sortie de sox (PCM) => google streaming
-  // sox.stdout.pipe(recognizeStream);
-  // let audioChunks = [];
-
-  // let isFirstChunk = true;
-
-  // Quand on reçoit un chunk du client
-  ws.on("message", (message) => {
-    console.log("Message received from client");
-
+  // Quand on reçoit un chunk du client (Int16 encodé base64)
+  ws.on('message', (message) => {
     const msg = JSON.parse(message.toString());
     if (msg.audio_data) {
-      const webmBuffer = Buffer.from(msg.audio_data, 'base64');
-      console.log("WebM buffer size:", webmBuffer.length);
-      // if (isFirstChunk) {
-        // On envoie la config Google Speech-to-Text
-      //   isFirstChunk = false;
-      // }
-      // else {
-      //   audioChunks.pop();
-      // }
-
-      // audioChunks.push(webmBuffer);
-      // const completeBuffer = Buffer.concat(audioChunks);
-
-
-      // Convertir WebM en WAV
-      const webmStream = new stream.PassThrough();
-      webmStream.end(webmBuffer);
-
-      const wavStream = new stream.PassThrough();
-
-      ffmpeg(webmStream)
-        .toFormat('wav')
-        .audioFrequency(16000)
-        .audioChannels(1)
-        .on('error', (err) => {
-          console.error('FFmpeg error:', err);
-          ws.send(JSON.stringify({ error: `FFmpeg error: ${err.message}` }));
-        })
-        .on('end', () => {
-          console.log('FFmpeg conversion finished');
-        })
-        .pipe(wavStream);
-
-      // La sortie de ffmpeg (WAV) => google streaming
-      wavStream.pipe(recognizeStream /*, { end: false }*/);
-
-
-    //   // Décoder le base64
-    //   const opusBuffer = Buffer.from(msg.audio_data, 'base64');
-    //   // Écrire dans sox.stdin
-    //   // sox.stdin.write(opusBuffer);
-    //   if (!soxClosed) {
-
-    //   sox.stdin.write(opusBuffer, (err) => {
-    //     if (err) {
-    //       console.error("Error writing to sox.stdin:", err);
-    //     } else {
-    //       console.log("Data written to sox.stdin");
-    //     }
-    //   });
-    // } else {
-    //   console.error("Cannot write to sox.stdin: stream is closed");
-    // }
+      // Décoder le base64 => Buffer Int16
+      const int16Buffer = Buffer.from(msg.audio_data, 'base64');
+      // On envoie ce buffer (PCM brut) directement à streamingRecognize
+      recognizeStream.write(int16Buffer);
     }
-    }  
-  );
-
-  // Fermeture
-  ws.on("close", () => {
-    console.log("Client disconnected from transcription.");
-    // On arrête sox, streamingRecognize
-    // sox.stdin.end();      // Fin du flux
-    recognizeStream.end();
   });
 
+  // Fermeture
+  ws.on('close', () => {
+    console.log('Client disconnected from transcription.');
+    recognizeStream.end();
+  });
 });
 
 // (Optionnel) Endpoint /api/suggestions
 app.use(express.json());
-app.post("/api/suggestions", (req, res) => {
+app.post('/api/suggestions', (req, res) => {
   const { context } = req.body;
   // Logique ChatGPT ou autre
-  res.json({ suggestions: ["Exemple 1", "Exemple 2"] });
+  res.json({ suggestions: ['Exemple suggestion 1', 'Exemple suggestion 2'] });
 });
 
 // Lancement serveur

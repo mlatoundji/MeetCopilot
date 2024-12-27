@@ -1,118 +1,129 @@
 // main.js
-// Capture audio (micro ou system), chunk, encodage base64, envoi WS
+// Gère le WebSocket, l'AudioContext + AudioWorklet, convertit Float32->Int16 et envoie à NodeJS
 
 let ws = null;
-let mediaRecorder = null;
-let transcriptionDiv = null;
+let audioContext = null;
+let workletNode = null;
+let currentStream = null;
+let transcriptionDiv;
 
 window.addEventListener('DOMContentLoaded', () => {
-  transcriptionDiv = document.getElementById("transcription");
+  transcriptionDiv = document.getElementById('transcription');
 
-  const startMicBtn = document.getElementById("startMic");
-  const stopMicBtn = document.getElementById("stopMic");
-  const startSystemBtn = document.getElementById("startSystem");
-  const stopSystemBtn = document.getElementById("stopSystem");
+  const startMicBtn = document.getElementById('startMic');
+  const stopMicBtn = document.getElementById('stopMic');
+  const startSystemBtn = document.getElementById('startSystem');
+  const stopSystemBtn = document.getElementById('stopSystem');
 
-  startMicBtn.onclick = () => startCapture({ audio: true, video: false }, "mic");
-  stopMicBtn.onclick = () => stopCapture();
-  startSystemBtn.onclick = () => startCapture({ audio: true, video: true }, "system");
-  stopSystemBtn.onclick = () => stopCapture();
+  startMicBtn.onclick = () => startCapture('mic');
+  stopMicBtn.onclick = stopCapture;
+  startSystemBtn.onclick = () => startCapture('system');
+  stopSystemBtn.onclick = stopCapture;
 });
 
-async function startCapture(constraints, mode) {
-  if (mediaRecorder) {
-    console.warn("Already recording!");
+async function startCapture(mode) {
+  if (audioContext) {
+    console.warn('Already capturing audio');
     return;
   }
   // 1) Ouvrir la WS
   ws = new WebSocket(`ws://localhost:3000/transcribe`);
   ws.onopen = () => {
-    console.log("WS open, start recording:", mode);
+    console.log('WS opened, capturing:', mode);
   };
   ws.onerror = (err) => {
-    console.error("WS error:", err);
+    console.error('WS error:', err);
   };
   ws.onmessage = (msg) => {
     const data = JSON.parse(msg.data);
     if (data.transcript) {
-      const text = data.isFinal ? "(final) " : "(partial) ";
+      const text = data.isFinal ? '(final) ' : '(partial) ';
       transcriptionDiv.innerText += `\n${text}${data.transcript}`;
     } else if (data.error) {
-      console.error("Backend error:", data.error);
+      console.error('Backend error:', data.error);
     }
   };
-  ws.onclose = () => console.log("WS closed");
+  ws.onclose = () => {
+    console.log('WS closed');
+  };
 
   // 2) getUserMedia ou getDisplayMedia
   let stream;
   try {
-    if (mode === "system") {
-      // L'utilisateur doit sélectionner la fenêtre/onglet et cocher "Share Audio"
-      stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+    if (mode === 'system') {
+      // Capture audio système (l'utilisateur doit partager un onglet/fenêtre et cocher "Share audio")
+      stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
     } else {
       // micro
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     }
   } catch (err) {
-    console.error("getUserMedia/getDisplayMedia error:", err);
+    console.error('Error capturing audio:', err);
     return;
   }
+  currentStream = stream;
 
-  function downloadBlob(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+  // 3) Créer un AudioContext à 16 kHz
+  audioContext = new AudioContext({ sampleRate: 16000 });
+  await audioContext.audioWorklet.addModule('./recorderWorklet.js');
 
-  // 3) MediaRecorder (webm/Opus)
-  mediaRecorder = new MediaRecorder(stream, {
-    mimeType: "audio/webm; codecs=opus"
-  });
+  // 4) Créer le node
+  workletNode = new AudioWorkletNode(audioContext, 'pcm-recorder-processor');
 
-  mediaRecorder.ondataavailable = (e) => {
-    console.log("Data available event triggered");
-    if (e.data && e.data.size > 0) {
-      console.log("Audio data size:", e.data.size);
-      // downloadBlob(e.data, `chunk-${Date.now()}.webm`);
-
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log("WebSocket is open, sending data");
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = btoa(reader.result);
-          console.log("Base64 audio data:", base64data);
-          // On envoie { audio_data: base64 }
-          ws.send(JSON.stringify({ audio_data: base64data }));
-        };
-        reader.readAsBinaryString(e.data);
-      } else {
-        console.log("WebSocket is not open");
-      }
-    } else {
-      console.log("No audio data available");
+  // 5) À chaque buffer Float32, on le convertit en Int16, on l'envoie
+  workletNode.port.onmessage = (event) => {
+    const float32Array = event.data;
+    const int16Array = float32ToInt16(float32Array);
+    const base64data = arrayBufferToBase64(int16Array.buffer);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ audio_data: base64data }));
     }
   };
-  
-  // Envoi d'un chunk toutes les 500ms
-  mediaRecorder.start(2000);
-  
-  console.log(mode, "capture started");
+
+  // 6) Connecter la source
+  const source = audioContext.createMediaStreamSource(stream);
+  source.connect(workletNode).connect(audioContext.destination);
+
+  console.log('Capture started:', mode);
 }
 
 function stopCapture() {
-  if (mediaRecorder) {
-    mediaRecorder.stop();
-    mediaRecorder = null;
+  if (workletNode) {
+    workletNode.disconnect();
+    workletNode = null;
+  }
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
   }
   if (ws) {
     ws.close();
     ws = null;
   }
-  transcriptionDiv.innerText += "\n[Stopped]";
-  console.log("Stopped capture");
+  transcriptionDiv.innerText += '\n[Stopped]';
+  console.log('Capture stopped');
+}
+
+// -- Fonctions utilitaires --
+
+function float32ToInt16(float32Array) {
+  const int16Array = new Int16Array(float32Array.length);
+  for (let i = 0; i < float32Array.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32Array[i]));
+    int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return int16Array;
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
