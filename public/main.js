@@ -13,7 +13,7 @@ const micButton = document.getElementById("micButton");
 const suggestionButton = document.getElementById("suggestionButton");
 const transcriptionDiv = document.getElementById("transcription");
 const suggestionsDiv = document.getElementById("suggestions");
-const meetingFrame = document.getElementById("meetingFrame");
+const videoElement = document.getElementById("screen-capture");
 
 // ----------------- Variables globales -----------------
 let systemMediaStream = null;
@@ -24,17 +24,30 @@ let isMicRecording = false;
 let chunks = [];
 let timeslice = 5000;
 
-let UserMicName = "UserMic"
-let SystemAudioName = "SystemAudio"
+let UserMicName = "UserMic";
+let SystemAudioName = "SystemAudio";
+let MeetContext = "MeetContext";
 
 // Pseudo-contexte stockant la conversation
 let conversationContext = `
 [System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
-Informations sur la réunion : Utilisateur [${UserMicName}]; Interlocuteur : [${SystemAudioName}].
-Suivez la conversation. 
+Informations sur la réunion : 
+* Utilisateur : [${UserMicName}]
+* Interlocuteur : [${SystemAudioName}]
+Suivez la conversation et générez des suggestions de réponses à la dernière question posée à l'utilisateur. 
 `;
 
 let suggestionText;
+
+document.addEventListener("keydown", (event) => {
+  if (event.code === "Space") {
+    suggestionButton.click();
+  } else if (event.code === "KeyM") {
+    micButton.click();
+  } else if (event.code === "KeyC") {
+    captureButton.click();
+  }
+});
 
 // ----------------- Fonctions utilitaires -----------------
 
@@ -55,9 +68,6 @@ async function getSystemAudioMedia() {
   }
 }
 
-/**
- * Récupère l'audio du micro local via getUserMedia.
- */
 async function getMicMedia() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -158,13 +168,20 @@ captureButton.addEventListener("click", async () => {
     systemMediaStream = await getSystemAudioMedia();
     if (systemMediaStream) {
       // Lance l'enregistrement
+      videoElement.srcObject = systemMediaStream;
+      videoElement.autoplay = true;
       mediaRecorder = startMediaRecorder(systemMediaStream, async (blob) => {
       if (blob) {
           // Transcription via Whisper
-          const text = await transcribeViaWhisper(blob);
+          const text = await transcribeViaAssemblyAI(blob);
           if (text) {
-            conversationContext += `\n[${SystemAudioName}] ${text}`;
-            transcriptionDiv.innerText = conversationContext;
+            const filteredText = filterTranscription(text);
+            if (filteredText !== "") {  
+              
+              conversationContext += `\n[${SystemAudioName}] ${filteredText}`;
+              transcriptionDiv.innerText = conversationContext;
+            
+            }       
           }
       }
       });
@@ -182,6 +199,51 @@ captureButton.addEventListener("click", async () => {
   }
 });
 
+/**
+ * Filtre les textes indésirables dans une transcription.
+ * @param {string} text - La transcription à nettoyer.
+ * @returns {string} - Le texte nettoyé.
+ */
+function filterTranscription(text) {
+  const filterOutBiasesStatics = [
+    "Merci d'avoir regardé cette vidéo.",
+    "Merci d'avoir regardé cette vidéo!",
+    "Merci d'avoir regardé cette vidéo !",
+    "Merci d'avoir regardé la vidéo.",
+    "J'espère que vous avez apprécié la vidéo.",
+    "Je vous remercie de vous abonner",
+    "Sous-titres réalisés para la communauté d'Amara.org",
+    "Sous-titres réalisés para la communauté d'Amara.org",
+    "Merci d'avoir regardé!",
+    "❤️ par SousTitreur.com",
+    "— Sous-titrage ST'501 —",
+    "Sous-titrage ST' 501",
+    "Thanks for watching!",
+    "Sous-titrage Société Radio-Canada",
+    "sous-titres faits par la communauté d'Amara.org",
+    "Merci."
+  ];
+
+  // Expressions régulières pour détecter des variantes dynamiques
+  const regexPatterns = [
+    /Sous-titres? r[ée]alis[ée]s? (par|para) la communaut[ée] d'Amara\.org/i,
+    /Merci d'avoir regard[ée] la (vidéo|vid[ée]o)!?/i
+  ];
+
+  // Suppression des correspondances exactes
+  filterOutBiasesStatics.forEach(bias => {
+    text = text.replaceAll(bias, "");
+  });
+
+  // Suppression des correspondances via regex
+  regexPatterns.forEach(pattern => {
+    text = text.replace(pattern, "");
+  });
+
+  // Nettoyage des espaces inutiles
+  return text.trim();
+}
+
 // ----------------- Gestion du bouton Micro Capture -----------------
 micButton.addEventListener("click", async () => {
   if (!isMicRecording) {
@@ -190,10 +252,13 @@ micButton.addEventListener("click", async () => {
       mediaRecorder = startMediaRecorder(micMediaStream, async (blob) => {
         if (blob) {
           // Transcription via Whisper
-          const text = await transcribeViaWhisper(blob);
+          const text = await transcribeViaAssemblyAI(blob);
           if (text) {
-            conversationContext += `\n[${UserMicName}] ${text}`;
-            transcriptionDiv.innerText = conversationContext;
+            const filteredText = filterTranscription(text);
+            if (filteredText !== "") {
+              conversationContext += `\n[${UserMicName}] ${filteredText}`;
+              transcriptionDiv.innerText = conversationContext;
+            }
           }
         }
       });
