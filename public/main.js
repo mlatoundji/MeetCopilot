@@ -29,11 +29,23 @@ let SystemAudioName = "SystemAudio";
 let MeetContext = "MeetContext";
 
 // Pseudo-contexte stockant la conversation
+
+const ContextKeys = ["Titre du poste", "Missions", "Informations sur l'entreprise", "Informations sur le candidat (utilisateur)", "Informations complémentaires"];
+let meetingDetails = "";
+// Références aux éléments DOM
+const addMeetingButton = document.getElementById("addMeetingButton");
+const meetingModal = document.getElementById("meetingModal");
+const modalOverlay = document.getElementById("modalOverlay");
+const dynamicFields = document.getElementById("dynamicFields");
+const saveMeetingButton = document.getElementById("saveMeetingButton");
+const closeMeetingButton = document.getElementById("closeMeetingButton");
+
 let conversationContext = `
 [System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
 Informations sur la réunion : 
 * Utilisateur : [${UserMicName}]
 * Interlocuteur : [${SystemAudioName}]
+${meetingDetails}
 Suivez la conversation et générez des suggestions de réponses à la dernière question posée à l'utilisateur. 
 `;
 
@@ -50,6 +62,44 @@ document.addEventListener("keydown", (event) => {
 });
 
 // ----------------- Fonctions utilitaires -----------------
+
+// Ouvrir la fenêtre modale
+addMeetingButton.addEventListener("click", () => {
+  dynamicFields.innerHTML = ""; // Reset des champs
+  ContextKeys.forEach(key => {
+    const label = document.createElement("label");
+    label.innerText = key;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = `input-${key}`;
+    input.style.display = "block";
+    input.style.marginBottom = "10px";
+    dynamicFields.appendChild(label);
+    dynamicFields.appendChild(input);
+  });
+  meetingModal.style.display = "block";
+  modalOverlay.style.display = "block";
+});
+
+// Fermer la fenêtre modale
+closeMeetingButton.addEventListener("click", () => {
+  meetingModal.style.display = "none";
+  modalOverlay.style.display = "none";
+});
+
+// Sauvegarder les informations
+saveMeetingButton.addEventListener("click", () => {
+  const values = ContextKeys.map(key => {
+    const input = document.getElementById(`input-${key}`);
+    return input.value.trim();
+  });
+  meetingDetails = ContextKeys.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
+  console.log("Détails de la réunion :\n", meetingDetails);
+
+  // Fermer la fenêtre modale
+  meetingModal.style.display = "none";
+  modalOverlay.style.display = "none";
+});
 
 /**
  * Récupère l'audio de l'onglet/fenêtre (et vidéo) via getDisplayMedia.
@@ -161,6 +211,7 @@ function startMediaRecorder(stream, callback) {
   recorder.start(timeslice);
   return recorder;
 }
+
 
 // ----------------- Gestion du bouton System Capture -----------------
 captureButton.addEventListener("click", async () => {
