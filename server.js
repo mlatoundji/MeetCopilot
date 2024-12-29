@@ -183,7 +183,7 @@ app.post('/summary', async (req, res) => {
       return res.status(response.status).json({ error: data });
     }
 
-    res.json({ suggestions: data.choices[0].message.content });
+    res.json({ summary: data.choices[0].message.content });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -211,7 +211,7 @@ app.post('/suggestions', async (req, res) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: context },
         ],
-        max_tokens: 300,
+        max_tokens: 500,
         temperature: 0.7,
       }),
     });

@@ -51,7 +51,7 @@ let conversationContextDialogs = "";
 let summaries = [];
 let lastSummarySegment = "";
 let lastSummaryTime = Date.now();
-const SUMMARY_INTERVAL = 2 * 60 * 1000; // 15 minutes
+const SUMMARY_INTERVAL = 15 * 60 * 1000; // 15 minutes
 let currentSummarieslength = summaries.length;
 
 let lastConversationSegment = "";
@@ -67,17 +67,28 @@ function extractLastSegment() {
 // ---------------------------------------------------
 // Exemple de fonction qui, toutes les 15 min, appelle /generateSummary
 async function maybeGenerateSummary() {
-  if ((Date.now() - lastSummaryTime) >= SUMMARY_INTERVAL) {
+  const now = Date.now();
+  if ((now - lastSummaryTime) >= SUMMARY_INTERVAL) {
     // On prend la portion de conversation accumulée depuis 15 minutes
     // ex. lastSummarySegment = (conversationContext - l'ancienne portion)
     // const segmentText = conversationContext.substring(conversationContext.indexOf(lastSummarySegment) + lastSummarySegment.length);
 
+    console.log("Generating summary...");
+    console.log("Now : " + now + "lastSummaryTime : " + lastSummaryTime);
+    console.log("Period : " + now - lastSummaryTime);
+
+    lastSummaryTime = now;
     const summary = await generateSummary(conversationContext);
 
-    lastSummarySegment = summary; 
-    lastSummaryTime = Date.now();
-    summaries.push(lastSummarySegment);
+    if(summary != "No summary found" && summary != "Error"){
+
+      lastSummarySegment = summary; 
+      summaries.push(lastSummarySegment);
+    }
+    return summary;
   }
+
+  return null;
 }
 
 async function updateConversationContext() {
@@ -91,18 +102,19 @@ async function updateConversationContext() {
   Suivez la conversation\n
   `;
 
-  //await maybeGenerateSummary();
+  const summary = await maybeGenerateSummary();
 
-  if(summaries.length > 0){
+  if(summaries.length > 0 && summary != null){
     conversationContextSummaries =  "== Résumé de chaque quart heure précédent ==\n"
     conversationContextSummaries += summaries.map((key, index) => `Résumé #${index+1} (Tranche ${0+15*index}-${15+15*index}min) : ${key}`).join("\n");
     conversationContextSummaries += "\n";
   }
 
-  if(currentSummarieslength < summaries.length){
-    conversationContextDialogs = "== Dernières phrases de la conversation : ==\n";
-    conversationContextDialogs += extractLastSegment();
+  if(summaries.length > 0 && currentSummarieslength < summaries.length && summary != null){
     currentSummarieslength = summaries.length;
+    let lastSegment = extractLastSegment();
+    conversationContextDialogs = "== Dernières phrases de la conversation : ==\n";
+    conversationContextDialogs += lastSegment;
   }
 
   conversationContext = `
