@@ -1,97 +1,75 @@
-# MeetCopilot - Application de Transcription Audio en Temps Réel
+# Virtual Meeting Assistant
 
-## Description
-MeetCopilot est une application web conçue pour capturer l'audio (microphone ou audio système) à partir du navigateur et transcrire les paroles en temps réel à l'aide des API Whisper ou AssemblyAI. Elle propose également des suggestions de réponses basées sur l'audio capturé. Les clés API restent sécurisées côté serveur grâce à une architecture frontend-backend.
+This application serves as a **virtual assistant** to:
 
-## Fonctionnalités principales
-- **Capture audio :** Capture de l'audio depuis le microphone ou les sons du système.
-- **Transcription en temps réel :** Envoi des données audio aux API Whisper ou AssemblyAI pour transcription.
-- **Suggestions contextuelles :** Génération de suggestions basées sur le contexte de la conversation via GPT.
+- **Capture audio** (microphone or system/tab) for a live meeting or a long interview session.  
+- **Transcribe** that audio in real time via Whisper or AssemblyAI.  
+- **Generate summaries** every 15 minutes (for example), providing a concise overview of what was said.  
+- **Suggest replies** or responses through ChatGPT/GPT-4, based on the conversation context and the previously saved summaries.
 
-## Prérequis
-- **Node.js** (version 14 ou supérieure)
-- **Python** (optionnel pour servir le frontend localement)
-- Clés API pour OpenAI (Whisper) et AssemblyAI
+## Features
 
-## Arborescence du projet
-```
-.
-├── public
-│   ├── index.html         # Page principale avec interface utilisateur
-│   ├── main.js            # Logique frontend pour capturer et envoyer l'audio
-├── server.js              # Serveur NodeJS pour cacher les clés API et gérer les endpoints
-├── .env                   # Fichier d'environnement pour stocker les clés API
-└── package.json           # Dépendances du projet
-```
+1. **System Audio Capture**: Allows selecting a browser tab or window, with the option to share audio.  
+2. **Microphone Capture**: Records local microphone input.  
+3. **Real-Time Transcription**:  
+   - **Whisper**: via OpenAI’s \(`/transcribe/whisper`\) endpoint, or  
+   - **AssemblyAI**: via \(`/transcribe/assemblyai`\).  
+4. **Summaries**:  
+   - Generates or requests a summary every 15 minutes to keep the conversation streamlined.  
+   - Stores these summaries to reconstitute context over time.  
+5. **Reply Suggestions**:  
+   - Provides 3 bullet-point suggestions for how to respond, taking into account the latest question and conversation context.  
 
-## Installation et Lancement
+## Prerequisites  
+- Node.js (version 14 or higher)  
+- Python (optional, for serving the frontend locally)  
+- API keys for OpenAI (Whisper) and AssemblyAI
 
-### 1. Installation des dépendances
-Assurez-vous d'avoir installé Node.js et NPM.
+## Installation
 
-```bash
-npm install
-```
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+2. **Create a `.env` file**:
+   ```bash
+   OPENAI_API_KEY=sk-xxxxxxx
+   ASSEMBLYAI_API_KEY=xxxxxxxx
+   ```
+   (And any additional keys or credentials needed.)
 
-### 2. Configuration des variables d'environnement
-Créez un fichier `.env` à la racine du projet avec les variables suivantes :
+3. **Run the server**:
+   ```bash
+   npm start
+   ```
+   The Node.js server will start at port 3000.
 
-```env
-OPENAI_API_KEY="votre_clé_API_OpenAI"
-ASSEMBLYAI_API_KEY="votre_clé_API_AssemblyAI"
-PORT=3000
-```
+## Usage
 
-### 3. Démarrage du serveur backend
-Lancez le serveur Node.js pour gérer les appels aux API.
+1. **Front-End**:  
+   If you wish to serve the front-end on port 8000 instead, you can run:
+   ```bash
+   python -m http.server 8000
+   ```
 
-```bash
-node server.js
-```
+   Or
 
-### 4. Démarrage du frontend
-Servez les fichiers frontend à l'aide de Python ou de tout autre serveur HTTP statique. Par exemple :
+   ```bash
+   npx http-server public -p 8000
+   ```
+   Then open [http://localhost:8000](http://localhost:8000) in your browser.
+2. **Capturing Audio**:  
+   - *System Capture*: Click **“Start System Capture”** to record an active tab/window.  
+   - *Microphone*: Click **“Start Mic”** to record locally from the mic.
+3. **Transcription**: View recognized text on-screen (e.g., the transcription panel).  
+4. **Generate Summaries**: The system periodically creates short summaries (e.g., every 15 minutes) to condense conversation segments.  
+5. **Suggestions**: Click **“Generate Suggestions”** to get 3 response ideas from ChatGPT/GPT-4.
 
-```bash
-python -m http.server 8000
-```
+## License
 
-Accédez à l'application via : [http://localhost:8000](http://localhost:8000)
+*(Specify your chosen license here: MIT, Apache 2.0, etc.)*
 
-## Utilisation
+## Contributions
 
-1. **Démarrage de la capture :**
-   - Cliquez sur **Start System Capture** pour capturer l'audio système.
-   - Cliquez sur **Start Mic** pour capturer l'audio du microphone.
-
-2. **Transcription :**
-   - Les données audio capturées sont envoyées aux API pour transcription.
-   - Les résultats apparaissent dans la zone de transcription.
-
-3. **Suggestions :**
-   - Cliquez sur **Generate Suggestions** pour obtenir des suggestions de réponses basées sur le contexte de la conversation.
-
-## Structure des Endpoints Backend
-- **POST `/transcribe/whisper`** : Envoi de l'audio pour transcription via Whisper.
-- **POST `/transcribe/assemblyai`** : Envoi de l'audio pour transcription via AssemblyAI.
-- **POST `/suggestions`** : Génération de suggestions basées sur GPT.
-
-## Dépendances
-- **Frontend** : JavaScript (utilisant les APIs Web Audio et Media)
-- **Backend** :
-  - `express` : Framework Node.js pour gérer les routes
-  - `multer` : Gestion des fichiers audio uploadés
-  - `node-fetch` : Pour effectuer les requêtes HTTP
-  - `dotenv` : Gestion des variables d'environnement
-
-## Développement futur
-- **Support multilingue :** Ajout de langues supplémentaires pour les transcriptions.
-- **Amélioration de l'interface utilisateur :** Intégration de visualisations audio en temps réel.
-- **Optimisation des performances :** Réduction de la latence pour une meilleure expérience utilisateur.
-
-## Contribution
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des issues ou des pull requests sur le dépôt GitHub.
-
-## Licence
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus d'informations.
-
+- **Author**: (Your name or username)  
+- **Contributions**: Open to pull requests.  
