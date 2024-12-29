@@ -5,12 +5,7 @@ import fetch from 'node-fetch';
 import path from 'path';
 import { fileURLToPath } from "url";
 import cors from 'cors';
-// import { randomBytes } from 'crypto';
-// import ffmpeg from 'fluent-ffmpeg';
-// import fs from 'fs';
-// import { Readable } from 'stream';
-import { Blob } from 'buffer'; // Import Blob from buffer module
-
+import { Blob } from 'buffer';
 
 
 dotenv.config();
@@ -33,36 +28,11 @@ app.use(express.json());
 app.post('/transcribe/whisper', upload.single('audio'), async (req, res) => {
   try {
 
-
-    // const fileBuffer = req.file; // Blob audio (webm) envoyé depuis le front
-
-    // // 2. Générer des noms de fichier temporaires
-    // const tmpId = randomBytes(6).toString('hex'); 
-    // const inputPath = path.join('uploads', `input_${tmpId}.webm`);
-    // const outputPath = path.join('uploads', `output_${tmpId}.webm`);
-
-    // // 3. Écrire le buffer en local
-    // fs.writeFileSync(inputPath, fileBuffer);
-
-    // // 4. Lancer FFmpeg pour réécrire le conteneur (sans réencoder)
-    // //    -c copy => copie directe audio
-    // await new Promise((resolve, reject) => {
-    //   ffmpeg(inputPath)
-    //     .outputOptions(['-c copy'])  
-    //     .output(outputPath)
-    //     .on('end', resolve)
-    //     .on('error', reject)
-    //     .run();
-    // });
-
-    // // 5. Lire le fichier de sortie en buffer
-    // const fixedBuffer = fs.readFileSync(outputPath);
-
     const formData = new FormData();
     const audioBlob = new Blob([req.file.buffer], { type: 'audio/webm' }); // Convert buffer to Blob
     formData.append('file', audioBlob, 'audio.webm');
     formData.append('model', 'whisper-1');
-    formData.append('language', 'fr');
+    formData.append('language', req.body.langCode);
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -87,6 +57,7 @@ app.post('/transcribe/whisper', upload.single('audio'), async (req, res) => {
 // Endpoint pour transcription via AssemblyAI
 app.post('/transcribe/assemblyai', upload.single('audio'), async (req, res) => {
   try {
+    console.log(req.body.langCode);
     const uploadResp = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
       headers: {
@@ -109,13 +80,9 @@ app.post('/transcribe/assemblyai', upload.single('audio'), async (req, res) => {
       },
       body: JSON.stringify({
         audio_url: uploadUrl,
-        language_code: "fr"
+        language_code: req.body.langCode
       })
     });
-
-    // if (!transcriptResp.ok) {
-    //   return res.status(transcriptResp.status).json({ error: data });
-    // }
 
     const transcript = await transcriptResp.json();
     const transcriptId = transcript.id;

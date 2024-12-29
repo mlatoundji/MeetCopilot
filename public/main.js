@@ -40,6 +40,7 @@ const modalOverlay = document.getElementById("modalOverlay");
 const dynamicFields = document.getElementById("dynamicFields");
 const saveMeetingButton = document.getElementById("saveMeetingButton");
 const closeMeetingButton = document.getElementById("closeMeetingButton");
+const langSelect = document.getElementById("langSelect");
 
 let conversationContext = "";
 
@@ -57,6 +58,9 @@ let currentSummarieslength = summaries.length;
 let lastConversationSegment = "";
 
 let suggestionText;
+
+const supportedLangs = ["en", "fr", "es", "de", "it"];
+let langSelected = "fr";
 
 function extractLastSegment() {
   const lines = conversationContextDialogs.split("\n");
@@ -125,7 +129,23 @@ async function updateConversationContext() {
   transcriptionDiv.innerText = conversationContext;
 }
 
+// Once DOM is loaded:
+document.addEventListener('DOMContentLoaded', () => {
 
+  // Dynamically add options
+  supportedLangs.forEach(lang => {
+    const option = document.createElement("option");
+    option.value = lang;
+    option.textContent = lang;
+    langSelect.appendChild(option);
+  });
+
+  // If you want to attach a change event:
+  langSelect.addEventListener("change", () => {
+    console.log("Selected language:", langSelect.value);
+    langSelected = langSelect.value;
+  });
+});
 
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space" && meetingModal.style.display === "none") {
@@ -421,6 +441,7 @@ suggestionButton.addEventListener("click", async () => {
 async function transcribeViaWhisper(blob) {
   const formData = new FormData();
   formData.append('audio', blob);
+  formData.append('langCode', langSelected);
 
   try {
     const response = await fetch(TRANSCRIBE_WHISPER_API_URL, {
@@ -442,6 +463,7 @@ async function transcribeViaWhisper(blob) {
 async function transcribeViaAssemblyAI(blob) {
   const formData = new FormData();
   formData.append('audio', blob);
+  formData.append('langCode', langSelected);
 
   try {
     const response = await fetch(TRANSCRIBE_ASSEMBLYAI_API_URL, {
