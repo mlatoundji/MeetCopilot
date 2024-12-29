@@ -57,7 +57,7 @@ app.post('/transcribe/whisper', upload.single('audio'), async (req, res) => {
 // Endpoint pour transcription via AssemblyAI
 app.post('/transcribe/assemblyai', upload.single('audio'), async (req, res) => {
   try {
-    console.log(req.body.langCode);
+    console.log("Language code : "+ req.body.langCode);
     const uploadResp = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
       headers: {

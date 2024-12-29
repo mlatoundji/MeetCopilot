@@ -31,7 +31,6 @@ let MeetContext = "MeetContext";
 
 // Pseudo-contexte stockant la conversation
 
-const ContextKeys = ["Titre du poste", "Missions", "Informations sur l'entreprise", "Informations sur le candidat (utilisateur)", "Informations complémentaires"];
 let meetingDetails = "";
 // Références aux éléments DOM
 const addMeetingButton = document.getElementById("addMeetingButton");
@@ -52,15 +51,67 @@ let conversationContextDialogs = "";
 let summaries = [];
 let lastSummarySegment = "";
 let lastSummaryTime = Date.now();
-const SUMMARY_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const SUMMARY_INTERVAL_MINUTES = 15;
+const SUMMARY_INTERVAL = SUMMARY_INTERVAL_MINUTES * 60 * 1000; // 15 minutes
 let currentSummarieslength = summaries.length;
 
 let lastConversationSegment = "";
 
 let suggestionText;
 
-const supportedLangs = ["en", "fr", "es", "de", "it"];
+const supportedLangs = [
+  { code: "fr", label: "Français" },
+  { code: "en", label: "English" },
+  // Ajoutez d’autres
+];
+
 let langSelected = "fr";
+// main.js
+const translations = {
+  fr: {
+    startSystemCapture: "Démarrer la capture système",
+    startMic: "Démarrer le micro",
+    generateSuggestions: "Générer des suggestions",
+    addMeeting: "Ajouter une réunion",
+    suggestionsPlaceholder: "Les suggestions apparaîtront ici...",
+    transcriptionPlaceholder: "La transcription apparaîtra ici...",
+    meetingModalTitle: "Ajouter une réunion",
+    validateButton: "Valider",
+    closeButton: "Fermer",
+    ContextKeys: ["Titre du poste", "Missions", "Informations sur l'entreprise", "Informations sur le candidat (utilisateur)", "Informations complémentaires"],
+    conversationContextHeader : `
+    [System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
+    Informations sur la réunion : 
+    * Utilisateur : [${UserMicName}]
+    * Interlocuteur : [${SystemAudioName}]
+    ${meetingDetails}
+    Suivez la conversation\n
+    `,
+    // ... etc.
+  },
+  en: {
+    startSystemCapture: "Start System Capture",
+    startMic: "Start Mic",
+    generateSuggestions: "Generate Suggestions",
+    addMeeting: "Add Meeting",
+    suggestionsPlaceholder: "Suggestions will appear here...",
+    transcriptionPlaceholder: "Transcription will appear here...",
+    meetingModalTitle: "Add Meeting",
+    validateButton: "Validate",
+    closeButton: "Close",
+    ContextKeys: ["Job Title", "Missions", "Company Information", "Candidate (User) Information", "Additional Information"],
+    conversationContextHeader : `
+      [System] This is a conversation. The user is chatting with a conversation partner in a meeting context.
+      Meeting information:
+      * User: [${UserMicName}]
+      * Conversation partner: [${SystemAudioName}]
+      ${meetingDetails}
+      Follow the conversation\n
+    `
+  },
+  // Ajoutez d’autres langues si besoin
+};
+
 
 function extractLastSegment() {
   const lines = conversationContextDialogs.split("\n");
@@ -97,20 +148,13 @@ async function maybeGenerateSummary() {
 
 async function updateConversationContext() {
 
-  conversationContextHeader = `
-  [System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
-  Informations sur la réunion : 
-  * Utilisateur : [${UserMicName}]
-  * Interlocuteur : [${SystemAudioName}]
-  ${meetingDetails}
-  Suivez la conversation\n
-  `;
+  conversationContextHeader = translations[langSelected].conversationContextHeader;
 
   const summary = await maybeGenerateSummary();
 
   if(summaries.length > 0 && summary != null){
     conversationContextSummaries =  "== Résumé de chaque quart heure précédent ==\n"
-    conversationContextSummaries += summaries.map((key, index) => `Résumé #${index+1} (Tranche ${0+15*index}-${15+15*index}min) : ${key}`).join("\n");
+    conversationContextSummaries += summaries.map((key, index) => `Résumé #${index+1} (Tranche ${0+SUMMARY_INTERVAL_MINUTES*index}-${SUMMARY_INTERVAL_MINUTES+SUMMARY_INTERVAL_MINUTES*index}min) : ${key}`).join("\n");
     conversationContextSummaries += "\n";
   }
 
@@ -129,14 +173,36 @@ async function updateConversationContext() {
   transcriptionDiv.innerText = conversationContext;
 }
 
+function applyTranslations(langCode) {
+  const t = translations[langCode];
+
+  // Mettre à jour les textes des boutons dans la sidebar
+  captureButton.textContent = t.startSystemCapture;
+  micButton.textContent = t.startMic;
+  suggestionButton.textContent = t.generateSuggestions;
+  addMeetingButton.textContent = t.addMeeting;
+
+  // Mettre à jour les placeholders
+  suggestionsDiv.textContent = t.suggestionsPlaceholder;
+  transcriptionDiv.textContent = t.transcriptionPlaceholder;
+
+  // Mettre à jour le titre de la modale
+  document.querySelector(".meeting-modal h2").textContent = t.meetingModalTitle;
+
+  // Boutons Valider/Fermer dans la modale
+  saveMeetingButton.textContent = t.validateButton;
+  closeMeetingButton.textContent = t.closeButton;
+  
+}
+
 // Once DOM is loaded:
 document.addEventListener('DOMContentLoaded', () => {
 
   // Dynamically add options
   supportedLangs.forEach(lang => {
     const option = document.createElement("option");
-    option.value = lang;
-    option.textContent = lang;
+    option.value = lang.code;
+    option.textContent = lang.label;
     langSelect.appendChild(option);
   });
 
@@ -144,7 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
   langSelect.addEventListener("change", () => {
     console.log("Selected language:", langSelect.value);
     langSelected = langSelect.value;
+    applyTranslations(langSelected);
   });
+  applyTranslations(langSelected);
+
 });
 
 document.addEventListener("keydown", (event) => {
@@ -162,7 +231,7 @@ document.addEventListener("keydown", (event) => {
 // Ouvrir la fenêtre modale
 addMeetingButton.addEventListener("click", () => {
   dynamicFields.innerHTML = ""; // Reset des champs
-  ContextKeys.forEach(key => {
+  translations[langSelected].ContextKeys.forEach(key => {
     const label = document.createElement("label");
     label.innerText = key;
     const input = document.createElement("input");
@@ -185,11 +254,11 @@ closeMeetingButton.addEventListener("click", () => {
 
 // Sauvegarder les informations
 saveMeetingButton.addEventListener("click", () => {
-  const values = ContextKeys.map(key => {
+  const values =  translations[langSelected].ContextKeys.map(key => {
     const input = document.getElementById(`input-${key}`);
     return input.value.trim();
   });
-  meetingDetails = ContextKeys.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
+  meetingDetails =  translations[langSelected].ContextKeys.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
   console.log("Détails de la réunion :\n", meetingDetails);
 
   // Fermer la fenêtre modale
