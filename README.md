@@ -64,6 +64,8 @@ This application serves as a **virtual assistant** to:
 4. **Generate Summaries**: The system periodically creates short summaries (e.g., every 15 minutes) to condense conversation segments.  
 5. **Suggestions**: Click **“Generate Suggestions”** to get 3 response ideas from ChatGPT/GPT-4.
 
+![alt text](https://github.com/MMyster/MeetCopilot/blob/develop/img/test.png?raw=true)
+
 ## Contributions
 
 - **Author**: MMyster 
