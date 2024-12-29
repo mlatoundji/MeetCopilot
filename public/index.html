@@ -1,73 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Assistant Demo</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .buttons {
-      margin-bottom: 1em;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-    }
-    #transcription, #suggestions {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      min-height: 200px;
-      white-space: pre-wrap;
-    }
-    iframe {
-      width: 800px; 
-      height: 450px; 
-      border: 1px solid #ccc;
-      margin-top: 20px;
-      display: block;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Audio Transcription App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Virtual Assistant Demo</h1>
+  <div class="container">
+    <header class="header">
+      <h1>Real-Time Audio Transcription App</h1>
+    </header>
+    
+    <aside class="sidebar">
+      <button id="captureButton" class="button">Start System Capture</button>
+      <button id="micButton" class="button">Start Mic</button>
+      <button id="suggestionButton" class="button">Generate Suggestions</button>
+      <button id="addMeetingButton" class="button">Add Meeting</button>
+    </aside>
+    
+    <main class="main-content">
+      <section id="suggestions" class="suggestions">
+        Suggestions will appear here...
+      </section>
+      <section id="screen-capture-section">
+        <video id="screen-capture" class="video" autoplay muted></video>
+      </section>
+    </main>
 
-  <div class="buttons">
-    <!-- Bouton pour capturer l'audio de l'ordinateur (onglet/fenêtre) -->
-    <button id="captureButton">Start System Capture</button>
-
-    <!-- Bouton pour capturer le micro -->
-    <button id="micButton">Start Mic</button>
-
-    <!-- Bouton pour générer les suggestions de réponse -->
-    <button id="suggestionButton">Generate Suggestions</button>
-
-    <!-- Bouton pour ajouter une réunion -->
-    <button id="addMeetingButton">Add meeting details</button>
-
-    <!-- Fenêtre modale pour la saisie des informations -->
-    <div id="meetingModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: white; z-index: 1000;">
-      <h2>Ajouter une réunion</h2>
-      <div id="dynamicFields"></div>
-      <button id="saveMeetingButton">Valider</button>
-      <button id="closeMeetingButton">Fermer</button>
-    </div>
-    <div id="modalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
-
+    <aside class="transcription">
+      <div id="transcription" class="transcription-box">Transcription will appear here...</div>
+    </aside>
   </div>
-
-  <!-- Affiche la transcription audio (micro ou système) -->
-  <div id="transcription">Transcription will appear here...</div>
-
-  <!-- Affiche les suggestions de l'assistant -->
-  <div id="suggestions">Suggestions will appear here...</div>
-
-  <!-- WebView / iframe pour afficher la réunion -->
-  <video id="screen-capture" width="800" height="600"></video>
-
   <script src="main.js"></script>
 </body>
 </html>
