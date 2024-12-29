@@ -1,7 +1,8 @@
 // ----------------- Configuration -----------------
+const SUMMARY_API_URL = "http://localhost:3000/summary";
 const SUGGESTIONS_API_URL = "http://localhost:3000/suggestions";
 const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
-const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/whisper";
+const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
 
 
 const MIME_TYPE_WEBM = "audio/webm; codecs=opus";
@@ -40,19 +41,82 @@ const dynamicFields = document.getElementById("dynamicFields");
 const saveMeetingButton = document.getElementById("saveMeetingButton");
 const closeMeetingButton = document.getElementById("closeMeetingButton");
 
-let conversationContext = `
-[System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
-Informations sur la réunion : 
-* Utilisateur : [${UserMicName}]
-* Interlocuteur : [${SystemAudioName}]
-${meetingDetails}
-Suivez la conversation et générez des suggestions de réponses à la dernière question posée à l'utilisateur. 
-`;
+let conversationContext = "";
+
+let conversationContextHeader = "";
+
+let conversationContextSummaries = "";
+let conversationContextDialogs = "";
+
+let summaries = [];
+let lastSummarySegment = "";
+let lastSummaryTime = Date.now();
+const SUMMARY_INTERVAL = 2 * 60 * 1000; // 15 minutes
+let currentSummarieslength = summaries.length;
+
+let lastConversationSegment = "";
 
 let suggestionText;
 
+function extractLastSegment() {
+  const lines = conversationContextDialogs.split("\n");
+  const lastN = lines.slice(-3).join("\n"); // Ex: On prend 3 lignes
+  return lastN;
+}
+
+// ---------------------------------------------------
+// Exemple de fonction qui, toutes les 15 min, appelle /generateSummary
+async function maybeGenerateSummary() {
+  if ((Date.now() - lastSummaryTime) >= SUMMARY_INTERVAL) {
+    // On prend la portion de conversation accumulée depuis 15 minutes
+    // ex. lastSummarySegment = (conversationContext - l'ancienne portion)
+    // const segmentText = conversationContext.substring(conversationContext.indexOf(lastSummarySegment) + lastSummarySegment.length);
+
+    const summary = await generateSummary(conversationContext);
+
+    lastSummarySegment = summary; 
+    lastSummaryTime = Date.now();
+    summaries.push(lastSummarySegment);
+  }
+}
+
+async function updateConversationContext() {
+
+  conversationContextHeader = `
+  [System] Voici une conversation. L'utilisateur discute avec un interlocuteur dans un contexte de réunion.
+  Informations sur la réunion : 
+  * Utilisateur : [${UserMicName}]
+  * Interlocuteur : [${SystemAudioName}]
+  ${meetingDetails}
+  Suivez la conversation\n
+  `;
+
+  //await maybeGenerateSummary();
+
+  if(summaries.length > 0){
+    conversationContextSummaries =  "== Résumé de chaque quart heure précédent ==\n"
+    conversationContextSummaries += summaries.map((key, index) => `Résumé #${index+1} (Tranche ${0+15*index}-${15+15*index}min) : ${key}`).join("\n");
+    conversationContextSummaries += "\n";
+  }
+
+  if(currentSummarieslength < summaries.length){
+    conversationContextDialogs = "== Dernières phrases de la conversation : ==\n";
+    conversationContextDialogs += extractLastSegment();
+    currentSummarieslength = summaries.length;
+  }
+
+  conversationContext = `
+  ${conversationContextHeader}
+  ${conversationContextSummaries} 
+  ${conversationContextDialogs}
+  `;
+  transcriptionDiv.innerText = conversationContext;
+}
+
+
+
 document.addEventListener("keydown", (event) => {
-  if (event.code === "Space") {
+  if (event.code === "Space" && meetingModal.style.display === "none") {
     suggestionButton.click();
   } else if (event.code === "KeyM") {
     micButton.click();
@@ -229,8 +293,8 @@ captureButton.addEventListener("click", async () => {
             const filteredText = filterTranscription(text);
             if (filteredText !== "") {  
               
-              conversationContext += `\n[${SystemAudioName}] ${filteredText}`;
-              transcriptionDiv.innerText = conversationContext;
+              conversationContextDialogs += `\n[${SystemAudioName}] ${filteredText}`;
+              await updateConversationContext();
             
             }       
           }
@@ -238,6 +302,7 @@ captureButton.addEventListener("click", async () => {
       });
       if (mediaRecorder) {
         isSystemRecording = true;
+        lastSummaryTime = Date.now();
         captureButton.innerText = "Stop System Capture";
       }
     }
@@ -307,14 +372,15 @@ micButton.addEventListener("click", async () => {
           if (text) {
             const filteredText = filterTranscription(text);
             if (filteredText !== "") {
-              conversationContext += `\n[${UserMicName}] ${filteredText}`;
-              transcriptionDiv.innerText = conversationContext;
+              conversationContextDialogs += `\n[${UserMicName}] ${filteredText}`;
+              await updateConversationContext();
             }
           }
         }
       });
       if (mediaRecorder) {
         isMicRecording = true;
+        lastSummaryTime = Date.now();
         micButton.innerText = "Stop Mic";
       }
     }
@@ -405,7 +471,34 @@ async function generateSuggestions(context) {
     const data = await response.json();
     return data.suggestions || 'No suggestions found';
   } catch (err) {
-    console.error('Error calling Whisper endpoint:', err);
+    console.error('Error calling Suggestions endpoint:', err);
+    return 'Error';
+  }
+}
+
+async function generateSummary(context) {
+
+  if (!context || typeof context !== 'string') {
+    console.warn("Invalid context provided:", context);
+    return "No summary";
+  }
+  try {
+    const response = await fetch(SUMMARY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ context }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn("summary error:", response.status, errorText);
+      return "No summary";
+    }
+    const data = await response.json();
+    return data.summary || 'No summary found';
+  } catch (err) {
+    console.error('Error calling Summary endpoint:', err);
     return 'Error';
   }
 }
