@@ -1,0 +1,6 @@
+.env
+node_modules/
+uploads/
+dist/
+*meetingcopilot-*.json
+_*

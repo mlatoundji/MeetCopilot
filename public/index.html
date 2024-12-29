@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Meeting Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- HEADER -->
+    <header class="header">
+      <h1>Virtual Meeting Assistant</h1>
+    </header>
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <button id="captureButton" class="button">Start System Capture</button>
+      <button id="micButton" class="button">Start Mic</button>
+      <button id="suggestionButton" class="button">Generate Suggestions</button>
+      <button id="addMeetingButton" class="button">Add Meeting</button>
+
+      <!-- Language dropdown below the buttons -->
+      <label for="langSelect" class="language-label">Language:</label>
+      <select id="langSelect" class="dropdown-languages"></select>
+    </aside>
+    
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <section id="suggestions" class="suggestions">
+        Suggestions will appear here...
+      </section>
+      <section id="screen-capture-section">
+        <video id="screen-capture" class="video" autoplay muted></video>
+      </section>
+    </main>
+
+    <!-- TRANSCRIPTION AREA -->
+    <aside class="transcription">
+      <!-- Make sure the container has scroll enabled -->
+      <div id="transcription" class="transcription-box">
+        Transcription will appear here...
+      </div>
+    </aside>
+  </div>
+
+  <!-- MODAL + OVERLAY -->
+  <div id="modalOverlay" class="modal-overlay"></div>
+  <div id="meetingModal" class="meeting-modal">
+    <h2>Add Meeting</h2>
+    <div id="dynamicFields"></div>
+    <div class="modal-buttons">
+      <button id="saveMeetingButton" class="button">Validate</button>
+      <button id="closeMeetingButton" class="button-secondary">Close</button>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
