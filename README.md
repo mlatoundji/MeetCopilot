@@ -4,7 +4,7 @@ This application serves as a **virtual assistant** to:
 
 - **Capture audio** (microphone or system/tab) for a live meeting or a long interview session.  
 - **Transcribe** that audio in real time via Whisper or AssemblyAI.  
-- **Generate summaries** every 15 minutes (for example), providing a concise overview of what was said.  
+- **Generate summaries** every **X** minutes, providing a concise overview of what was said.  
 - **Suggest replies** or responses through ChatGPT/GPT-4, based on the conversation context and the previously saved summaries.
 
 ## Features
@@ -15,7 +15,7 @@ This application serves as a **virtual assistant** to:
    - **Whisper**: via OpenAI’s \(`/transcribe/whisper`\) endpoint, or  
    - **AssemblyAI**: via \(`/transcribe/assemblyai`\).  
 4. **Summaries**:  
-   - Generates or requests a summary every 15 minutes to keep the conversation streamlined.  
+   - Generates or requests a summary every **X** minutes to keep the conversation streamlined.  
    - Stores these summaries to reconstitute context over time.  
 5. **Reply Suggestions**:  
    - Provides 3 bullet-point suggestions for how to respond, taking into account the latest question and conversation context.  
@@ -23,7 +23,7 @@ This application serves as a **virtual assistant** to:
 ## Prerequisites  
 - Node.js (version 14 or higher)  
 - Python (optional, for serving the frontend locally)  
-- API keys for OpenAI (Whisper) and AssemblyAI
+- API keys for OpenAI (Whisper) and/or AssemblyAI
 
 ## Installation
 
@@ -35,14 +35,14 @@ This application serves as a **virtual assistant** to:
    ```bash
    OPENAI_API_KEY=sk-xxxxxxx
    ASSEMBLYAI_API_KEY=xxxxxxxx
+   PORT=XXXX
    ```
-   (And any additional keys or credentials needed.)
-
+   
 3. **Run the server**:
    ```bash
    npm start
    ```
-   The Node.js server will start at port 3000.
+   The Node.js server will start at port 3000 by default.
 
 ## Usage
 
@@ -51,7 +51,6 @@ This application serves as a **virtual assistant** to:
    ```bash
    python -m http.server 8000
    ```
-
    Or
 
    ```bash
@@ -65,11 +64,7 @@ This application serves as a **virtual assistant** to:
 4. **Generate Summaries**: The system periodically creates short summaries (e.g., every 15 minutes) to condense conversation segments.  
 5. **Suggestions**: Click **“Generate Suggestions”** to get 3 response ideas from ChatGPT/GPT-4.
 
-## License
-
-*(Specify your chosen license here: MIT, Apache 2.0, etc.)*
-
 ## Contributions
 
-- **Author**: (Your name or username)  
+- **Author**: MMyster 
 - **Contributions**: Open to pull requests.  
