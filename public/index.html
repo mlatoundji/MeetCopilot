@@ -55,7 +55,11 @@
       <button id="closeMeetingButton" class="button-secondary">Close</button>
     </div>
   </div>
-
-  <script src="main.js"></script>
+  <script type="importmap">
+    { "imports": {
+        "wavefile":   "https://cdn.skypack.dev/wavefile"
+    } }
+  </script> 
+  <script type="module" src="main.js"></script>
 </body>
 </html>

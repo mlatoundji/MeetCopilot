@@ -28,11 +28,16 @@ app.use(express.json());
 app.post('/transcribe/whisper', upload.single('audio'), async (req, res) => {
   try {
 
+    const mimeType = req.file.mimetype?? 'audio/wav';
+    const filename = req.file.fileName?? 'audio.wav';
+    const model = req.body.model?? 'whisper-1';
+    const language = req.body.langCode?? 'fr';
+
     const formData = new FormData();
-    const audioBlob = new Blob([req.file.buffer], { type: 'audio/webm' }); // Convert buffer to Blob
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    formData.append('language', req.body.langCode);
+    const audioBlob = new Blob([req.file.buffer], { type: mimeType }); // Convert buffer to Blob
+    formData.append('file', audioBlob, filename);
+    formData.append('model', model);
+    formData.append('language', language);
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',

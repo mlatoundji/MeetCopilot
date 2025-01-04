@@ -1,3 +1,5 @@
+import { WaveFile } from 'wavefile';
+
 // ----------------- Configuration -----------------
 const SUMMARY_API_URL = "http://localhost:3000/summary";
 const SUGGESTIONS_API_URL = "http://localhost:3000/suggestions";
@@ -5,8 +7,9 @@ const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
 const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
 
 
-const MIME_TYPE_WEBM = "audio/webm; codecs=opus";
-const MIME_TYPE_OGG = "audio/ogg; codecs=opus";
+const MIME_TYPE_WAV= "audio/wav";
+const AUDIO_WAV_FILE_NAME= "audio.wav";
+
 
 // ----------------- Éléments du DOM -----------------
 const captureButton = document.getElementById("captureButton");
@@ -18,16 +21,27 @@ const videoElement = document.getElementById("screen-capture");
 
 // ----------------- Variables globales -----------------
 let systemMediaStream = null;
-let micMediaStream = null;
-let mediaRecorder = null;
+let systemAudioContext = null;
+let systemSource;
+let systemRecorder;
+let systemBuffer = [];
+let systemTranscription = null;
 let isSystemRecording = false;
+
+
+let micMediaStream = null;
+let micAudioContext = null;
+let micSource;
+let micRecorder;
+let micBuffer = [];
+let micTranscription = null;
 let isMicRecording = false;
-let chunks = [];
-let timeslice = 5000;
+
+let timeslice = 4000;
+
 
 let UserMicName = "UserMic";
 let SystemAudioName = "SystemAudio";
-let MeetContext = "MeetContext";
 
 // Pseudo-contexte stockant la conversation
 
@@ -54,8 +68,6 @@ let lastSummaryTime = Date.now();
 const SUMMARY_INTERVAL_MINUTES = 15;
 const SUMMARY_INTERVAL = SUMMARY_INTERVAL_MINUTES * 60 * 1000; // 15 minutes
 let currentSummarieslength = summaries.length;
-
-let lastConversationSegment = "";
 
 let suggestionText;
 
@@ -310,73 +322,6 @@ function downloadBlob(blob, fileName) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Lance un MediaRecorder sur un flux audio-only (filtre la piste audio).
- * callback sera appelé après l'arrêt pour traiter le blob.
- */
-function startMediaRecorder(stream, callback) {
-  // Filtrer la piste audio
-  const audioTracks = stream.getAudioTracks();
-  if (!audioTracks || audioTracks.length === 0) {
-    alert("No audio track found. Make sure you've allowed audio capture.");
-    return null;
-  }
-
-  // Créer un flux ne contenant que la piste audio
-  const audioOnlyStream = new MediaStream();
-  audioTracks.forEach(track => audioOnlyStream.addTrack(track));
-
-  // Vérification mime
-  let mimeType = MIME_TYPE_WEBM;
-  if (!MediaRecorder.isTypeSupported(mimeType)) {
-    mimeType = MIME_TYPE_OGG;
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      alert("No supported mimeType found (webm/ogg).");
-      return null;
-    }
-  }
-
-  // Démarrer l'enregistrement
-  const recorder = new MediaRecorder(audioOnlyStream, { mimeType });
-  chunks = [];
-  let stop = false;
-
-  recorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0 && !stop) {
-      chunks.push(e.data);
-      blob = new Blob(chunks, { type: mimeType });
-      callback(blob);
-      //downloadBlob(blob, "recorded_audio.webm");
-      stop = true;
-      recorder.stop();
-    }
-
-  };
-
-  recorder.onstop = async () => {
-    // if (chunks.length === 0) {
-    //   console.log("No chunks recorded.");
-    //   // callback(null);
-    //   return;
-    // }
-    // const blob = new Blob(chunks, { type: mimeType });
-    // Télécharger localement (optionnel)
-    // downloadBlob(blob, "recorded_audio.webm");
-    // callback(blob);
-    if(stream != null)
-    {    
-      chunks = [];
-      stop = false;
-      recorder.start(timeslice);
-    }
-
-  };
-
-  // recorder.start();
-  recorder.start(timeslice);
-  return recorder;
-}
-
 
 // ----------------- Gestion du bouton System Capture -----------------
 captureButton.addEventListener("click", async () => {
@@ -386,10 +331,61 @@ captureButton.addEventListener("click", async () => {
       // Lance l'enregistrement
       videoElement.srcObject = systemMediaStream;
       videoElement.autoplay = true;
-      mediaRecorder = startMediaRecorder(systemMediaStream, async (blob) => {
-      if (blob) {
+      // Créer un contexte audio
+      systemAudioContext = new AudioContext();
+      // Créer une source audio
+      systemSource = systemAudioContext.createMediaStreamSource(systemMediaStream);
+      // Créer un processeur audio
+      systemRecorder = systemAudioContext.createScriptProcessor(4096, 1, 1);
+      // Connecter la source à l'enregistreur
+      systemSource.connect(systemRecorder);
+      // Connecter l'enregistreur à la destination
+      systemRecorder.connect(systemAudioContext.destination);
+      // Démarrer l'enregistrement
+      systemRecorder.onaudioprocess = (event) => {
+        const audioData = event.inputBuffer.getChannelData(0);
+        systemBuffer.push(new Float32Array(audioData));
+      };
+      if (systemRecorder) {
+        isSystemRecording = true;
+        lastSummaryTime = Date.now();
+        captureButton.innerText = "Stop System Capture";
+        startSystemTranscription();
+      }
+    }
+  } else {
+    systemMediaStream?.getTracks().forEach(t => t.stop());
+    systemMediaStream = null;
+    isSystemRecording = false;
+    if (systemRecorder) {
+      systemRecorder.onaudioprocess = null;
+      systemSource.disconnect(systemRecorder);
+      systemRecorder.disconnect(systemAudioContext.destination);
+    }
+    systemAudioContext.close();
+    captureButton.innerText = "Start System Capture";
+    stopSystemTranscription();
+  }
+
+});
+
+function startSystemTranscription() {
+  systemTranscription = setInterval( async function() {
+    if (systemBuffer.length > 0) {
+      const audioBuffer = systemBuffer.reduce((acc, val) => {
+        const tmp = new Float32Array(acc.length + val.length);
+        tmp.set(acc, 0);
+        tmp.set(val, acc.length);
+        return tmp;
+      }, new Float32Array());
+  
+      const wavBlob = bufferToWaveBlob(audioBuffer, systemAudioContext.sampleRate);
+      
+      systemBuffer = [];
+
+      if (wavBlob) {
           // Transcription via Whisper
-          const text = await transcribeViaAssemblyAI(blob);
+          const text = await transcribeViaWhisper(wavBlob);
           if (text) {
             const filteredText = filterTranscription(text);
             if (filteredText !== "") {  
@@ -400,65 +396,12 @@ captureButton.addEventListener("click", async () => {
             }       
           }
       }
-      });
-      if (mediaRecorder) {
-        isSystemRecording = true;
-        lastSummaryTime = Date.now();
-        captureButton.innerText = "Stop System Capture";
-      }
     }
-  } else {
-    systemMediaStream?.getTracks().forEach(t => t.stop());
-    systemMediaStream = null;
-    isSystemRecording = false;
-    if (mediaRecorder) mediaRecorder.stop();
-    captureButton.innerText = "Start System Capture";
-  }
-});
+}, timeslice);
+}
 
-/**
- * Filtre les textes indésirables dans une transcription.
- * @param {string} text - La transcription à nettoyer.
- * @returns {string} - Le texte nettoyé.
- */
-function filterTranscription(text) {
-  const filterOutBiasesStatics = [
-    "Merci d'avoir regardé cette vidéo.",
-    "Merci d'avoir regardé cette vidéo!",
-    "Merci d'avoir regardé cette vidéo !",
-    "Merci d'avoir regardé la vidéo.",
-    "J'espère que vous avez apprécié la vidéo.",
-    "Je vous remercie de vous abonner",
-    "Sous-titres réalisés para la communauté d'Amara.org",
-    "Sous-titres réalisés para la communauté d'Amara.org",
-    "Merci d'avoir regardé!",
-    "❤️ par SousTitreur.com",
-    "— Sous-titrage ST'501 —",
-    "Sous-titrage ST' 501",
-    "Thanks for watching!",
-    "Sous-titrage Société Radio-Canada",
-    "sous-titres faits par la communauté d'Amara.org",
-    "Merci."
-  ];
-
-  // Expressions régulières pour détecter des variantes dynamiques
-  const regexPatterns = [
-    /Sous-titres? r[ée]alis[ée]s? (par|para) la communaut[ée] d'Amara\.org/i,
-    /Merci d'avoir regard[ée] la (vidéo|vid[ée]o)!?/i
-  ];
-
-  // Suppression des correspondances exactes
-  filterOutBiasesStatics.forEach(bias => {
-    text = text.replaceAll(bias, "");
-  });
-
-  // Suppression des correspondances via regex
-  regexPatterns.forEach(pattern => {
-    text = text.replace(pattern, "");
-  });
-
-  // Nettoyage des espaces inutiles
-  return text.trim();
+function stopSystemTranscription() {
+  clearInterval(systemTranscription);
 }
 
 // ----------------- Gestion du bouton Micro Capture -----------------
@@ -466,33 +409,80 @@ micButton.addEventListener("click", async () => {
   if (!isMicRecording) {
     micMediaStream = await getMicMedia();
     if (micMediaStream) {
-      mediaRecorder = startMediaRecorder(micMediaStream, async (blob) => {
-        if (blob) {
-          // Transcription via Whisper
-          const text = await transcribeViaAssemblyAI(blob);
-          if (text) {
-            const filteredText = filterTranscription(text);
-            if (filteredText !== "") {
-              conversationContextDialogs += `\n[${UserMicName}] ${filteredText}`;
-              await updateConversationContext();
-            }
-          }
-        }
-      });
-      if (mediaRecorder) {
+      // Lance l'enregistrement
+      videoElement.srcObject = micMediaStream;
+      videoElement.autoplay = true;
+      // Créer un contexte audio
+      micAudioContext = new AudioContext();
+      // Créer une source audio
+      micSource = micAudioContext.createMediaStreamSource(micMediaStream);
+      // Créer un processeur audio
+      micRecorder = micAudioContext.createScriptProcessor(4096, 1, 1);
+      // Connecter la source à l'enregistreur
+      micSource.connect(micRecorder);
+      // Connecter l'enregistreur à la destination
+      micRecorder.connect(micAudioContext.destination);
+      // Démarrer l'enregistrement
+      micRecorder.onaudioprocess = (event) => {
+        const audioData = event.inputBuffer.getChannelData(0);
+        micBuffer.push(new Float32Array(audioData));
+      };
+      if (micRecorder) {
         isMicRecording = true;
         lastSummaryTime = Date.now();
         micButton.innerText = "Stop Mic";
+        startMicTranscription();
       }
     }
   } else {
     isMicRecording = false;
     micMediaStream?.getTracks().forEach(t => t.stop());
     micMediaStream = null;
-    if (mediaRecorder) mediaRecorder.stop();
+    if (micRecorder) {
+      micRecorder.onaudioprocess = null;
+      micSource.disconnect(micRecorder);
+      micRecorder.disconnect(micAudioContext.destination);
+    }
+    micAudioContext.close();
     micButton.innerText = "Start Mic";
+    stopMicTranscription();
   }
 });
+
+function startMicTranscription() {
+  micTranscription = setInterval( async function() {
+    if (micBuffer.length > 0) {
+      const audioBuffer = micBuffer.reduce((acc, val) => {
+        const tmp = new Float32Array(acc.length + val.length);
+        tmp.set(acc, 0);
+        tmp.set(val, acc.length);
+        return tmp;
+      }, new Float32Array());
+  
+      const wavBlob = bufferToWaveBlob(audioBuffer, micAudioContext.sampleRate);
+      
+      micBuffer = [];
+
+      if (wavBlob) {
+          // Transcription via Whisper
+          const text = await transcribeViaWhisper(wavBlob);
+          if (text) {
+            const filteredText = filterTranscription(text);
+            if (filteredText !== "") {  
+              
+              conversationContextDialogs += `\n[${UserMicName}] ${filteredText}`;
+              await updateConversationContext();
+            
+            }       
+          }
+      }
+    }
+}, timeslice);
+}
+
+function stopMicTranscription() {
+  clearInterval(micTranscription);
+}
 
 // ----------------- Génération de suggestions -----------------
 suggestionButton.addEventListener("click", async () => {
@@ -504,13 +494,26 @@ suggestionButton.addEventListener("click", async () => {
   }
 });
 
-/**
- * Envoie le blob à l’API Whisper pour transcription.
- */
+function bufferToWaveBlob(audioBuffer, sampleRate) {
+  // On crée une instance WaveFile
+  const wav = new WaveFile();
+  // On y injecte nos données brutes (32 bits float, mono)
+  wav.fromScratch(1, sampleRate, '32f', audioBuffer);
+
+  // On récupère ensuite un Blob WAV valide
+  const wavBlob = new Blob([wav.toBuffer()], { type: 'audio/wav' });
+  return wavBlob;
+}
+
+
 async function transcribeViaWhisper(blob) {
+
   const formData = new FormData();
   formData.append('audio', blob);
   formData.append('langCode', langSelected);
+  formData.append('model', 'whisper-1');
+  formData.append('mimeType', MIME_TYPE_WAV);
+  formData.append('fileName', AUDIO_WAV_FILE_NAME);
 
   try {
     const response = await fetch(TRANSCRIBE_WHISPER_API_URL, {
@@ -524,6 +527,7 @@ async function transcribeViaWhisper(blob) {
     console.error('Error calling Whisper endpoint:', err);
     return '';
   }
+
 }
 
 /**
@@ -604,4 +608,49 @@ async function generateSummary(context) {
     console.error('Error calling Summary endpoint:', err);
     return 'Error';
   }
+}
+
+/**
+ * Filtre les textes indésirables dans une transcription.
+ * @param {string} text - La transcription à nettoyer.
+ * @returns {string} - Le texte nettoyé.
+ */
+function filterTranscription(text) {
+  const filterOutBiasesStatics = [
+    "Merci d'avoir regardé cette vidéo.",
+    "Merci d'avoir regardé cette vidéo!",
+    "Merci d'avoir regardé cette vidéo !",
+    "Merci d'avoir regardé la vidéo.",
+    "J'espère que vous avez apprécié la vidéo.",
+    "Je vous remercie de vous abonner",
+    "Sous-titres réalisés para la communauté d'Amara.org",
+    "Sous-titres réalisés para la communauté d'Amara.org",
+    "Merci d'avoir regardé!",
+    "❤️ par SousTitreur.com",
+    "— Sous-titrage ST'501 —",
+    "Sous-titrage ST' 501",
+    "Thanks for watching!",
+    "Sous-titrage Société Radio-Canada",
+    "sous-titres faits par la communauté d'Amara.org",
+    "Merci."
+  ];
+
+  // Expressions régulières pour détecter des variantes dynamiques
+  const regexPatterns = [
+    /Sous-titres? r[ée]alis[ée]s? (par|para) la communaut[ée] d'Amara\.org/i,
+    /Merci d'avoir regard[ée] la (vidéo|vid[ée]o)!?/i
+  ];
+
+  // Suppression des correspondances exactes
+  filterOutBiasesStatics.forEach(bias => {
+    text = text.replaceAll(bias, "");
+  });
+
+  // Suppression des correspondances via regex
+  regexPatterns.forEach(pattern => {
+    text = text.replace(pattern, "");
+  });
+
+  // Nettoyage des espaces inutiles
+  return text.trim();
 }
