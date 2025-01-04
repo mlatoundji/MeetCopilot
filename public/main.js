@@ -409,9 +409,6 @@ micButton.addEventListener("click", async () => {
   if (!isMicRecording) {
     micMediaStream = await getMicMedia();
     if (micMediaStream) {
-      // Lance l'enregistrement
-      videoElement.srcObject = micMediaStream;
-      videoElement.autoplay = true;
       // Créer un contexte audio
       micAudioContext = new AudioContext();
       // Créer une source audio
