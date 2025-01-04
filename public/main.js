@@ -385,7 +385,7 @@ function startSystemTranscription() {
 
       if (wavBlob) {
           // Transcription via Whisper
-          const text = await transcribeViaWhisper(wavBlob);
+          const text = await transcribeViaAssemblyAI(wavBlob);
           if (text) {
             const filteredText = filterTranscription(text);
             if (filteredText !== "") {  
@@ -462,7 +462,7 @@ function startMicTranscription() {
 
       if (wavBlob) {
           // Transcription via Whisper
-          const text = await transcribeViaWhisper(wavBlob);
+          const text = await transcribeViaAssemblyAI(wavBlob);
           if (text) {
             const filteredText = filterTranscription(text);
             if (filteredText !== "") {  
