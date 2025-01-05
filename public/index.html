@@ -19,7 +19,7 @@
       <button id="captureButton" class="button">Start System Capture</button>
       <button id="micButton" class="button">Start Mic</button>
       <button id="suggestionButton" class="button">Generate Suggestions</button>
-      <button id="addMeetingButton" class="button">Add Meeting</button>
+      <button id="addMeetingInfosButton" class="button">Add Meeting Infos</button>
 
       <!-- Language dropdown below the buttons -->
       <label for="langSelect" class="language-label">Language:</label>
@@ -48,18 +48,13 @@
   <!-- MODAL + OVERLAY -->
   <div id="modalOverlay" class="modal-overlay"></div>
   <div id="meetingModal" class="meeting-modal">
-    <h2>Add Meeting</h2>
+    <h2>Add Meeting Infos</h2>
     <div id="dynamicFields"></div>
     <div class="modal-buttons">
-      <button id="saveMeetingButton" class="button">Validate</button>
-      <button id="closeMeetingButton" class="button-secondary">Close</button>
+      <button id="saveMeetingInfosButton" class="button">Validate</button>
+      <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
     </div>
   </div>
-  <script type="importmap">
-    { "imports": {
-        "wavefile":   "https://cdn.skypack.dev/wavefile"
-    } }
-  </script> 
-  <script type="module" src="main.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
