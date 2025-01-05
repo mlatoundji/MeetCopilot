@@ -3,13 +3,13 @@
  * and managing button event listeners.
  */
 
+const SYSTEM_SOURCE = 'system';
 export class UIHandler {
 
-    
-
     constructor() {
-      this.captureButton = document.getElementById("captureButton");
-      this.micButton = document.getElementById("micButton");
+        this.isRecording = false;
+      this.systemCaptureButton = document.getElementById("systemCaptureButton");
+      this.micCaptureButton = document.getElementById("micCaptureButton");
       this.suggestionButton = document.getElementById("suggestionButton");
       this.transcriptionDiv = document.getElementById("transcription");
       this.suggestionsDiv = document.getElementById("suggestions");
@@ -27,15 +27,85 @@ export class UIHandler {
         "Informations sur le candidat (utilisateur)", 
         "Informations complémentaires"
       ];
-      
+
       this.langSelect = document.getElementById("langSelect");
       this.defaultLang = "fr";
+      
   
       this.supportedLangs = [
         { code: "fr", label: "Français" },
         { code: "en", label: "English" },
       ];
+
+      this.translations = {
+        fr: {
+          systemButtonStart: "Démarrer la capture système",
+          systemButtonStop: "Arrêter la capture système",
+          micButtonStart: "Démarrer la capture micro",
+          micButtonStop: "Arrêter la capture micro",
+          suggestionButton: "Générer des suggestions",
+          addMeetingInfosButton: "Ajouter des infos de réunion",
+          saveMeetingInfosButton: "Enregistrer les infos de réunion",
+          closeMeetingInfosButton: "Fermer",
+          transcriptionPlaceholder: "La transcription apparaîtra ici...",
+          suggestionsPlaceholder: "Les suggestions apparaîtront ici.",
+          meetingsInfosLabels : [
+              "Titre du poste", 
+              "Missions", 
+              "Informations sur l'entreprise",
+              "Informations sur le candidat (utilisateur)", 
+              "Informations complémentaires"
+            ]
+        },
+        en: {
+          systemButtonStart: "Start System Capture",
+          systemButtonStop: "Stop System Capture",
+          micButtonStart: "Start Mic Capture",
+          micButtonStop: "Stop Mic Capture",
+          suggestionButton: "Generate Suggestions",
+          addMeetingInfosButton: "Add Meeting Infos",
+          saveMeetingInfosButton: "Save Meeting Infos",
+          closeMeetingInfosButton: "Close",
+          transcriptionPlaceholder: "Transcription will appear here...",
+          suggestionsPlaceholder: "Suggestions will appear here.",
+          meetingsInfosLabels : [
+              "Job Title", 
+              "Missions", 
+              "Company Information",
+              "Candidate Information (User)", 
+              "Additional Information"
+            ]
+        },
+      };
+
+      this.selectedTranslations = this.translations[this.defaultLang];
+    
+      this.videoElement = document.getElementById("screen-capture");
+
     }
+
+    translateUI(lang) {
+        
+        const uiElements = {
+          suggestionButton: this.suggestionButton,
+          addMeetingInfosButton: this.addMeetingInfosButton,
+          saveMeetingInfosButton: this.saveMeetingInfosButton,
+          closeMeetingInfosButton: this.closeMeetingInfosButton,
+        };
+
+        this.selectedTranslations = this.translations[lang];
+            
+        Object.keys(uiElements).forEach((key) => {
+          if (uiElements[key]) {
+            uiElements[key].textContent = this.selectedTranslations[key];
+          }
+        });
+        this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+        this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+        this.updateTranscription(this.selectedTranslations.transcriptionPlaceholder);
+        this.updateSuggestions(this.selectedTranslations.suggestionsPlaceholder);
+        this.meetingsInfosLabels = this.selectedTranslations.meetingsInfosLabels;
+      }
   
     /**
      * Initializes the UI by populating language options and setting event listeners.
@@ -47,6 +117,7 @@ export class UIHandler {
         const selectedLang = this.langSelect.value;
         onLangChange(selectedLang);
       });
+      this.translateUI(this.defaultLang);
     }
   
     /**
@@ -84,9 +155,29 @@ export class UIHandler {
      * @param {boolean} isRecording - Whether recording is active.
      */
     toggleCaptureButton(type, isRecording) {
-      const button = type === "system" ? this.captureButton : this.micButton;
-      button.textContent = isRecording ? `Stop ${type} Capture` : `Start ${type} Capture`;
+        this.isRecording = isRecording;
+        switch (type) {
+        case SYSTEM_SOURCE:
+            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+            break;
+        default:
+            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+          break;
+        }
     }
+
+    populateVideoElement(stream) {
+        this.videoElement.srcObject = stream;
+        this.videoElement.onloadedmetadata = () => {
+          this.videoElement.play();
+        };
+    }
+
+    closeVideoElement() {
+        this.videoElement.pause();
+        this.videoElement.srcObject = null;
+    }
+
 
     populateMeetingModal(){
         dynamicFields.innerHTML = ""; 
@@ -111,8 +202,8 @@ export class UIHandler {
     }
   
     attachCaptureEventListeners(onSystemCapture, onMicCapture) {
-        this.captureButton.addEventListener("click", onSystemCapture);
-        this.micButton.addEventListener("click", onMicCapture);
+        this.systemCaptureButton.addEventListener("click", onSystemCapture);
+        this.micCaptureButton.addEventListener("click", onMicCapture);
     }
     attachSuggestionEventListeners(onGenerateSuggestions) {;
         this.suggestionButton.addEventListener("click", onGenerateSuggestions);
@@ -127,9 +218,9 @@ export class UIHandler {
         if (event.code === "Space" && meetingModal.style.display === "none") {
             this.suggestionButton.click();
         } else if (event.code === "KeyM") {
-            this.micButton.click();
+            this.micCaptureButton.click();
         } else if (event.code === "KeyC") {
-            this.captureButton.click();
+            this.systemCaptureButton.click();
         }
         });
     }

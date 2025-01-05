@@ -13,6 +13,10 @@ export class TranscriptionHandler {
     this.fileName = 'audio.wav';
   }
 
+  async applyTranslation(langCode) {
+    this.language = langCode;
+  }
+
   /**
    * Sends audio data to the transcription API.
    * @param {Blob} audioBlob - The audio data to be transcribed.
@@ -20,11 +24,11 @@ export class TranscriptionHandler {
    * @param {string} model - The transcription model to use.
    * @returns {Promise<string>} - The transcribed text.
    */
-  async transcribeAudio(audioBlob, langCode, model = 'whisper-1') {
+  async transcribeAudio(audioBlob) {
     const formData = new FormData();
     formData.append('audio', audioBlob);
-    formData.append('langCode', langCode?? this.language);
-    formData.append('model', model?? this.model);
+    formData.append('langCode', this.language);
+    formData.append('model', this.model);
     formData.append('mimeType', this.mimeType);
     formData.append('fileName', this.fileName);
 

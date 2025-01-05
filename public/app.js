@@ -12,11 +12,14 @@ const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assembly
 const SUGGESTIONS_API_URL = "http://localhost:3000/suggestions";
 const SUMMARY_API_URL = "http://localhost:3000/summary";
 
+const SYSTEM_SOURCE = 'system';
+const MIC_SOURCE = 'mic';
+
 
 // Initialize handlers
 const audioCapture = new AudioCapture();
-const transcriptionHandler = new TranscriptionHandler(TRANSCRIPTION_WHISPER_API_URL);
 const uiHandler = new UIHandler();
+const transcriptionHandler = new TranscriptionHandler(TRANSCRIPTION_WHISPER_API_URL);
 const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_API_URL);
 const conversationContextHandler = new ConversationContextHandler(SUMMARY_API_URL);
 
@@ -27,11 +30,13 @@ let currentLanguage = uiHandler.defaultLang;
 async function handleSystemCapture() {
   if (!audioCapture.isSystemRecording) {
     await audioCapture.startSystemCapture();
-    uiHandler.toggleCaptureButton('system', true);
-    await startTranscription('system');
+    uiHandler.toggleCaptureButton(SYSTEM_SOURCE, true);
+    uiHandler.populateVideoElement(audioCapture.systemMediaStream);
+    await startTranscription(SYSTEM_SOURCE);
   } else {
     audioCapture.stopSystemCapture();
-    uiHandler.toggleCaptureButton('system', false);
+    uiHandler.toggleCaptureButton(SYSTEM_SOURCE, false);
+    uiHandler.closeVideoElement();
   }
 }
 
@@ -39,19 +44,19 @@ async function handleSystemCapture() {
 async function handleMicCapture() {
   if (!audioCapture.isMicRecording) {
     await audioCapture.startMicCapture();
-    uiHandler.toggleCaptureButton('mic', true);
-    await startTranscription('mic');
+    uiHandler.toggleCaptureButton(MIC_SOURCE, true);
+    await startTranscription(MIC_SOURCE);
   } else {
     audioCapture.stopMicCapture();
-    uiHandler.toggleCaptureButton('mic', false);
+    uiHandler.toggleCaptureButton(MIC_SOURCE, false);
   }
 }
 
 // Function to start transcription for a specific source
 async function startTranscription(source) {
   const intervalId = setInterval(async () => {
-    const buffer = source === 'system' ? audioCapture.systemBuffer : audioCapture.micBuffer;
-    const contextLabel = source === 'system' ? 'System' : 'Mic';
+    const buffer = source === SYSTEM_SOURCE ? audioCapture.systemBuffer : audioCapture.micBuffer;
+    const contextLabel = source === SYSTEM_SOURCE ? conversationContextHandler.systemLabel : conversationContextHandler.micLabel;
 
     if (buffer.length > 0) {
       const audioBuffer = buffer.reduce((acc, val) => {
@@ -64,7 +69,7 @@ async function startTranscription(source) {
       const wavBlob = transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
       buffer.length = 0; // Clear buffer
 
-      const transcription = await transcriptionHandler.transcribeAudio(wavBlob, currentLanguage);
+      const transcription = await transcriptionHandler.transcribeAudio(wavBlob);
       if (transcription) {
         console.log(`Transcription (${contextLabel}):`, transcription);
         const filteredText = filterTranscription(transcription);
@@ -76,7 +81,7 @@ async function startTranscription(source) {
     }
   }, audioCapture.timeslice);
 
-  if (source === 'system') {
+  if (source === SYSTEM_SOURCE) {
     audioCapture.systemTranscriptionInterval = intervalId;
   } else {
     audioCapture.micTranscriptionInterval = intervalId;
@@ -102,7 +107,7 @@ function handleSaveMeetingInfos() {
     return input.value.trim();
   });
   conversationContextHandler.conversationContextMeetingInfosText =  uiHandler.meetingsInfosLabels.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
-  console.log("Détails de la réunion :\n", conversationContextHandler.conversationContextMeetingInfosText);
+  console.log("Meetings details :\n", conversationContextHandler.conversationContextMeetingInfosText);
 
   uiHandler.closeMeetingModal();
 }
@@ -110,11 +115,13 @@ function handleSaveMeetingInfos() {
 // Function to handle language change
 function handleLanguageChange(newLang) {
   currentLanguage = newLang;
+  applyTranslations(currentLanguage);
 }
 
 function applyTranslations(lang) {
   uiHandler.translateUI(lang);
   conversationContextHandler.translateContext(lang);
+  transcriptionHandler.applyTranslation(lang);
 }
 
 // Initialize UI and attach event listeners

@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 
 export const generateSummary = async (req, res) => {
     try {
+        console.log("Generate Summary...");
       const systemPrompt = `
         Tu es un assistant IA chargé de résumer un segment de conversation. 
         Le résumé doit être concis (100-200 mots max) et mettre en avant les points clés et éventuellement la dernière question posée par l'interlocuteur [System]. 
@@ -28,9 +29,10 @@ export const generateSummary = async (req, res) => {
   
       const data = await response.json();
       if (!response.ok) {
+        console.log("Summary error: ", data);
         return res.status(response.status).json({ error: data });
       }
-  
+        console.log("Summary generated: ", data.choices[0].message.content);
       res.json({ summary: data.choices[0].message.content });
     } catch (error) {
       console.error(error);

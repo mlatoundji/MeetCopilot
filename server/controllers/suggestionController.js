@@ -2,12 +2,15 @@ import fetch from 'node-fetch';
 
 export const generateSuggestions = async (req, res) => {
     try {
+    console.log("Generate Suggestions...");
+
       const systemPrompt = `
         Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
         suggestions de réponses d'utilisateurs dans une conversation.
         Fournissez 3 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
         Basez vos suggestions sur le contexte ci-dessous :
       `;
+      
   
       const { context } = req.body;
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -29,9 +32,11 @@ export const generateSuggestions = async (req, res) => {
   
       const data = await response.json();
       if (!response.ok) {
+        console.log("Suggestions error: ", data);
         return res.status(response.status).json({ error: data });
       }
-  
+      console.log("Suggestions generated: ", data.choices[0].message.content);
+
       res.json({ suggestions: data.choices[0].message.content });
     } catch (error) {
       console.error(error);

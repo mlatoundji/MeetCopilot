@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "node ./server/server.js"
+    "start": "node ./server/main.js"
   },
   "name": "meetcopilot",
   "version": "1.0.0",
