@@ -1,6 +1,13 @@
 {
   "scripts": {
-    "start": "node server.js"
+    "start": "node ./server/main.js",
+    "test": "jest"
+  },
+  "jest": {
+    "testMatch": [
+      "**/tests/**/*.js?(x)",
+      "**/?(*.)+(spec|test).js?(x)"
+    ]
   },
   "name": "meetcopilot",
   "version": "1.0.0",
@@ -11,5 +18,8 @@
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
