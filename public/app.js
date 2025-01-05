@@ -72,7 +72,7 @@ async function startTranscription(source) {
       const transcription = await transcriptionHandler.transcribeAudio(wavBlob);
       if (transcription) {
         console.log(`Transcription (${contextLabel}):`, transcription);
-        const filteredText = filterTranscription(transcription);
+        const filteredText = filterTranscription(transcription, currentLanguage);
         if(filteredText === "") return;
         conversationContextHandler.conversationContextDialogs.push({speaker: contextLabel, text: filteredText, time: Date.now(), language: currentLanguage, source: source});
         await conversationContextHandler.updateConversationContext();

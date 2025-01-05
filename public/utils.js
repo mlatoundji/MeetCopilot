@@ -29,38 +29,64 @@ export const downloadBlob = async(blob, fileName) => {
     URL.revokeObjectURL(url);
 };
 
-export const filterTranscription = (text) => {
-    const filterOutBiasesStatics = [
-      "Merci d'avoir regardé cette vidéo.",
-      "Merci d'avoir regardé cette vidéo!",
-      "Merci d'avoir regardé cette vidéo !",
-      "Merci d'avoir regardé la vidéo.",
-      "J'espère que vous avez apprécié la vidéo.",
-      "Je vous remercie de vous abonner",
-      "Sous-titres réalisés para la communauté d'Amara.org",
-      "Sous-titres réalisés para la communauté d'Amara.org",
-      "Merci d'avoir regardé!",
-      "❤️ par SousTitreur.com",
-      "— Sous-titrage ST'501 —",
-      "Sous-titrage ST' 501",
-      "Thanks for watching!",
-      "Sous-titrage Société Radio-Canada",
-      "sous-titres faits par la communauté d'Amara.org",
-      "Merci."
-    ];
-  
-    const regexPatterns = [
-      /Sous-titres? r[ée]alis[ée]s? (par|para) la communaut[ée] d'Amara\.org/i,
-      /Merci d'avoir regard[ée] la (vidéo|vid[ée]o)!?/i
-    ];
-  
-    filterOutBiasesStatics.forEach(bias => {
-      text = text.replaceAll(bias, "");
+export const filterTranscription = (text, lang) => {
+    const filterOutBiasesStatics = {
+        fr: [
+            "Merci d'avoir regardé cette vidéo.",
+            "Merci d'avoir regardé cette vidéo!",
+            "Merci d'avoir regardé cette vidéo !",
+            "Merci d'avoir regardé la vidéo.",
+            "J'espère que vous avez apprécié la vidéo.",
+            "Je vous remercie de vous abonner",
+            "Sous-titres réalisés para la communauté d'Amara.org",
+            "Sous-titres réalisés para la communauté d'Amara.org",
+            "Merci d'avoir regardé!",
+            "❤️ par SousTitreur.com",
+            "— Sous-titrage ST'501 —",
+            "Sous-titrage ST' 501",
+            "Thanks for watching!",
+            "Sous-titrage Société Radio-Canada",
+            "sous-titres faits par la communauté d'Amara.org",
+            "Merci."
+        ],
+        en: [
+            "Thank you for watching this video.",
+            "Thank you for watching this video!",
+            "Thank you for watching this video !",
+            "Thank you for watching the video.",
+            "I hope you enjoyed the video.",
+            "Thank you for subscribing",
+            "Subtitles made by the Amara.org community",
+            "Subtitles made by the Amara.org community",
+            "Thank you for watching!",
+            "❤️ by SousTitreur.com",
+            "— Subtitling ST'501 —",
+            "Subtitling ST' 501",
+            "Thanks for watching!",
+            "Subtitling Société Radio-Canada",
+            "subtitles made by the Amara.org community",
+            "Thank you."
+        ]
+    };
+
+    const regexPatterns = {
+        fr: [
+            /Sous-titres? r[ée]alis[ée]s? (par|para) la communaut[ée] d'Amara\.org/i,
+            /Merci d'avoir regard[ée] la (vidéo|vid[ée]o)!?/i
+        ],
+        en: [
+            /Subtitles? made by the Amara\.org community/i,
+            /Thank you for watching the video!?/i
+        ]
+    };
+
+    filterOutBiasesStatics[lang].forEach(bias => {
+        text = text.replaceAll(bias, "");
     });
-  
-    regexPatterns.forEach(pattern => {
-      text = text.replace(pattern, "");
+
+    regexPatterns[lang].forEach(pattern => {
+        text = text.replace(pattern, "");
     });
-  
+
     return text.trim();
-  }
+};
