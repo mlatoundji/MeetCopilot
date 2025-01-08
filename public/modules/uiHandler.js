@@ -216,12 +216,15 @@ export class UIHandler {
     initializeKeydownEventListeners() {        
         document.addEventListener("keydown", (event) => {
         if (event.code === "Space" && meetingModal.style.display === "none") {
+            event.preventDefault();
             this.suggestionButton.click();
-        } else if (event.code === "KeyM") {
-            this.micCaptureButton.click();
-        } else if (event.code === "KeyC") {
-            this.systemCaptureButton.click();
         }
+        //else if (event.code === "KeyM") {
+        //     this.micCaptureButton.click();
+        // } 
+        // else if (event.code === "KeyC") {
+        //     this.systemCaptureButton.click();
+        // }
         });
     }
 

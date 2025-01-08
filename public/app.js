@@ -19,7 +19,7 @@ const MIC_SOURCE = 'mic';
 // Initialize handlers
 const audioCapture = new AudioCapture();
 const uiHandler = new UIHandler();
-const transcriptionHandler = new TranscriptionHandler(TRANSCRIPTION_WHISPER_API_URL);
+const transcriptionHandler = new TranscriptionHandler(TRANSCRIBE_ASSEMBLYAI_API_URL);
 const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_API_URL);
 const conversationContextHandler = new ConversationContextHandler(SUMMARY_API_URL);
 

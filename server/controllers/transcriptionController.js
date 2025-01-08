@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 
 export const transcribeWhisper = async (req, res) => {
   try {
+    console.log("Transcribe via Whisper...");
     const mimeType = req.body.mimeType || 'audio/wav';
     const filename = req.body.filename || 'audio.wav';
     const model = req.body.model || 'whisper-1';
@@ -35,6 +36,7 @@ export const transcribeWhisper = async (req, res) => {
 
 export const transcribeAssemblyAI = async (req, res) => {
   try {
+    console.log("Transcribe via AssemblyAI...");
     const language = req.body.langCode?? 'fr';
     const uploadResp = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
@@ -62,16 +64,32 @@ export const transcribeAssemblyAI = async (req, res) => {
     });
 
     const transcript = await transcriptResp.json();
+    const transcriptId = transcript.id;
 
-    if (transcript.status === 'completed') {
-      res.json({ transcription: transcript.text });
-    } else if (transcript.status === 'processing') {
-      res.status(202).json({ message: 'Transcription is still processing. Please try again later.' });
-    } else if (transcript.status === 'failed') {
-      res.status(500).json({ error: transcript.error || 'Transcription failed due to an unknown error.' });
-    } else {
-      res.status(400).json({ error: `Unexpected status: ${transcript.status}` });
+    let completed = false;
+
+    while (!completed) {
+      await new Promise(r => setTimeout(r, 100));
+      const statusResp = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+        headers: {
+          Authorization: process.env.ASSEMBLYAI_API_KEY,
+        },
+      });
+
+      const statusData = await statusResp.json();
+      if (statusData.status === 'completed') {
+        completed = true;
+        console.log('Transcription completed:', statusData.text);
+        return res.json({ transcription: statusData.text });
+      } else if (statusData.status === 'failed') {
+        console.error('Transcription failed:', statusData.error);
+        return res.status(500).json({ error: statusData.error || 'Transcription failed due to an unknown error.' });
+      }
+      else {
+        console.log('Transcription status:', statusData.status);
+      }
     }
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });

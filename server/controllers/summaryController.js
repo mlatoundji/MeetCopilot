@@ -4,9 +4,12 @@ export const generateSummary = async (req, res) => {
     try {
         console.log("Generate Summary...");
       const systemPrompt = `
-        Tu es un assistant IA chargé de résumer un segment de conversation. 
-        Le résumé doit être concis (100-200 mots max) et mettre en avant les points clés et éventuellement la dernière question posée par l'interlocuteur [System]. 
-        Tes réponses doivent être claires et précises et se concentrer sur les informations les plus importantes.
+  Tu es un assistant IA chargé de résumer un segment de conversation. 
+  Le résumé doit être concis (100-200 mots max) et mettre en avant les points clés et éventuellement la dernière question posée par l'interlocuteur [System]. 
+  Tes réponses doivent être claires et précises et se concentrer sur les informations les plus importantes.
+  Voici le format de la réponse attendue :
+  - Points clés : ...
+  - Dernière question : ...
       `;
   
       const { context } = req.body;
@@ -17,7 +20,7 @@ export const generateSummary = async (req, res) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: context },

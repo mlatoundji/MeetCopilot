@@ -76,7 +76,7 @@ export class ConversationContextHandler {
         if ((now - this.lastSummaryTime) >= this.summaryInterval) {
         
             this.lastSummaryTime = now;
-        const summary = await this.generateSummary(this.conversationContextText);
+            const summary = await this.generateSummary(this.conversationContextText);
     
             if(summary != null){
         
@@ -99,12 +99,16 @@ export class ConversationContextHandler {
         }
     
         if(this.conversationContextSummaries.length > 0 && lastSummariesCount < this.conversationContextSummaries.length && res != null){
-            this.conversationContextDialogsIndexStart = this.conversationContextSummaries.length - 3;
+            let malus = this.conversationContextDialogs.length > 0 ? 1 : 0;
+            this.conversationContextDialogsIndexStart = this.conversationContextDialogs.length - malus;
+            console.log("this.conversationContextDialogsIndexStart", this.conversationContextDialogsIndexStart);
         }
     
         this.conversationContextDialogsText = this.conversationContextDialogs.length > 0 ? this.conversationContextDialogsHeaderText : "";
         this.conversationContextDialogsText += this.conversationContextDialogs.map((key, index) => `[${key.speaker}] ${key.text}`).slice(this.conversationContextDialogsIndexStart, this.conversationContextDialogs.length).join("\n");
         
+        console.log("Words count : ", this.conversationContextText.split(" ").length);
+
         this.conversationContextText = `
         ${this.conversationContextHeaderText}
         ${this.conversationContextSummariesText} 
@@ -114,11 +118,13 @@ export class ConversationContextHandler {
 
     async generateSummary(context) {
         try {
+          let start = Date.now();
           const response = await callApi(this.summaryApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ context }),
           });
+          console.log("Summary generated in ", Date.now() - start, "ms");
           return response.summary || 'No summary generated';
         } catch (error) {
           console.error('Error generating summary:', error);
