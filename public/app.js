@@ -7,9 +7,10 @@ import { filterTranscription } from './utils.js';
 
 
 // URLs for API endpoints
-const TRANSCRIPTION_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
+const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
 const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
-const SUGGESTIONS_API_URL = "http://localhost:3000/suggestions";
+const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/mistral";
+const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
 const SUMMARY_API_URL = "http://localhost:3000/summary";
 
 const SYSTEM_SOURCE = 'system';
@@ -20,7 +21,7 @@ const MIC_SOURCE = 'mic';
 const audioCapture = new AudioCapture();
 const uiHandler = new UIHandler();
 const transcriptionHandler = new TranscriptionHandler(TRANSCRIBE_ASSEMBLYAI_API_URL);
-const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_API_URL);
+const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_MISTRAL_API_URL);
 const conversationContextHandler = new ConversationContextHandler(SUMMARY_API_URL);
 
 // Current language selection
@@ -29,6 +30,8 @@ let currentLanguage = uiHandler.defaultLang;
 // Function to handle system audio capture
 async function handleSystemCapture() {
   if (!audioCapture.isSystemRecording) {
+    // conversationContextHandler.resetConversationContext();
+    conversationContextHandler.lastSummaryTime = Date.now();
     await audioCapture.startSystemCapture();
     uiHandler.toggleCaptureButton(SYSTEM_SOURCE, true);
     uiHandler.populateVideoElement(audioCapture.systemMediaStream);
@@ -106,7 +109,9 @@ function handleSaveMeetingInfos() {
     const input = document.getElementById(`input-${key}`);
     return input.value.trim();
   });
-  conversationContextHandler.conversationContextMeetingInfosText =  uiHandler.meetingsInfosLabels.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
+  let details =  uiHandler.meetingsInfosLabels.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
+  conversationContextHandler.updateMeetingInfosText(details);
+  conversationContextHandler.updateConversationContextHeadersText();
   console.log("Meetings details :\n", conversationContextHandler.conversationContextMeetingInfosText);
 
   uiHandler.closeMeetingModal();
