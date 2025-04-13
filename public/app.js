@@ -9,7 +9,7 @@ import { filterTranscription } from './utils.js';
 // URLs for API endpoints
 const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
 const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
-const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/mistral";
+const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/local";
 const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
 const SUMMARY_API_URL = "http://localhost:3000/summary";
 

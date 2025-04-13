@@ -28,12 +28,10 @@ export const initializeLocalLLM = async () => {
             console.log('Initializing Local Mistral LLM...');
             console.log(`Model path: ${MODEL_PATH}`);
             
-            // Verify model file exists
             if (!fs.existsSync(MODEL_PATH)) {
                 throw new Error(`Model file not found at ${MODEL_PATH}`);
             }
 
-            // Initialize the model with optimized settings from config
             const modelConfig = {
                 modelPath: MODEL_PATH,
                 contextSize: LLMConfig.contextSize,
@@ -49,33 +47,21 @@ export const initializeLocalLLM = async () => {
 
             console.log('Model configuration:', modelConfig);
             
-            // Create model instance with error handling
-            try {
-                model = await LlamaModel.create(modelConfig);
-                if (!model) {
-                    throw new Error('Failed to create LlamaModel instance');
-                }
-            } catch (modelError) {
-                console.error('Error creating LlamaModel:', modelError);
-                throw new Error(`Failed to initialize model: ${modelError.message}`);
+            model = new LlamaModel(modelConfig);
+            if (!model) {
+                throw new Error('Failed to create LlamaModel instance');
             }
 
-            // Create context with error handling
-            try {
-                const contextConfig = {
-                    model,
-                    threads: LLMConfig.numThreads,
-                    batchSize: LLMConfig.batchSize,
-                    contextSize: LLMConfig.contextSize,
-                };
-                context = new LlamaContext(contextConfig);
-                if (!context) {
-                    throw new Error('Failed to create LlamaContext instance');
-                }
-            } catch (contextError) {
-                console.error('Error creating LlamaContext:', contextError);
-                cleanupLocalLLM();
-                throw new Error(`Failed to initialize context: ${contextError.message}`);
+            const contextConfig = {
+                model,
+                threads: LLMConfig.numThreads,
+                batchSize: LLMConfig.batchSize,
+                contextSize: LLMConfig.contextSize,
+            };
+            
+            context = new LlamaContext(contextConfig);
+            if (!context) {
+                throw new Error('Failed to create LlamaContext instance');
             }
             
             isInitialized = true;
@@ -110,14 +96,15 @@ export const generateLocalSuggestions = async (userContext) => {
             console.log('Generating suggestions with local LLM...');
         }
 
+        // Optimize context length
+        const truncatedContext = userContext.slice(0, 200);
+
         const session = new LlamaChatSession({
             context,
-            systemPrompt: `You are an AI assistant specialized in synthesizing and generating user response suggestions in a conversation.
-            Provide 2 potential response suggestions (100-200 words each) in bullet points to the last detected question.
-            Base your suggestions on the context below:`,
+            systemPrompt: 'Generate 2 brief suggestions:',
         });
 
-        const response = await session.prompt(userContext, {
+        const response = await session.prompt(truncatedContext, {
             maxTokens: LLMConfig.maxTokens,
             temperature: LLMConfig.temperature,
             topP: LLMConfig.generation.topP,
@@ -147,15 +134,15 @@ export const generateLocalBatchSuggestions = async (contexts) => {
 
         const session = new LlamaChatSession({
             context,
-            systemPrompt: `You are an AI assistant specialized in synthesizing and generating user response suggestions in a conversation.
-            Provide 2 potential response suggestions (100-200 words each) in bullet points to the last detected question.
-            Base your suggestions on the context below:`,
+            systemPrompt: 'Generate 2 brief response suggestions based on the context:',
         });
 
         const responses = await Promise.all(
             contexts.map(async (context) => {
                 try {
-                    const response = await session.prompt(context, {
+                    // Limit context size
+                    const truncatedContext = context.slice(0, 100);
+                    const response = await session.prompt(truncatedContext, {
                         maxTokens: LLMConfig.maxTokens,
                         temperature: LLMConfig.temperature,
                         topP: LLMConfig.generation.topP,
@@ -167,7 +154,7 @@ export const generateLocalBatchSuggestions = async (contexts) => {
                     });
                     return { context, suggestions: response.trim() };
                 } catch (error) {
-                    console.error(`Error processing context: ${context.slice(0, 100)}...`, error);
+                    console.error(`Error processing context: ${truncatedContext.slice(0, 100)}...`, error);
                     return { context, error: error.message };
                 }
             })
@@ -189,20 +176,20 @@ export const generateLocalBatchSuggestions = async (contexts) => {
 };
 
 // Memory management and cleanup
-export const cleanupLocalLLM = () => {
-    console.log('Cleaning up LLM resources...');
-    try {
-        if (context) {
-            context.free();
-            context = null;
+export const cleanupLocalLLM = async () => {
+    if (isInitialized) {
+        try {
+            console.log('Cleaning up LLM resources...');
+            if (context) {
+                context = null;
+            }
+            if (model) {
+                model = null;
+            }
+            isInitialized = false;
+            console.log('LLM resources cleaned up successfully');
+        } catch (error) {
+            console.error('Error during cleanup:', error);
         }
-        if (model) {
-            model.free();
-            model = null;
-        }
-        isInitialized = false;
-        console.log('Cleanup completed successfully');
-    } catch (error) {
-        console.error('Error during cleanup:', error);
     }
-}; 
+} 
