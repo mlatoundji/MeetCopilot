@@ -4,14 +4,20 @@ import { UIHandler } from './modules/uiHandler.js';
 import { SuggestionsHandler } from './modules/suggestionsHandler.js';
 import { ConversationContextHandler } from './modules/conversationContextHandler.js';
 import { filterTranscription } from './utils.js';
+import { UI } from './modules/ui.js';
+import { MeetingManager } from './modules/meeting-manager.js';
+import { TranscriptionManager } from './modules/transcription-manager.js';
+import { SuggestionManager } from './modules/suggestion-manager.js';
 
 
 // URLs for API endpoints
 const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
 const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
-const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/local";
+const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/mistral";
+const SUGGESTIONS_LOCAL_API_URL = "http://localhost:3000/suggestions/local";
 const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
-const SUMMARY_API_URL = "http://localhost:3000/summary";
+const SUMMARY_MISTRAL_API_URL = "http://localhost:3000/summary/mistral";
+const SUMMARY_LOCAL_API_URL = "http://localhost:3000/summary/local";
 
 const SYSTEM_SOURCE = 'system';
 const MIC_SOURCE = 'mic';
@@ -21,8 +27,8 @@ const MIC_SOURCE = 'mic';
 const audioCapture = new AudioCapture();
 const uiHandler = new UIHandler();
 const transcriptionHandler = new TranscriptionHandler(TRANSCRIBE_ASSEMBLYAI_API_URL);
-const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_MISTRAL_API_URL);
-const conversationContextHandler = new ConversationContextHandler(SUMMARY_API_URL);
+const suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_LOCAL_API_URL);
+const conversationContextHandler = new ConversationContextHandler(SUMMARY_LOCAL_API_URL);
 
 // Current language selection
 let currentLanguage = uiHandler.defaultLang;
@@ -135,3 +141,186 @@ uiHandler.attachCaptureEventListeners(handleSystemCapture, handleMicCapture);
 uiHandler.attachSuggestionEventListeners(handleGenerateSuggestions);
 uiHandler.attachMeetingInfosEventListeners(handleAddMeetingInfos, handleCloseMeetingInfos, handleSaveMeetingInfos);
 uiHandler.initializeKeydownEventListeners();
+
+class App {
+  constructor() {
+    this.ui = new UI();
+    this.meetingManager = new MeetingManager();
+    this.transcriptionManager = new TranscriptionManager();
+    this.suggestionManager = new SuggestionManager();
+    
+    this.setupEventListeners();
+    this.loadInitialData();
+  }
+
+  setupEventListeners() {
+    // System capture button
+    document.getElementById('systemCaptureButton').addEventListener('click', () => {
+      this.meetingManager.toggleSystemCapture();
+    });
+
+    // Mic capture button
+    document.getElementById('micCaptureButton').addEventListener('click', () => {
+      this.meetingManager.toggleMicCapture();
+    });
+
+    // Suggestion button
+    document.getElementById('suggestionButton').addEventListener('click', () => {
+      this.suggestionManager.generateSuggestions();
+    });
+
+    // Add meeting info button
+    document.getElementById('addMeetingInfosButton').addEventListener('click', () => {
+      this.meetingManager.showMeetingInfoModal();
+    });
+
+    // Save meeting info button
+    document.getElementById('saveMeetingInfosButton').addEventListener('click', () => {
+      this.meetingManager.saveMeetingInfo();
+    });
+
+    // Close meeting info button
+    document.getElementById('closeMeetingInfosButton').addEventListener('click', () => {
+      this.meetingManager.closeMeetingInfoModal();
+    });
+
+    // Language selection
+    document.getElementById('langSelect').addEventListener('change', (e) => {
+      this.transcriptionManager.setLanguage(e.target.value);
+    });
+
+    // Search functionality
+    const searchInput = document.querySelector('.search-input');
+    const searchButton = document.querySelector('.search-button');
+    if (searchInput && searchButton) {
+      searchButton.addEventListener('click', () => {
+        this.searchMeetings(searchInput.value);
+      });
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          this.searchMeetings(searchInput.value);
+        }
+      });
+    }
+
+    // Audio input selection
+    const audioInputSelect = document.getElementById('audioInputSelect');
+    if (audioInputSelect) {
+      audioInputSelect.addEventListener('change', (e) => {
+        this.meetingManager.setAudioInput(e.target.value);
+      });
+    }
+  }
+
+  async loadInitialData() {
+    try {
+      // Load available languages
+      const languages = await this.transcriptionManager.getAvailableLanguages();
+      this.populateLanguageDropdown(languages);
+
+      // Load audio input devices
+      const devices = await this.meetingManager.getAudioInputDevices();
+      this.populateAudioInputDevices(devices);
+
+      // Load recent meetings
+      const recentMeetings = await this.meetingManager.getRecentMeetings();
+      this.populateRecentMeetings(recentMeetings);
+
+      // Load dashboard statistics
+      const stats = await this.meetingManager.getMeetingStatistics();
+      this.populateDashboardStats(stats);
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      this.ui.showNotification('Error loading initial data', 'error');
+    }
+  }
+
+  populateLanguageDropdown(languages) {
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect) {
+      languages.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang.code;
+        option.textContent = lang.name;
+        langSelect.appendChild(option);
+      });
+    }
+  }
+
+  populateAudioInputDevices(devices) {
+    const audioInputSelect = document.getElementById('audioInputSelect');
+    if (audioInputSelect) {
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Device ${device.deviceId}`;
+        audioInputSelect.appendChild(option);
+      });
+    }
+  }
+
+  populateRecentMeetings(meetings) {
+    const meetingsList = document.querySelector('.meetings-list');
+    if (meetingsList) {
+      meetingsList.innerHTML = meetings.map(meeting => `
+        <div class="meeting-item">
+          <h4>${meeting.title}</h4>
+          <p>${new Date(meeting.date).toLocaleDateString()}</p>
+          <button class="button" onclick="app.viewMeeting('${meeting.id}')">View</button>
+        </div>
+      `).join('');
+    }
+  }
+
+  populateDashboardStats(stats) {
+    const statsContent = document.querySelector('.stats-content');
+    if (statsContent) {
+      statsContent.innerHTML = `
+        <div class="stat-item">
+          <span class="stat-label">Total Meetings</span>
+          <span class="stat-value">${stats.totalMeetings}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Duration</span>
+          <span class="stat-value">${this.formatDuration(stats.totalDuration)}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Average Duration</span>
+          <span class="stat-value">${this.formatDuration(stats.averageDuration)}</span>
+        </div>
+      `;
+    }
+  }
+
+  formatDuration(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+
+  async searchMeetings(query) {
+    try {
+      const results = await this.meetingManager.searchMeetings(query);
+      this.populateRecentMeetings(results);
+    } catch (error) {
+      console.error('Error searching meetings:', error);
+      this.ui.showNotification('Error searching meetings', 'error');
+    }
+  }
+
+  async viewMeeting(meetingId) {
+    try {
+      const meeting = await this.meetingManager.getMeetingDetails(meetingId);
+      // Switch to history tab and display meeting details
+      document.querySelector('[data-tab="history"]').click();
+      // TODO: Implement meeting details view
+    } catch (error) {
+      console.error('Error viewing meeting:', error);
+      this.ui.showNotification('Error viewing meeting', 'error');
+    }
+  }
+}
+
+// Initialize the app
+const app = new App();
+window.app = app; // Make app available globally for debugging

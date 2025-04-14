@@ -11,6 +11,11 @@ let model = null;
 let context = null;
 let isInitialized = false;
 let initializationPromise = null;
+let conversationMemory = [];
+let responseCache = new Map();
+
+// Cache cleanup interval (5 minutes)
+const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 export const initializeLocalLLM = async () => {
     if (isInitialized) {
@@ -66,6 +71,12 @@ export const initializeLocalLLM = async () => {
             
             isInitialized = true;
             console.log('Local Mistral LLM initialized successfully');
+
+            // Start cache cleanup interval
+            setInterval(() => {
+                responseCache.clear();
+            }, CACHE_CLEANUP_INTERVAL);
+
             return true;
         } catch (error) {
             console.error('Error initializing Local LLM:', error);
@@ -92,19 +103,32 @@ export const generateLocalSuggestions = async (userContext) => {
             throw new Error('Local LLM not properly initialized');
         }
 
+        // Check cache first
+        const cacheKey = userContext.slice(0, 100);
+        const cachedResponse = responseCache.get(cacheKey);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+
         if (LLMConfig.logging.enabled) {
             console.log('Generating suggestions with local LLM...');
         }
 
-        // Optimize context length
-        const truncatedContext = userContext.slice(0, 200);
+        // Optimize context length and add conversation memory
+        const truncatedContext = userContext.slice(0, 100);
+        const fullContext = [...conversationMemory, truncatedContext].join('\n');
 
         const session = new LlamaChatSession({
             context,
-            systemPrompt: 'Generate 2 brief suggestions:',
+            systemPrompt: `
+            Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
+            suggestions de réponses d'utilisateurs dans une conversation.
+            Fournissez 2 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
+            Basez vos suggestions sur le contexte ci-dessous :
+            `,
         });
 
-        const response = await session.prompt(truncatedContext, {
+        const response = await session.prompt(fullContext, {
             maxTokens: LLMConfig.maxTokens,
             temperature: LLMConfig.temperature,
             topP: LLMConfig.generation.topP,
@@ -112,12 +136,89 @@ export const generateLocalSuggestions = async (userContext) => {
             topK: LLMConfig.generation.topK,
             presencePenalty: LLMConfig.generation.presencePenalty,
             frequencyPenalty: LLMConfig.generation.frequencyPenalty,
-            streamResponse: false,
+            streamResponse: true,  // Enable streaming for faster response
         });
+
+        // Update conversation memory
+        conversationMemory.push(truncatedContext);
+        if (conversationMemory.length > 3) {  // Reduced memory size
+            conversationMemory.shift();
+        }
+
+        // Cache the response
+        responseCache.set(cacheKey, response.trim());
 
         return response.trim();
     } catch (error) {
         console.error('Error generating local suggestions:', error);
+        throw error;
+    }
+};
+
+export const generateSummary = async (conversationHistory) => {
+    if (!isInitialized) {
+        const initialized = await initializeLocalLLM();
+        if (!initialized) {
+            throw new Error('Local LLM initialization failed');
+        }
+    }
+
+    try {
+        const session = new LlamaChatSession({
+            context,
+            systemPrompt: `
+            Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
+            résumés de conversations.
+            Fournissez un résumé concis et pertinent de la conversation ci-dessous :
+            `,
+        });
+
+        const response = await session.prompt(conversationHistory, {
+            maxTokens: LLMConfig.summary.maxLength,
+            temperature: 0.2, // Lower temperature for more focused summaries
+            topP: 0.8,
+            repeatPenalty: 1.0,
+            topK: 20,
+            presencePenalty: 0.0,
+            frequencyPenalty: 0.0,
+            streamResponse: true,  // Enable streaming
+        });
+
+        return response.trim();
+    } catch (error) {
+        console.error('Error generating summary:', error);
+        throw error;
+    }
+};
+
+export const transcribeAudio = async (audioData) => {
+    if (!isInitialized) {
+        const initialized = await initializeLocalLLM();
+        if (!initialized) {
+            throw new Error('Local LLM initialization failed');
+        }
+    }
+
+    try {
+        const session = new LlamaChatSession({
+            context,
+            systemPrompt: 'Transcribe the following audio content concisely:',
+        });
+
+        const response = await session.prompt(audioData, {
+            maxTokens: LLMConfig.maxTokens,
+            temperature: 0.1, // Very low temperature for accurate transcription
+            topP: 0.8,
+            repeatPenalty: 1.0,
+            topK: 20,
+            presencePenalty: 0.0,
+            frequencyPenalty: 0.0,
+            streamResponse: true,  // Enable streaming
+        });
+
+        return response.trim();
+    } catch (error) {
+        console.error('Error transcribing audio:', error);
         throw error;
     }
 };
@@ -175,7 +276,6 @@ export const generateLocalBatchSuggestions = async (contexts) => {
     }
 };
 
-// Memory management and cleanup
 export const cleanupLocalLLM = async () => {
     if (isInitialized) {
         try {
@@ -186,6 +286,8 @@ export const cleanupLocalLLM = async () => {
             if (model) {
                 model = null;
             }
+            conversationMemory = [];
+            responseCache.clear();
             isInitialized = false;
             console.log('LLM resources cleaned up successfully');
         } catch (error) {

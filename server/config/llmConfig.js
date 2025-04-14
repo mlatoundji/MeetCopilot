@@ -3,18 +3,18 @@ import os from 'os';
 export const LLMConfig = {
     // Model settings
     modelPath: '../../models/mistral-7b-instruct-v0.2.Q4_K_M.gguf',
-    contextSize: 512,
-    numThreads: 4,
-    batchSize: 64,
+    contextSize: 1024,
+    numThreads: Math.max(4, Math.floor(os.cpus().length * 0.9)),
+    batchSize: 256,
     maxTokens: 128,
-    temperature: 0.7,
+    temperature: 0.5,
     
     // Performance settings
-    gpuLayers: 0,
+    gpuLayers: 32,
     
     // GPU settings
     gpu: {
-        enabled: false,
+        enabled: true,
         mainGpu: 0,
         tensorSplit: [0],
     },
@@ -22,22 +22,36 @@ export const LLMConfig = {
     // Memory settings
     memory: {
         useMmap: true,
-        useMLock: false,
+        useMLock: true,
     },
     
     // Generation settings
     generation: {
-        topK: 40,
-        topP: 0.9,
-        repeatPenalty: 1.1,
-        presencePenalty: 0,
-        frequencyPenalty: 0,
+        topK: 20,
+        topP: 0.8,
+        repeatPenalty: 1.0,
+        presencePenalty: 0.0,
+        frequencyPenalty: 0.0,
     },
     
     // Logging settings
     logging: {
         enabled: true,
         level: 'info',
+    },
+
+    // Transcription specific settings
+    transcription: {
+        maxAudioLength: 15,
+        minConfidence: 0.7,
+        language: 'en',
+    },
+
+    // Summary settings
+    summary: {
+        interval: 3,
+        maxLength: 250,
+        keywords: [],
     }
 };
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,33 +12,124 @@
     <!-- HEADER -->
     <header class="header">
       <h1>Virtual Meeting Assistant</h1>
+      <div class="header-controls">
+        <button id="themeToggle" class="button-icon" title="Toggle Theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button id="userProfile" class="button-icon" title="User Profile">
+          <span class="profile-icon">👤</span>
+        </button>
+      </div>
     </header>
     
     <!-- SIDEBAR -->
     <aside class="sidebar">
-      <button id="systemCaptureButton" class="button">Start System Capture</button>
-      <button id="micCaptureButton" class="button">Start Mic</button>
-      <button id="suggestionButton" class="button">Generate Suggestions</button>
-      <button id="addMeetingInfosButton" class="button">Add Meeting Infos</button>
+      <div class="sidebar-header">
+        <h3>Controls</h3>
+        <button id="collapseSidebar" class="button-icon">☰</button>
+      </div>
+      <div class="sidebar-content">
+        <button id="systemCaptureButton" class="button">
+          <span class="button-icon">🎥</span>
+          Start System Capture
+        </button>
+        <button id="micCaptureButton" class="button">
+          <span class="button-icon">🎤</span>
+          Start Mic
+        </button>
+        <button id="suggestionButton" class="button">
+          <span class="button-icon">💡</span>
+          Generate Suggestions
+        </button>
+        <button id="addMeetingInfosButton" class="button">
+          <span class="button-icon">📝</span>
+          Add Meeting Infos
+        </button>
 
-      <!-- Language dropdown below the buttons -->
-      <label for="langSelect" class="language-label">Language:</label>
-      <select id="langSelect" class="dropdown-languages"></select>
+        <label for="langSelect" class="language-label">Language:</label>
+        <select id="langSelect" class="dropdown-languages"></select>
+      </div>
     </aside>
     
     <!-- MAIN CONTENT -->
     <main class="main-content">
-      <section id="suggestions" class="suggestions">
-        Suggestions will appear here...
-      </section>
-      <section id="screen-capture-section">
-        <video id="screen-capture" class="video" autoplay muted></video>
-      </section>
+      <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="current">Current Meeting</button>
+        <button class="tab" data-tab="history">History</button>
+        <button class="tab" data-tab="settings">Settings</button>
+      </nav>
+      
+      <div class="tab-content">
+        <section id="dashboard" class="tab-pane active">
+          <div class="dashboard-grid">
+            <div class="stats-card">
+              <h3>Meeting Statistics</h3>
+              <div class="stats-content">
+                <!-- Stats will be populated by JavaScript -->
+              </div>
+            </div>
+            <div class="recent-summaries">
+              <h3>Recent Summaries</h3>
+              <div class="summaries-list">
+                <!-- Recent summaries will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section id="current" class="tab-pane">
+          <div class="suggestions-container">
+            <section id="suggestions" class="suggestions">
+              Suggestions will appear here...
+            </section>
+            <section id="screen-capture-section">
+              <video id="screen-capture" class="video" autoplay muted></video>
+            </section>
+          </div>
+        </section>
+        
+        <section id="history" class="tab-pane">
+          <div class="search-bar">
+            <input type="text" placeholder="Search past meetings..." class="search-input">
+            <button class="search-button">🔍</button>
+          </div>
+          <div class="meetings-list">
+            <!-- Past meetings will be populated by JavaScript -->
+          </div>
+        </section>
+        
+        <section id="settings" class="tab-pane">
+          <div class="settings-grid">
+            <div class="settings-section">
+              <h3>Appearance</h3>
+              <div class="setting-item">
+                <label>Theme</label>
+                <select id="themeSelect" class="setting-select">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="system">System</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>Audio Settings</h3>
+              <div class="setting-item">
+                <label>Input Device</label>
+                <select id="audioInputSelect" class="setting-select"></select>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- TRANSCRIPTION AREA -->
     <aside class="transcription">
-      <!-- Make sure the container has scroll enabled -->
+      <div class="transcription-header">
+        <h3>Transcription</h3>
+        <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
+      </div>
       <div id="transcription" class="transcription-box">
         Transcription will appear here...
       </div>

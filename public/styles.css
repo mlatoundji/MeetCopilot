@@ -1,40 +1,99 @@
+:root {
+  /* Light theme variables */
+  --bg-primary: #f9f9f9;
+  --bg-secondary: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --accent-color: #0055AA;
+  --accent-hover: #004488;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --border-color: #404040;
+  --accent-color: #4a9eff;
+  --accent-hover: #3a8eff;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: 'Open Sans', sans-serif;
-  background-color: #f9f9f9;
-  color: #333;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
   display: grid;
-  grid-template-columns: 200px 1fr 300px;
+  grid-template-columns: 250px 1fr 300px;
   grid-template-rows: 80px auto;
   grid-template-areas:
     "header header header"
     "sidebar main-content transcription";
   height: 100vh;
+  gap: 1px;
+  background-color: var(--border-color);
 }
 
 .header {
   grid-area: header;
-  background-color: #0055AA;
+  background-color: var(--accent-color);
   color: #fff;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+.header-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.button-icon {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.button-icon:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar {
   grid-area: sidebar;
-  background-color: #eee;
-  padding: 10px;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-content {
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -44,128 +103,466 @@ body {
   padding: 10px;
   font-size: 1rem;
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .button:hover {
-  background: #ddd;
+  background: var(--accent-color);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .main-content {
   grid-area: main-content;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 1px;
+  background-color: var(--border-color);
+  padding: 0.5rem;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--accent-color);
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.tab-pane {
+  display: none;
+  height: 100%;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.stats-card, .recent-summaries {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.suggestions-container {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 10px;
+  height: 100%;
 }
 
 .suggestions {
-  background-color: #fff;
-  border: 1px solid #ccc;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
   padding: 1rem;
   min-height: 100px;
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 #screen-capture-section {
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 1;
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .video {
   max-width: 100%;
-  max-height: 600px;
-  border: 2px solid #ccc;
+  max-height: 100%;
+  border-radius: 8px;
   background: #000;
 }
 
 .transcription {
   grid-area: transcription;
-  background-color: #fff;
-  border-left: 1px solid #ccc;
-  padding: 10px;
-  /* You can control the width or let the grid do it */
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+}
+
+.transcription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .transcription-box {
-  border: 1px solid #ccc;
-  height: 100%;
-  max-height: calc(100vh - 80px); /* for instance, to keep it from overflowing the screen */
-  overflow-y: auto;              /* Make it scrollable */
+  flex: 1;
+  overflow-y: auto;
   padding: 1rem;
 }
 
-.language-label {
-  margin-top: 1rem;
-  font-weight: 600;
-  display: block;
+.search-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.dropdown-languages {
-  width: 100%;
-  padding: 6px;
-  font-size: 0.9rem;
-  margin-top: 4px;
+.search-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
+.settings-grid {
+  display: grid;
+  gap: 2rem;
+}
 
-/* MODAL OVERLAY */
+.settings-section {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.setting-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Modal styles */
 .modal-overlay {
-  display: none; /* hidden by default */
+  display: none;
   position: fixed;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
 }
 
-/* MEETING MODAL */
 .meeting-modal {
-  display: none; /* hidden by default */
+  display: none;
   position: fixed;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
   padding: 20px;
-  width: 300px; /* or adapt as needed */
-  background: #fff;
-  border: 1px solid #ccc;
+  width: 400px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
   z-index: 1000;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 6px var(--shadow-color);
 }
 
-/* MEETING MODAL heading */
-.meeting-modal h2 {
-  margin-top: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+/* Notification styles */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.3s;
 }
 
-/* Container for dynamic fields */
-#dynamicFields {
-  margin-bottom: 1rem;
+.notification.show {
+  transform: translateY(0);
+  opacity: 1;
 }
 
-/* Buttons inside modal */
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
+.notification.success {
+  border-left: 4px solid #4CAF50;
+}
+
+.notification.error {
+  border-left: 4px solid #F44336;
+}
+
+.notification.info {
+  border-left: 4px solid #2196F3;
+}
+
+/* Stats card styles */
+.stats-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
+  margin-top: 1rem;
 }
 
-/* Example for a secondary button style */
-.button-secondary {
-  padding: 10px;
-  font-size: 1rem;
-  background: #e0e0e0;
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  cursor: pointer;
+.stat-item {
+  background-color: var(--bg-primary);
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
 }
-.button-secondary:hover {
-  background: #ccc;
+
+.stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+/* Meeting item styles */
+.meeting-item {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  transition: transform 0.2s;
+}
+
+.meeting-item:hover {
+  transform: translateY(-2px);
+}
+
+.meeting-item h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+}
+
+.meeting-item p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Search bar styles */
+.search-bar {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.search-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-button:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Settings styles */
+.settings-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.settings-section {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.settings-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.setting-item label {
+  color: var(--text-primary);
+}
+
+.setting-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  min-width: 200px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .stats-content {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .setting-select {
+    width: 100%;
+  }
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus styles for better accessibility */
+:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .button {
+    border: 2px solid currentColor;
+  }
+  
+  .notification {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .container {
+    grid-template-columns: 200px 1fr 250px;
+  }
+}
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 60px 1fr;
+    grid-template-areas:
+      "header header"
+      "sidebar main-content";
+  }
+  
+  .transcription {
+    display: none;
+  }
+  
+  .sidebar.collapsed {
+    width: 60px;
+  }
+  
+  .sidebar-content {
+    display: none;
+  }
+  
+  .sidebar.collapsed .sidebar-content {
+    display: flex;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main-content";
+  }
+  
+  .sidebar {
+    display: none;
+  }
+  
+  .tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
