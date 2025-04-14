@@ -77,11 +77,24 @@ body {
   background-color: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s;
+  transition: all 0.3s ease;
+  width: 250px;
+  overflow: hidden;
 }
 
 .sidebar.collapsed {
-  width: 60px;
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+}
+
+.sidebar.collapsed .sidebar-content {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.sidebar.collapsed .sidebar-header h3 {
+  display: none;
 }
 
 .sidebar-header {
@@ -199,12 +212,13 @@ body {
   align-items: center;
   background-color: var(--bg-primary);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
+  max-height: calc(100vh - 250px);
 }
 
 .video {
   max-width: 100%;
-  max-height: 100%;
+  height: auto;
   border-radius: 8px;
   background: #000;
 }
@@ -228,6 +242,27 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
+  height: calc(100vh - 160px);
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) var(--bg-secondary);
+}
+
+.transcription-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.transcription-box::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.transcription-box::-webkit-scrollbar-thumb {
+  background-color: var(--accent-color);
+  border-radius: 4px;
+}
+
+.transcription-box.no-auto-scroll {
+  overflow-y: scroll;
 }
 
 .search-bar {
@@ -274,28 +309,140 @@ body {
 
 /* Modal styles */
 .modal-overlay {
-  display: none;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: none;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .meeting-modal {
-  display: none;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 20px;
-  width: 400px;
-  background: var(--bg-secondary);
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 2rem;
+  max-width: 600px;
+  width: 80%;
+  display: none;
+  z-index: 1001;
+  overflow: auto;
+  max-height: 80vh;
+}
+
+.meeting-modal h2 {
+  margin-top: 0;
+  color: var(--accent-color);
+  font-size: 1.8rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+#dynamicFields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+#dynamicFields label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+#dynamicFields input, #dynamicFields textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  z-index: 1000;
-  box-shadow: 0 4px 6px var(--shadow-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: border 0.2s ease;
+}
+
+#dynamicFields input:focus, #dynamicFields textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+}
+
+#dynamicFields textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.button-secondary {
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.button-secondary:hover {
+  background: var(--border-color);
+}
+
+/* Style pour les boutons d'action */
+#saveMeetingInfosButton {
+  padding: 10px 24px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+#saveMeetingInfosButton:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Mode tabs pour la modale */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.modal-tab {
+  padding: 0.8rem 1.2rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.modal-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.tab-content-modal {
+  display: none;
+}
+
+.tab-content-modal.active {
+  display: block;
 }
 
 /* Notification styles */
@@ -565,4 +712,172 @@ body {
     overflow-x: auto;
     white-space: nowrap;
   }
+}
+
+/* Modification de l'apparence du bouton de collapse */
+#collapseSidebar {
+  color: var(--text-primary);
+  background-color: transparent;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+#collapseSidebar:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* Styles pour les modes de session */
+.session-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.session-mode {
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.session-mode:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.session-mode.selected {
+  border-color: var(--accent-color);
+  background-color: rgba(74, 158, 255, 0.05);
+}
+
+.session-mode.selected:before {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--accent-color);
+  color: white;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.session-mode h3 {
+  margin-top: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.session-mode p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.mode-start-session {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.mode-start-session:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+/* Styles pour les onglets de la modale */
+.modal-tabs {
+  display: flex;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-tab {
+  padding: 0.8rem 1.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.modal-tab:hover {
+  color: var(--accent-color);
+}
+
+.modal-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.tab-content-modal {
+  display: none;
+}
+
+.tab-content-modal.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Styles pour les champs de formulaire */
+.field-group {
+  margin-bottom: 1.5rem;
+}
+
+.field-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.field-group input, .field-group textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+  min-height: 50px;
+}
+
+.field-group input:focus, .field-group textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.1);
+}
+
+.field-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.meeting-info-fields {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 1rem;
 }
