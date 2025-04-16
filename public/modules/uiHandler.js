@@ -14,7 +14,7 @@ export class UIHandler {
         this.transcriptionDiv = document.getElementById("transcription");
         this.suggestionsDiv = document.getElementById("suggestions");
         
-        this.addMeetingInfosButton = document.getElementById("addMeetingInfosButton");
+        this.sessionControlButton = document.getElementById("sessionControlButton");
         this.meetingModal = document.getElementById("meetingModal");
         this.modalOverlay = document.getElementById("modalOverlay");
         this.dynamicFields = document.getElementById("dynamicFields");
@@ -48,6 +48,7 @@ export class UIHandler {
                 micButtonStop: "Arrêter la capture micro",
                 suggestionButton: "Générer des suggestions",
                 startSessionButton: "Démarrer une session",
+                sessionButtonStop: "Arrêter la session",
                 saveMeetingInfosButton: "Enregistrer les infos",
                 closeMeetingInfosButton: "Fermer",
                 transcriptionPlaceholder: "La transcription apparaîtra ici...",
@@ -75,6 +76,7 @@ export class UIHandler {
                 micButtonStop: "Stop Mic Capture",
                 suggestionButton: "Generate Suggestions",
                 startSessionButton: "Start Session",
+                sessionButtonStop: "Stop Session",
                 saveMeetingInfosButton: "Save Meeting Info",
                 closeMeetingInfosButton: "Close",
                 transcriptionPlaceholder: "Transcription will appear here...",
@@ -104,7 +106,7 @@ export class UIHandler {
     translateUI(lang) {
         const uiElements = {
             suggestionButton: this.suggestionButton,
-            startSessionButton: this.addMeetingInfosButton, // Renommé pour clarté
+            startSessionButton: this.sessionControlButton, // Renommé pour clarté
             saveMeetingInfosButton: this.saveMeetingInfosButton,
             closeMeetingInfosButton: this.closeMeetingInfosButton,
         };
@@ -137,8 +139,8 @@ export class UIHandler {
         this.translateUI(this.defaultLang);
         
         // Renommer le bouton pour "Démarrer une session"
-        if (this.addMeetingInfosButton) {
-            this.addMeetingInfosButton.innerHTML = `
+        if (this.sessionControlButton) {
+            this.sessionControlButton.innerHTML = `
                 <span class="button-icon">🚀</span>
                 ${this.selectedTranslations.startSessionButton}
             `;
@@ -233,7 +235,7 @@ export class UIHandler {
                         <p>${this.selectedTranslations.modeAssisteDesc}</p>
                     </div>
                 </div>
-                <button class="button mode-start-session">${this.selectedTranslations.startSession}</button>
+                <button id="startSessionButton" class="button mode-start-session">${this.selectedTranslations.startSession}</button>
             </div>
             
             <div id="meeting-tab" class="tab-content-modal">
@@ -247,7 +249,21 @@ export class UIHandler {
                 </div>
             </div>
         `;
+
+        // Masquer le bouton de sauvegarde par défaut
+        if (this.saveMeetingInfosButton) {
+            this.saveMeetingInfosButton.style.display = 'none';
+        }
         
+        // Configuration des écouteurs d'événements de la modale
+        this.setupModalEventListeners();
+        
+        // Afficher la modale
+        this.meetingModal.style.display = "block";
+        this.modalOverlay.style.display = "block";
+    }
+
+    setupModalEventListeners() {
         // Gestionnaires d'événements pour les onglets
         const tabs = this.dynamicFields.querySelectorAll('.modal-tab');
         tabs.forEach(tab => {
@@ -260,6 +276,11 @@ export class UIHandler {
                     content.classList.remove('active');
                 });
                 document.getElementById(`${tabId}-tab`).classList.add('active');
+
+                // Afficher/masquer le bouton de sauvegarde selon l'onglet actif
+                if (this.saveMeetingInfosButton) {
+                    this.saveMeetingInfosButton.style.display = tabId === 'meeting' ? 'block' : 'none';
+                }
             });
         });
         
@@ -272,50 +293,11 @@ export class UIHandler {
                 this.mode = mode.getAttribute('data-mode');
             });
         });
-        
-        // Gestionnaire pour le bouton de démarrage de session
-        const startSessionButton = this.dynamicFields.querySelector('.mode-start-session');
-        if (startSessionButton) {
-            startSessionButton.addEventListener('click', () => {
-                if (this.mode === 'assiste') {
-                    // Basculer vers l'onglet réunion si en mode assisté
-                    tabs.forEach(t => t.classList.remove('active'));
-                    this.dynamicFields.querySelector('[data-tab-modal="meeting"]').classList.add('active');
-                    
-                    this.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    document.getElementById('meeting-tab').classList.add('active');
-                } else {
-                    // Fermer la modale et commencer la session en mode libre
-                    this.closeMeetingModal();
-                }
-            });
-        }
-        
-        // Afficher la modale
-        this.meetingModal.style.display = "block";
-        this.modalOverlay.style.display = "block";
     }
 
     closeMeetingModal() {
         this.meetingModal.style.display = "none";
         this.modalOverlay.style.display = "none";
-    }
-  
-    attachCaptureEventListeners(onSystemCapture, onMicCapture) {
-        this.systemCaptureButton.addEventListener("click", onSystemCapture);
-        this.micCaptureButton.addEventListener("click", onMicCapture);
-    }
-    
-    attachSuggestionEventListeners(onGenerateSuggestions) {
-        this.suggestionButton.addEventListener("click", onGenerateSuggestions);
-    }
-    
-    attachMeetingInfosEventListeners(onAddMeetingInfos, onCloseMeetingInfos, onSaveMeetingInfos) {    
-        this.addMeetingInfosButton.addEventListener("click", onAddMeetingInfos);
-        this.closeMeetingInfosButton.addEventListener("click", onCloseMeetingInfos);
-        this.saveMeetingInfosButton.addEventListener("click", onSaveMeetingInfos);
     }
     
     initializeKeydownEventListeners() {        

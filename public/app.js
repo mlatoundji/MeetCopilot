@@ -3,6 +3,7 @@ import { TranscriptionHandler } from './modules/transcriptionHandler.js';
 import { UIHandler } from './modules/uiHandler.js';
 import { SuggestionsHandler } from './modules/suggestionsHandler.js';
 import { ConversationContextHandler } from './modules/conversationContextHandler.js';
+import { Router } from './modules/Router.js';
 import { filterTranscription } from './utils.js';
 import { UI } from './modules/ui.js';
 
@@ -33,8 +34,19 @@ class App {
     // Current language
     this.currentLanguage = this.uiHandler.defaultLang;
     
-    this.setupEventListeners();
+    this.sessionActive = false;
+    this.sessionButton = document.getElementById('sessionControlButton');
+    this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
+    this.currentMeetingTab = document.querySelector('[data-tab="current-meeting"]');
+    
     this.loadInitialData();
+    
+    // Initialiser le routeur après que tout soit chargé
+    this.initializeRouter();
+  }
+  
+  initializeRouter() {
+    this.router = new Router(this);
   }
 
   setupEventListeners() {
@@ -53,9 +65,20 @@ class App {
       this.handleGenerateSuggestions();
     });
 
-    // Add meeting info button
-    document.getElementById('addMeetingInfosButton').addEventListener('click', () => {
-      this.handleAddMeetingInfos();
+    // Session control button - point central de gestion de la session
+    document.getElementById('sessionControlButton').addEventListener('click', () => {
+      if (this.sessionActive) {
+        this.stopSession();
+      } else {
+        this.uiHandler.populateMeetingModal();
+      }
+    });
+
+    // Utilisation de la délégation d'événements pour le bouton de démarrage de session
+    document.addEventListener('click', async (e) => {
+      if (e.target && e.target.id === 'startSessionButton') {
+        await this.handleStartSession();
+      }
     });
 
     // Save meeting info button
@@ -105,6 +128,11 @@ class App {
         this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, true);
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
         await this.startTranscription(SYSTEM_SOURCE);
+        
+        // Mettre à jour l'interface utilisateur via le router si nécessaire
+        if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
+          this.router.currentPage.updateButtonStates();
+        }
       } catch (error) {
         console.error('Error starting system capture:', error);
         // En cas d'erreur, on s'assure que le bouton reste dans son état initial
@@ -114,6 +142,11 @@ class App {
       this.audioCapture.stopSystemCapture();
       this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, false);
       this.uiHandler.closeVideoElement();
+      
+      // Mettre à jour l'interface utilisateur via le router si nécessaire
+      if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
+        this.router.currentPage.updateButtonStates();
+      }
     }
   }
 
@@ -123,9 +156,19 @@ class App {
       await this.audioCapture.startMicCapture();
       this.uiHandler.toggleCaptureButton(MIC_SOURCE, true);
       await this.startTranscription(MIC_SOURCE);
+      
+      // Mettre à jour l'interface utilisateur via le router si nécessaire
+      if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
+        this.router.currentPage.updateButtonStates();
+      }
     } else {
       this.audioCapture.stopMicCapture();
       this.uiHandler.toggleCaptureButton(MIC_SOURCE, false);
+      
+      // Mettre à jour l'interface utilisateur via le router si nécessaire
+      if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
+        this.router.currentPage.updateButtonStates();
+      }
     }
   }
 
@@ -179,10 +222,6 @@ class App {
   }
 
   // Functions to handle meeting info modals
-  handleAddMeetingInfos() {
-    this.uiHandler.populateMeetingModal();
-  }
-  
   handleCloseMeetingInfos() {
     this.uiHandler.closeMeetingModal();
   }
@@ -197,21 +236,37 @@ class App {
     this.conversationContextHandler.updateConversationContextHeadersText();
     console.log("Meetings details :\n", this.conversationContextHandler.conversationContextMeetingInfosText);
     
-    // En fonction du mode, démarrer la session appropriée
-    const mode = this.uiHandler.getMode();
-    console.log("Mode de session :", mode);
-    
     // Fermer la modale
     this.uiHandler.closeMeetingModal();
     
-    // Si nous sommes en mode assisté, démarrer automatiquement la capture système
-    if (mode === 'assiste') {
-      // Si nous n'avons pas encore commencé l'enregistrement, le lancer
-      if (!this.audioCapture.isSystemRecording) {
-        this.handleSystemCapture();
-      }
-    }
+    // Démarrer la session
+    await this.startSession();
   }
+
+  async handleStartSession() {
+    if (this.uiHandler.mode === 'assiste') {
+      // Basculer vers l'onglet réunion si en mode assisté
+      const tabs = this.uiHandler.dynamicFields.querySelectorAll('.modal-tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      this.uiHandler.dynamicFields.querySelector('[data-tab-modal="meeting"]').classList.add('active');
+      
+      this.uiHandler.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
+          content.classList.remove('active');
+      });
+      document.getElementById('meeting-tab').classList.add('active');
+      
+      // Afficher le bouton de sauvegarde
+      if (this.saveMeetingInfosButton) {
+          this.saveMeetingInfosButton.style.display = 'block';
+      }
+  } else {
+    // Fermer la modale
+    this.uiHandler.closeMeetingModal();
+    
+    // Démarrer la session
+    await this.startSession();
+  }
+}
 
   // Function to handle language change
   handleLanguageChange(newLang) {
@@ -223,6 +278,11 @@ class App {
     this.uiHandler.translateUI(lang);
     this.conversationContextHandler.translateContext(lang);
     this.transcriptionHandler.applyTranslation(lang);
+    
+    // Mettre à jour l'interface utilisateur via le router si nécessaire
+    if (this.router && this.router.currentPage) {
+      this.router.currentPage.render();
+    }
   }
 
   async loadInitialData() {
@@ -238,6 +298,9 @@ class App {
       // Populate UI placeholder text
       this.uiHandler.updateTranscription(this.uiHandler.selectedTranslations.transcriptionPlaceholder);
       this.uiHandler.updateSuggestions(this.uiHandler.selectedTranslations.suggestionsPlaceholder);
+      
+      // Configuration des écouteurs d'événements
+      this.setupEventListeners();
     } catch (error) {
       console.error('Error loading initial data:', error);
       // Show error notification if available
@@ -257,6 +320,50 @@ class App {
       if (this.ui.showNotification) {
         this.ui.showNotification('Error searching meetings', 'error');
       }
+    }
+  }
+
+  async startSession() {
+    this.sessionActive = true;
+    
+    // Naviguer vers la page de réunion
+    this.router.navigateTo('meeting');
+    
+    // Démarrer les captures audio
+    if (!this.audioCapture.isSystemRecording) {
+      await this.handleSystemCapture();
+    }
+    if (!this.audioCapture.isMicRecording) {
+      await this.handleMicCapture();
+    }
+    
+    // Mettre à jour l'interface utilisateur
+    if (this.router.currentPage) {
+      this.router.currentPage.render();
+    }
+  }
+
+  stopSession() {
+    this.sessionActive = false;
+    
+    // Arrêter les captures audio
+    if (this.audioCapture.isSystemRecording) {
+      this.audioCapture.stopSystemCapture();
+      this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, false);
+      this.uiHandler.closeVideoElement();
+    }
+    
+    if (this.audioCapture.isMicRecording) {
+      this.audioCapture.stopMicCapture();
+      this.uiHandler.toggleCaptureButton(MIC_SOURCE, false);
+    }
+    
+    // Naviguer vers la page d'accueil
+    this.router.navigateTo('home');
+    
+    // Mettre à jour l'interface utilisateur
+    if (this.router.currentPage) {
+      this.router.currentPage.render();
     }
   }
 }

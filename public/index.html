@@ -29,25 +29,29 @@
         <button id="collapseSidebar" class="button-icon">☰</button>
       </div>
       <div class="sidebar-content">
-        <button id="systemCaptureButton" class="button">
-          <span class="button-icon">🎥</span>
-          Start System Capture
-        </button>
-        <button id="micCaptureButton" class="button">
-          <span class="button-icon">🎤</span>
-          Start Mic
-        </button>
-        <button id="suggestionButton" class="button">
-          <span class="button-icon">💡</span>
-          Generate Suggestions
-        </button>
-        <button id="addMeetingInfosButton" class="button">
-          <span class="button-icon">📝</span>
-          Add Meeting Infos
-        </button>
-
-        <label for="langSelect" class="language-label">Language:</label>
-        <select id="langSelect" class="dropdown-languages"></select>
+        <!-- Éléments de la page d'accueil - toujours visibles -->
+        <div id="home-controls">
+          <button id="sessionControlButton" class="button">
+            <span class="button-icon">🚀</span>
+            Démarrer une session
+          </button>
+        </div>
+        
+        <!-- Éléments spécifiques à la page Meeting - masqués par défaut -->
+        <div id="meeting-controls" style="display: none;">
+          <button id="systemCaptureButton" class="button">
+            <span class="button-icon">🎥</span>
+            Start System Capture
+          </button>
+          <button id="micCaptureButton" class="button">
+            <span class="button-icon">🎤</span>
+            Start Mic
+          </button>
+          <button id="suggestionButton" class="button">
+            <span class="button-icon">💡</span>
+            Generate Suggestions
+          </button>
+        </div>
       </div>
     </aside>
     
@@ -55,7 +59,7 @@
     <main class="main-content">
       <nav class="tabs">
         <button class="tab active" data-tab="dashboard">Dashboard</button>
-        <button class="tab" data-tab="current">Current Meeting</button>
+        <button class="tab" data-tab="current-meeting">Current Meeting</button>
         <button class="tab" data-tab="history">History</button>
         <button class="tab" data-tab="settings">Settings</button>
       </nav>
@@ -78,7 +82,7 @@
           </div>
         </section>
         
-        <section id="current" class="tab-pane">
+        <section id="current-meeting" class="tab-pane">
           <div class="suggestions-container">
             <section id="suggestions" class="suggestions">
               Suggestions will appear here...
@@ -110,6 +114,13 @@
                   <option value="dark">Dark</option>
                   <option value="system">System</option>
                 </select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>Language Settings</h3>
+              <div class="setting-item">
+                <label for="langSelect">Interface Language</label>
+                <select id="langSelect" class="setting-select dropdown-languages"></select>
               </div>
             </div>
             <div class="settings-section">
