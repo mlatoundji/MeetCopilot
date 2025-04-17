@@ -1,13 +1,14 @@
 import { HomePage } from '../pages/HomePage.js';
 import { MeetingPage } from '../pages/MeetingPage.js';
-
+import { HistoryPage } from '../pages/HistoryPage.js';
 export class Router {
   constructor(app) {
     this.app = app;
     this.currentPage = null;
     this.routes = {
       'home': HomePage,
-      'meeting': MeetingPage
+      'meeting': MeetingPage,
+      'history': HistoryPage
     };
     this.initializeRouter();
   }
@@ -22,6 +23,8 @@ export class Router {
         const tabId = e.currentTarget.getAttribute('data-tab');
         if (tabId === 'current-meeting') {
           this.navigateTo('meeting');
+        } else if (tabId === 'history') {
+          this.navigateTo('history');
         } else {
           this.navigateTo('home');
         }

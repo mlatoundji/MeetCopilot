@@ -38,19 +38,18 @@
         </div>
         
         <!-- Éléments spécifiques à la page Meeting - masqués par défaut -->
-        <div id="meeting-controls" style="display: none;">
-          <button id="systemCaptureButton" class="button">
-            <span class="button-icon">🎥</span>
-            Start System Capture
-          </button>
-          <button id="micCaptureButton" class="button">
-            <span class="button-icon">🎤</span>
-            Start Mic
-          </button>
-          <button id="suggestionButton" class="button">
-            <span class="button-icon">💡</span>
-            Generate Suggestions
-          </button>
+        <div id="meeting-controls" class="meeting-controls" style="display: none;">
+          <div class="capture-controls">
+            <button id="systemCaptureButton" class="button">Start System Capture</button>
+            <button id="micCaptureButton" class="button">Start Mic Capture</button>
+          </div>
+          <div class="suggestions-controls">
+            <button id="suggestionButton" class="button">Generate Suggestions</button>
+          </div>
+          <div class="meeting-actions">
+            <button id="saveAndQuitButton" class="button primary">Save and Quit</button>
+            <button id="quitButton" class="button secondary">Quit</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -82,7 +81,7 @@
           </div>
         </section>
         
-        <section id="current-meeting" class="tab-pane">
+        <section id="current-meeting" class="tab-pane" style="display: none;">
           <div class="suggestions-container">
             <section id="suggestions" class="suggestions">
               Suggestions will appear here...
@@ -136,7 +135,7 @@
     </main>
 
     <!-- TRANSCRIPTION AREA -->
-    <aside class="transcription">
+    <aside class="transcription" style="display: none;">
       <div class="transcription-header">
         <h3>Transcription</h3>
         <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
@@ -155,6 +154,16 @@
     <div class="modal-buttons">
       <button id="saveMeetingInfosButton" class="button">Validate</button>
       <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
+    </div>
+  </div>
+  <div id="saveMethodModal" class="meeting-modal">
+    <h2>Choose Save Method</h2>
+    <div class="save-methods">
+      <button id="localSaveButton" class="button primary">Save Locally</button>
+      <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
+    </div>
+    <div class="modal-buttons">
+      <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
     </div>
   </div>
   <script type="module" src="app.js"></script>

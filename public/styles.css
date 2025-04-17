@@ -8,6 +8,15 @@
   --accent-color: #0055AA;
   --accent-hover: #004488;
   --shadow-color: rgba(0, 0, 0, 0.1);
+  --card-bg: #ffffff;
+  --local-bg: #e3f2fd;
+  --local-text: #1976d2;
+  --cloud-bg: #e8f5e9;
+  --cloud-text: #2e7d32;
+  --dialog-border: #2196f3;
+  --summary-border: #4caf50;
+  --suggestion-border: #ff9800;
+  --error-text: #d32f2f;
 }
 
 [data-theme="dark"] {
@@ -893,4 +902,207 @@ body {
   max-height: 60vh;
   overflow-y: auto;
   padding-right: 1rem;
+}
+
+.meeting-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--background-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.capture-controls,
+.suggestions-controls,
+.meeting-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.meeting-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.button.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.button.secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.button.primary:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.button.secondary:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+/* Animation for save success */
+@keyframes saveSuccess {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.save-success {
+    animation: saveSuccess 0.5s ease-in-out;
+}
+
+.save-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.save-methods button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+}
+
+#saveMethodModal .modal-buttons {
+    margin-top: 1rem;
+}
+
+/* History Page Styles */
+.meetings-list {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.meeting-item {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.meeting-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.meeting-info h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.meeting-meta {
+    display: flex;
+    gap: 15px;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.save-method {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.save-method.local {
+    background: var(--local-bg);
+    color: var(--local-text);
+}
+
+.save-method.cloud {
+    background: var(--cloud-bg);
+    color: var(--cloud-text);
+}
+
+.no-meetings {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+/* Meeting Details Page Styles */
+.meeting-details {
+    padding: 20px;
+}
+
+.meeting-header {
+    margin-bottom: 30px;
+}
+
+.meeting-header h2 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.meeting-meta {
+    display: flex;
+    gap: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 20px;
+}
+
+.timeline-time {
+    min-width: 80px;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.timeline-content {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.timeline-content.dialog {
+    border-left: 4px solid var(--dialog-border);
+}
+
+.timeline-content.summary {
+    border-left: 4px solid var(--summary-border);
+}
+
+.timeline-content.suggestion {
+    border-left: 4px solid var(--suggestion-border);
+}
+
+.timeline-content h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.timeline-content p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+/* Error Message Styles */
+.error-message {
+    text-align: center;
+    padding: 40px;
+    color: var(--error-text);
+}
+
+.error-message h2 {
+    margin-bottom: 15px;
 }

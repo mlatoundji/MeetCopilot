@@ -1,7 +1,10 @@
+import { BackupHandler } from '../modules/backupHandler.js';
+
 export class HomePage {
   constructor(app) {
     this.app = app;
     this.initializeElements();
+    this.bindEvents();
   }
 
   initializeElements() {
@@ -13,6 +16,16 @@ export class HomePage {
     this.container = document.querySelector('.container');
   }
 
+  bindEvents() {
+    if (this.sessionControlButton) {
+      this.sessionControlButton.addEventListener('click', () => this.app.handleSessionControl());
+    }
+  }
+
+  handleSessionControl() {
+    this.app.handleSessionControl();
+    this.app.backupHandler.initializeMeeting();
+  }
 
   render() {
     // Assurez-vous que les onglets Dashboard, History et Settings sont visibles
@@ -49,9 +62,10 @@ export class HomePage {
     
     // Mise à jour du bouton de contrôle de session
     if (this.sessionControlButton) {
-      this.sessionControlButton.textContent = this.app.sessionActive ? 
-        this.app.uiHandler.selectedTranslations.sessionButtonStop : 
-        this.app.uiHandler.selectedTranslations.startSessionButton;
+      this.sessionControlButton.textContent = this.app.uiHandler.selectedTranslations.startSessionButton;
+      // this.sessionControlButton.textContent = this.app.sessionActive ? 
+      //   this.app.uiHandler.selectedTranslations.sessionButtonStop : 
+      //   this.app.uiHandler.selectedTranslations.startSessionButton;
     }
   }
 } 

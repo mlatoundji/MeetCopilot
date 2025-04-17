@@ -6,6 +6,7 @@ import { ConversationContextHandler } from './modules/conversationContextHandler
 import { Router } from './modules/Router.js';
 import { filterTranscription } from './utils.js';
 import { UI } from './modules/ui.js';
+import { BackupHandler } from './modules/backupHandler.js';
 
 // URLs for API endpoints
 const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
@@ -15,6 +16,7 @@ const SUGGESTIONS_LOCAL_API_URL = "http://localhost:3000/suggestions/local";
 const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
 const SUMMARY_MISTRAL_API_URL = "http://localhost:3000/summary/mistral";
 const SUMMARY_LOCAL_API_URL = "http://localhost:3000/summary/local";
+const MEETINGS_API_URL = "http://localhost:3000/api/meetings";
 
 const SYSTEM_SOURCE = 'system';
 const MIC_SOURCE = 'mic';
@@ -24,18 +26,22 @@ class App {
     // Initialize UI
     this.ui = new UI();
     
+    // API URLs
+    this.MEETINGS_API_URL = MEETINGS_API_URL;
+    
     // Initialize handlers
     this.audioCapture = new AudioCapture();
     this.uiHandler = new UIHandler();
     this.transcriptionHandler = new TranscriptionHandler(TRANSCRIBE_ASSEMBLYAI_API_URL);
     this.suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_MISTRAL_API_URL);
     this.conversationContextHandler = new ConversationContextHandler(SUMMARY_MISTRAL_API_URL);
+
+    this.backupHandler = new BackupHandler(MEETINGS_API_URL);
     
     // Current language
     this.currentLanguage = this.uiHandler.defaultLang;
     
     this.sessionActive = false;
-    this.sessionButton = document.getElementById('sessionControlButton');
     this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
     this.currentMeetingTab = document.querySelector('[data-tab="current-meeting"]');
     
@@ -50,29 +56,6 @@ class App {
   }
 
   setupEventListeners() {
-    // System capture button
-    document.getElementById('systemCaptureButton').addEventListener('click', () => {
-      this.handleSystemCapture();
-    });
-
-    // Mic capture button
-    document.getElementById('micCaptureButton').addEventListener('click', () => {
-      this.handleMicCapture();
-    });
-
-    // Suggestion button
-    document.getElementById('suggestionButton').addEventListener('click', () => {
-      this.handleGenerateSuggestions();
-    });
-
-    // Session control button - point central de gestion de la session
-    document.getElementById('sessionControlButton').addEventListener('click', () => {
-      if (this.sessionActive) {
-        this.stopSession();
-      } else {
-        this.uiHandler.populateMeetingModal();
-      }
-    });
 
     // Utilisation de la délégation d'événements pour le bouton de démarrage de session
     document.addEventListener('click', async (e) => {
@@ -114,6 +97,9 @@ class App {
     this.uiHandler.initializeKeydownEventListeners();
   }
 
+  async handleSessionControl() {
+    await this.uiHandler.populateMeetingModal();
+  }
   // Function to handle system audio capture
   async handleSystemCapture() {
     if (!this.audioCapture.isSystemRecording) {
@@ -219,6 +205,12 @@ class App {
     const context = this.conversationContextHandler.conversationContextText;
     const suggestions = await this.suggestionsHandler.generateSuggestions(context);
     this.uiHandler.updateSuggestions(suggestions);
+    this.conversationContextHandler.conversationContextSuggestions.push({
+      text: suggestions,
+      time: Date.now(),
+      language: this.currentLanguage
+    });
+
   }
 
   // Functions to handle meeting info modals
@@ -330,17 +322,20 @@ class App {
     this.router.navigateTo('meeting');
     
     // Démarrer les captures audio
-    if (!this.audioCapture.isSystemRecording) {
-      await this.handleSystemCapture();
-    }
-    if (!this.audioCapture.isMicRecording) {
-      await this.handleMicCapture();
-    }
+    // if (!this.audioCapture.isSystemRecording) {
+    //   await this.handleSystemCapture();
+    // }
+    // if (!this.audioCapture.isMicRecording) {
+    //   await this.handleMicCapture();
+    // }
     
-    // Mettre à jour l'interface utilisateur
-    if (this.router.currentPage) {
+
+    // Mettre à jour l'interface utilisateur via le router si nécessaire
+    if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
       this.router.currentPage.render();
+      this.router.currentPage.updateButtonStates();
     }
+
   }
 
   stopSession() {

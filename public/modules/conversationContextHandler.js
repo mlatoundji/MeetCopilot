@@ -14,6 +14,7 @@ export class ConversationContextHandler {
         this.conversationContextDialogsText = "";
         this.conversationContextSummaries = [];
         this.conversationContextDialogs = [];
+        this.conversationContextSuggestions = [];
         this.lastSummaryTime = Date.now();
         this.summaryIntervalMinutes = 5;
         this.summaryInterval = this.summaryIntervalMinutes * 60 * 1000;
@@ -77,6 +78,7 @@ export class ConversationContextHandler {
         this.conversationContextText = "";
         this.conversationContextSummaries = [];
         this.conversationContextDialogs = [];
+        this.conversationContextSuggestions = [];
         this.conversationContextDialogsIndexStart = 0;
         this.updateConversationContextHeadersText();
         this.updateConversationContext();
@@ -114,7 +116,7 @@ export class ConversationContextHandler {
     
             if(summary != null){
         
-                this.conversationContextSummaries.push({text: summary, time: now});
+                this.conversationContextSummaries.push({text: summary, time: now, language: this.defaultLang});
             }
             return summary;
         }

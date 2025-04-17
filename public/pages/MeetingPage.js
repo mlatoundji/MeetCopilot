@@ -1,7 +1,10 @@
+import { BackupHandler } from '../modules/backupHandler.js';
+
 export class MeetingPage {
   constructor(app) {
     this.app = app;
     this.initializeElements();
+    this.bindEvents();
   }
 
   initializeElements() {
@@ -15,6 +18,8 @@ export class MeetingPage {
     this.meetingControls = document.getElementById('meeting-controls');
     this.transcriptionSection = document.querySelector('.transcription');
     this.container = document.querySelector('.container');
+    this.saveAndQuitButton = document.getElementById('saveAndQuitButton');
+    this.quitButton = document.getElementById('quitButton');
     
     this.setupTranscriptionContainer();
   }
@@ -28,6 +33,65 @@ export class MeetingPage {
       this.transcriptionBox.style.border = '1px solid var(--border-color)';
       this.transcriptionBox.style.borderRadius = '8px';
     }
+  }
+
+  bindEvents() {
+    if (this.systemCaptureButton) {
+      this.systemCaptureButton.addEventListener('click', () => this.app.handleSystemCapture());
+    }
+    if (this.micCaptureButton) {
+      this.micCaptureButton.addEventListener('click', () => this.app.handleMicCapture());
+    }
+    if (this.suggestionButton) {
+      this.suggestionButton.addEventListener('click', () => this.app.handleGenerateSuggestions());
+    }
+    if (this.saveAndQuitButton) {
+      this.saveAndQuitButton.addEventListener('click', () => this.handleSaveAndQuit());
+    }
+    if (this.quitButton) {
+      this.quitButton.addEventListener('click', () => this.handleQuit());
+    }
+  }
+
+  async handleSaveAndQuit() {
+    const lastSummary = await this.app.conversationContextHandler.generateSummary(this.app.conversationContextHandler.conversationContextText);
+    if (lastSummary != null) {
+      this.app.conversationContextHandler.conversationContextSummaries.push({text: lastSummary, time: Date.now(), language: this.app.currentLanguage});
+    }
+    // Finalize and save meeting data
+    for (let i = 0; i < this.app.conversationContextHandler.conversationContextDialogs.length; i++) {
+      this.app.backupHandler.addDialog(this.app.conversationContextHandler.conversationContextDialogs[i]);
+    }
+    for (let i = 0; i < this.app.conversationContextHandler.conversationContextSummaries.length; i++) {
+      this.app.backupHandler.addSummary(this.app.conversationContextHandler.conversationContextSummaries[i]);
+    }
+    for (let i = 0; i < this.app.conversationContextHandler.conversationContextSuggestions.length; i++) {
+      this.app.backupHandler.addSuggestion(this.app.conversationContextHandler.conversationContextSuggestions[i]);
+    }
+    
+
+    this.app.backupHandler.finalizeMeeting();
+    this.app.backupHandler.saveMeetingData()
+      .then(() => {
+        // Show success animation
+        this.saveAndQuitButton.classList.add('save-success');
+        setTimeout(() => {
+          this.saveAndQuitButton.classList.remove('save-success');
+          this.handleQuit();
+        }, 500);
+      })
+      .catch(error => {
+        console.error('Error saving meeting data:', error);
+        // Show error message to user
+        alert('Error saving meeting data. Please try again.');
+      });
+  }
+
+  handleQuit() {
+    // Clear meeting data
+    this.app.backupHandler.clearMeetingData();
+    // Navigate back to home page
+    window.location.href = '/';
   }
 
   render() {
@@ -78,6 +142,24 @@ export class MeetingPage {
       this.micCaptureButton.textContent = this.app.audioCapture.isMicRecording ? 
         this.app.uiHandler.selectedTranslations.micButtonStop : 
         this.app.uiHandler.selectedTranslations.micButtonStart;
+    }
+  }
+
+  show() {
+    if (this.transcriptionSection) {
+      this.transcriptionSection.style.display = 'block';
+    }
+    if (this.suggestionsContainer) {
+      this.suggestionsContainer.style.display = 'block';
+    }
+  }
+
+  hide() {
+    if (this.transcriptionSection) {
+      this.transcriptionSection.style.display = 'none';
+    }
+    if (this.suggestionsContainer) {
+      this.suggestionsContainer.style.display = 'none';
     }
   }
 } 

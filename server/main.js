@@ -6,6 +6,11 @@ import transcriptionRoutes from './routes/transcriptionRoutes.js';
 import suggestionRoutes from './routes/suggestionRoutes.js';
 import summaryRoutes from './routes/summaryRoutes.js';
 import { initializeLocalLLM, cleanupLocalLLM } from './services/localLLMService.js';
+import path from 'path';
+import meetingsRouter from './routes/meetingsRoutes.js';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 dotenv.config();
@@ -14,29 +19,16 @@ const PORT = process.env.PORT || 3000;
 
 // CORS Configuration
 const corsOptions = {
-    origin: [
-        'http://localhost:8000',
-        'http://localhost:5173', 
-        'http://localhost:3000',
-        'http://127.0.0.1:8000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:3000'
-    ],
+    origin: ['http://localhost:8000', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-        'Content-Type', 
-        'Authorization', 
-        'X-Requested-With',
-        'Accept',
-        'Origin'
-    ],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Additional CORS headers for extra compatibility
 app.use((req, res, next) => {
@@ -50,7 +42,6 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Initialize Local LLM
@@ -77,6 +68,7 @@ app.use('/api/summary', summaryRoutes);
 app.use('/summary', summaryRoutes);
 app.use('/api/transcribe', transcriptionRoutes);
 app.use('/transcribe', transcriptionRoutes);
+app.use('/api/meetings', meetingsRouter);
 
 // Error handling middleware
 app.use((req, res, next) => {
@@ -121,5 +113,6 @@ app.listen(PORT, () => {
     console.log(`- POST /api/transcribe/assemblyai or /transcribe/assemblyai`);
     console.log(`- POST /api/transcribe/whisper or /transcribe/whisper`);
     console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
+    console.log(`- POST /api/meetings`);
 });
 
