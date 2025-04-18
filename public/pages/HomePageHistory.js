@@ -1,6 +1,6 @@
 import { callApi } from '../utils.js';
 
-export class HistoryPage {
+export class HomePageHistory {
     constructor(app) {
         this.app = app;
         this.meetingsApiUrl = app.MEETINGS_API_URL;
@@ -27,7 +27,6 @@ export class HistoryPage {
             }
 
             this.meetings = response.data;
-            this.render();
         } catch (error) {
             console.error('Error loading meetings:', error);
             this.showError(error.message);
@@ -35,6 +34,7 @@ export class HistoryPage {
     }
 
     render() {
+
         const container = document.querySelector('.main-content');
         if (!container) return;
 
@@ -131,7 +131,60 @@ export class HistoryPage {
             }
         `;
         document.head.appendChild(style);
+
+        this.setupSearch();
     }
+
+    setupSearch() {
+        const searchInput = document.querySelector('.search-input');
+        const searchButton = document.querySelector('.search-button');
+
+        if (searchInput && searchButton) {
+            const performSearch = () => {
+                const query = searchInput.value.toLowerCase();
+                const filteredMeetings = this.meetings.filter(meeting => {
+                    const companyName = (meeting.metadata.meetingInfo?.companyName || '').toLowerCase();
+                    const meetingId = meeting.id.toLowerCase();
+                    return companyName.includes(query) || meetingId.includes(query);
+                });
+                
+                // Re-render with filtered meetings
+                const container = document.querySelector('#history .meetings-list');
+                if (container) {
+                    if (filteredMeetings.length === 0) {
+                        container.innerHTML = '<div class="no-meetings">No meetings found matching your search</div>';
+                    } else {
+                        container.innerHTML = '';
+                        filteredMeetings.forEach(meeting => {
+                            const item = document.createElement('div');
+                            item.className = `meeting-item ${document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light'}`;
+                            item.innerHTML = `
+                                <div class="meeting-info">
+                                    <h3>${meeting.metadata.meetingInfo?.companyName || 'Unknown'}</h3>
+                                    <p class="meeting-id">${meeting.id}</p>
+                                    <div class="meeting-meta">
+                                        <span class="date">${new Date(meeting.metadata.startTime).toLocaleString()}</span>
+                                        <span class="duration">Duration: ${this.formatDuration(meeting.metadata.duration)}</span>
+                                        <span class="save-method ${meeting.metadata.saveMethod}">${meeting.metadata.saveMethod === 'local' ? 'Local' : 'Cloud'}</span>
+                                    </div>
+                                </div>
+                            `;
+                            item.addEventListener('click', () => this.navigateToMeeting(meeting.id));
+                            container.appendChild(item);
+                        });
+                    }
+                }
+            };
+    
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        }
+    }
+
 
     formatDuration(duration) {
         const hours = Math.floor(duration / 3600000);
@@ -142,6 +195,7 @@ export class HistoryPage {
     }
 
     navigateToMeeting(meetingId) {
+        console.log(`Navigating to meeting: ${meetingId}`);
         window.location.hash = `#/meeting/${meetingId}`;
     }
 

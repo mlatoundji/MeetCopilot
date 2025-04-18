@@ -131,4 +131,83 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get specific meeting by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { saveMethod } = req.query;
+
+        if (!saveMethod) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing saveMethod parameter' 
+            });
+        }
+
+        if (saveMethod === 'local') {
+            // Find the local file by ID
+            const filename = `${id}.json`;
+            const filepath = path.join(meetingsDir, filename);
+            
+            if (!fs.existsSync(filepath)) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Meeting with ID ${id} not found`
+                });
+            }
+            
+            const content = fs.readFileSync(filepath, 'utf8');
+            const meeting = JSON.parse(content);
+            
+            // Add id and saveMethod to meeting
+            const meetingWithMetadata = {
+                ...meeting,
+                id,
+                metadata: {
+                    ...meeting.metadata,
+                    saveMethod: 'local'
+                }
+            };
+            
+            res.json({
+                success: true,
+                data: meetingWithMetadata
+            });
+        } else if (saveMethod === 'supabase') {
+            // Get from Supabase by ID
+            const { data, error } = await supabase
+                .from('meetings')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return res.status(404).json({
+                        success: false,
+                        error: `Meeting with ID ${id} not found`
+                    });
+                }
+                throw error;
+            }
+            
+            res.json({
+                success: true,
+                data
+            });
+        } else {
+            res.status(400).json({ 
+                success: false, 
+                error: 'Invalid save method' 
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching meeting details:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 export default router; 
