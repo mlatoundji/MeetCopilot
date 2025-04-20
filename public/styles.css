@@ -353,14 +353,20 @@ body {
   padding: 2rem;
   max-width: 600px;
   width: 80%;
-  display: none;
   z-index: 1001;
-  overflow: auto;
   max-height: 80vh;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Quand la modale est affichée */
+.meeting-modal[style*="display: block"] {
+  display: flex !important;
 }
 
 .meeting-modal h2 {
-  margin-top: 0;
+  margin: 0 0 20px 0;
   color: var(--accent-color);
   font-size: 1.8rem;
   border-bottom: 1px solid var(--border-color);
@@ -368,29 +374,26 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
 #dynamicFields {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px;
+  margin: 0 -20px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-
 }
 
-#dynamicFields label {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.4rem;
-  display: block;
-}
-
-#dynamicFields input, #dynamicFields textarea {
+#dynamicFields .form-group {
+  margin-bottom: 15px;
   width: 100%;
+}
+
+#dynamicFields input,
+#dynamicFields textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.8rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
