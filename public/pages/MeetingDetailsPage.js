@@ -46,7 +46,7 @@ export class MeetingDetailsPage {
         const header = document.createElement('div');
         header.className = 'meeting-header';
         header.innerHTML = `
-            <h1>${this.meetingData.metadata.meetingInfo?.companyName || 'Unknown'}</h1>
+            <h1>${this.meetingData.title || 'Unknown'}</h1>
             <div class="meeting-meta">
                 <span class="date">${new Date(this.meetingData.metadata.startTime).toLocaleString()}</span>
                 <span class="duration">Duration: ${this.formatDuration(this.meetingData.metadata.duration)}</span>
@@ -62,17 +62,17 @@ export class MeetingDetailsPage {
         const events = [
             ...(this.meetingData.dialogs || []).map(dialog => ({
                 type: 'dialog',
-                time: dialog.timestamp,
+                time: dialog.time,
                 data: dialog
             })),
             ...(this.meetingData.summaries || []).map(summary => ({
                 type: 'summary',
-                time: summary.timestamp,
+                time: summary.time,
                 data: summary
             })),
             ...(this.meetingData.suggestions || []).map(suggestion => ({
                 type: 'suggestion',
-                time: suggestion.timestamp,
+                time: suggestion.time,
                 data: suggestion
             }))
         ].sort((a, b) => new Date(a.time) - new Date(b.time));
@@ -111,8 +111,8 @@ export class MeetingDetailsPage {
         const navigation = document.createElement('div');
         navigation.className = 'meeting-navigation';
         navigation.innerHTML = `
-            <button class="back-button" onclick="window.location.hash = '#/history'">
-                Retour à l'historique
+            <button class="back-button" onclick="window.location.hash = '/'">
+                Retour à l'accueil
             </button>
         `;
 
@@ -136,6 +136,10 @@ export class MeetingDetailsPage {
                     padding: 20px;
                     margin-bottom: 20px;
                     border-bottom: 1px solid #eee;
+                    position: sticky;
+                    top: 0;
+                    background: var(--bg-secondary);
+                    z-index: 10;
                 }
                 .meeting-header h1 {
                     margin: 0 0 10px 0;
@@ -149,13 +153,20 @@ export class MeetingDetailsPage {
                 }
                 .meeting-timeline {
                     padding: 0 20px;
+                    max-height: calc(100vh - 200px);
+                    overflow-y: auto;
+                    scroll-behavior: smooth;
                 }
                 .timeline-event {
                     padding: 15px;
                     margin-bottom: 15px;
                     border-radius: 8px;
                     position: relative;
+                    transition: transform 0.2s ease;
                     ${isDarkTheme ? 'background-color: #2c2c2c;' : 'background-color: #f0f7ff;'}
+                }
+                .timeline-event:hover {
+                    transform: translateX(5px);
                 }
                 .timeline-event.dialog {
                     background: #f0f7ff;
@@ -171,9 +182,12 @@ export class MeetingDetailsPage {
                     background: #f1f8f1;
                     border-left: 4px solid #34a853;
                     ${isDarkTheme ? 'background-color: #2c2c2c;' : 'background-color: #f0f7ff;'}
+                }
                 .timeline-event .speaker {
                     font-weight: bold;
                     margin-bottom: 5px;
+                    color: ${isDarkTheme ? '#4a9eff' : '#1a73e8'};
+                    font-size: 1.1em;
                 }
                 .timeline-event .content {
                     line-height: 1.5;
@@ -184,11 +198,18 @@ export class MeetingDetailsPage {
                     right: 10px;
                     font-size: 0.8em;
                     color: #666;
+                    background: ${isDarkTheme ? '#1a1a1a80' : '#ffffff80'};
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    backdrop-filter: blur(4px);
                 }
                 .meeting-navigation {
                     padding: 20px;
                     display: flex;
                     justify-content: center;
+                    position: sticky;
+                    bottom: 0;
+                    background: var(--bg-secondary);
                 }
                 .back-button {
                     padding: 8px 16px;
@@ -198,22 +219,26 @@ export class MeetingDetailsPage {
                     border-radius: 4px;
                     cursor: pointer;
                     font-size: 14px;
+                    transition: all 0.2s ease;
                 }
                 .back-button:hover {
                     background: #3367d6;
+                    transform: translateY(-2px);
                 }
-                .error-message {
-                    padding: 20px;
-                    text-align: center;
+                /* Scrollbar styling */
+                .meeting-timeline::-webkit-scrollbar {
+                    width: 8px;
                 }
-                .error-message h2 {
-                    color: #d32f2f;
+                .meeting-timeline::-webkit-scrollbar-track {
+                    background: ${isDarkTheme ? '#1a1a1a' : '#f1f1f1'};
+                    border-radius: 4px;
                 }
-                .loading {
-                    padding: 40px;
-                    text-align: center;
-                    font-size: 1.2em;
-                    color: #666;
+                .meeting-timeline::-webkit-scrollbar-thumb {
+                    background: ${isDarkTheme ? '#4a9eff' : '#4285f4'};
+                    border-radius: 4px;
+                }
+                .meeting-timeline::-webkit-scrollbar-thumb:hover {
+                    background: ${isDarkTheme ? '#3a8eff' : '#3367d6'};
                 }
             `;
             document.head.appendChild(style);
@@ -236,7 +261,7 @@ export class MeetingDetailsPage {
             <div class="error-message">
                 <h2>Erreur</h2>
                 <p>${message}</p>
-                <button onclick="window.location.hash = '#/history'" class="back-button">Retour à l'historique</button>
+                <button onclick="window.location.hash = '/'" class="back-button">Retour à l'accueil</button>
             </div>
         `;
     }
