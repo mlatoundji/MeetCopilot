@@ -93,7 +93,7 @@ router.get('/', async (req, res) => {
                 // Add id and saveMethod to each meeting
                 return {
                     ...meeting,
-                    id: filename.replace('.json', ''),
+                    id: meeting.id || filename.replace('.json', ''),
                     metadata: {
                         ...meeting.metadata,
                         saveMethod: 'local'

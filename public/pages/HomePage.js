@@ -107,7 +107,6 @@ export class HomePage {
 
   handleSessionControl() {
     this.app.handleSessionControl();
-    this.app.backupHandler.initializeMeeting();
   }
 
   render() {

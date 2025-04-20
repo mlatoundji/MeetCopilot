@@ -81,7 +81,7 @@
           </div>
         </section>
         
-        <section id="current-meeting" class="tab-pane" style="display: none;">
+        <section id="current-meeting" class="tab-pane">
           <div class="suggestions-container">
             <section id="suggestions" class="suggestions">
               Suggestions will appear here...
@@ -159,6 +159,7 @@
   <div id="saveMethodModal" class="meeting-modal">
     <h2>Choose Save Method</h2>
     <div class="save-methods">
+      <input type="text" id="saveTitleInput" placeholder="Enter a title for the meeting">
       <button id="localSaveButton" class="button primary">Save Locally</button>
       <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
     </div>

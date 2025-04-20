@@ -36,7 +36,7 @@ class App {
     this.suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_MISTRAL_API_URL);
     this.conversationContextHandler = new ConversationContextHandler(SUMMARY_MISTRAL_API_URL);
 
-    this.backupHandler = new BackupHandler(MEETINGS_API_URL);
+    this.backupHandler = new BackupHandler(MEETINGS_API_URL, this);
     
     // Current language
     this.currentLanguage = this.uiHandler.defaultLang;
@@ -44,6 +44,12 @@ class App {
     this.sessionActive = false;
     this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
     this.currentMeetingTab = document.querySelector('[data-tab="current-meeting"]');
+
+    this.meetingInfos = {};
+
+    this.saveMeetingInfosButton = document.getElementById('saveMeetingInfosButton');
+    this.closeMeetingInfosButton = document.getElementById('closeMeetingInfosButton');
+    this.langSelect = document.getElementById('langSelect');
     
     this.loadInitialData();
     
@@ -64,18 +70,20 @@ class App {
       }
     });
 
+    
+
     // Save meeting info button
-    document.getElementById('saveMeetingInfosButton').addEventListener('click', () => {
+    this.saveMeetingInfosButton.addEventListener('click', () => {
       this.handleSaveMeetingInfos();
     });
 
     // Close meeting info button
-    document.getElementById('closeMeetingInfosButton').addEventListener('click', () => {
+    this.closeMeetingInfosButton.addEventListener('click', () => {
       this.handleCloseMeetingInfos();
     });
 
     // Language selection
-    document.getElementById('langSelect').addEventListener('change', (e) => {
+    this.langSelect.addEventListener('change', (e) => {
       this.handleLanguageChange(e.target.value);
     });
 
@@ -223,7 +231,10 @@ class App {
       const input = document.getElementById(`input-${key}`);
       return input.value.trim();
     });
-    let details = this.uiHandler.meetingsInfosLabels.map((key, index) => `* ${key} : ${values[index]}`).join("\n");
+    this.meetingInfos = this.uiHandler.meetingsInfosLabels.map((key, index) => ({
+      [key]: values[index]
+    }));
+    let details = Object.entries(this.meetingInfos).map(([key, value]) => `* ${key} : ${value}`).join("\n");
     this.conversationContextHandler.updateMeetingInfosText(details);
     this.conversationContextHandler.updateConversationContextHeadersText();
     console.log("Meetings details :\n", this.conversationContextHandler.conversationContextMeetingInfosText);
@@ -317,6 +328,9 @@ class App {
 
   async startSession() {
     this.sessionActive = true;
+
+    this.backupHandler.initializeMeeting(this.meetingInfos);
+
     
     // Naviguer vers la page de réunion
     this.router.navigateTo('meeting');
@@ -329,6 +343,7 @@ class App {
     //   await this.handleMicCapture();
     // }
     
+
 
     // Mettre à jour l'interface utilisateur via le router si nécessaire
     if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {

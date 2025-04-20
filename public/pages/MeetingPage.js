@@ -54,23 +54,7 @@ export class MeetingPage {
   }
 
   async handleSaveAndQuit() {
-    const lastSummary = await this.app.conversationContextHandler.generateSummary(this.app.conversationContextHandler.conversationContextText);
-    if (lastSummary != null) {
-      this.app.conversationContextHandler.conversationContextSummaries.push({text: lastSummary, time: Date.now(), language: this.app.currentLanguage});
-    }
-    // Finalize and save meeting data
-    for (let i = 0; i < this.app.conversationContextHandler.conversationContextDialogs.length; i++) {
-      this.app.backupHandler.addDialog(this.app.conversationContextHandler.conversationContextDialogs[i]);
-    }
-    for (let i = 0; i < this.app.conversationContextHandler.conversationContextSummaries.length; i++) {
-      this.app.backupHandler.addSummary(this.app.conversationContextHandler.conversationContextSummaries[i]);
-    }
-    for (let i = 0; i < this.app.conversationContextHandler.conversationContextSuggestions.length; i++) {
-      this.app.backupHandler.addSuggestion(this.app.conversationContextHandler.conversationContextSuggestions[i]);
-    }
-    
-
-    this.app.backupHandler.finalizeMeeting();
+ 
     this.app.backupHandler.saveMeetingData()
       .then(() => {
         // Show success animation
@@ -126,6 +110,7 @@ export class MeetingPage {
         this.container.classList.remove('no-transcription');
       }
     }
+    
     
     // Mettre à jour l'état des boutons selon l'état de capture
     this.updateButtonStates();

@@ -52,7 +52,7 @@ export class HomePageHistory {
                 item.className = `meeting-item`;
                 item.innerHTML = `
                     <div class="meeting-info">
-                        <h3 class="meeting-title">${meeting.metadata.meetingInfo?.companyName || 'Unknown'}</h3>
+                        <h3 class="meeting-title">${meeting.title || 'Unknown'}</h3>
                         <p class="meeting-id">${meeting.id}</p>
                         <div class="meeting-meta">
                             <span class="date">${new Date(meeting.metadata.startTime).toLocaleString()}</span>

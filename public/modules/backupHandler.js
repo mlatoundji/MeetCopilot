@@ -1,9 +1,12 @@
 import { callApi } from '../utils.js';
 
 export class BackupHandler {
-    constructor(meetingsApiUrl) {
+    constructor(meetingsApiUrl, app) {
+        this.app = app;
         this.meetingsApiUrl = meetingsApiUrl;
         this.meetingData = {
+            id: null,
+            title: null,
             dialogs: [],
             summaries: [],
             suggestions: [],
@@ -50,8 +53,34 @@ export class BackupHandler {
             const saveMethod = await this.showSaveMethodModal();
             if (!saveMethod) return { success: false, message: 'Save cancelled' };
 
+            const lastSummary = await this.app.conversationContextHandler.generateSummary(this.app.conversationContextHandler.conversationContextText);
+            if (lastSummary != null) {
+              this.app.conversationContextHandler.conversationContextSummaries.push({text: lastSummary, time: Date.now(), language: this.app.currentLanguage});
+            }
+            // Finalize and save meeting data
+            for (let i = 0; i < this.app.conversationContextHandler.conversationContextDialogs.length; i++) {
+              this.addDialog(this.app.conversationContextHandler.conversationContextDialogs[i]);
+            }
+            for (let i = 0; i < this.app.conversationContextHandler.conversationContextSummaries.length; i++) {
+              this.addSummary(this.app.conversationContextHandler.conversationContextSummaries[i]);
+            }
+            for (let i = 0; i < this.app.conversationContextHandler.conversationContextSuggestions.length; i++) {
+              this.addSuggestion(this.app.conversationContextHandler.conversationContextSuggestions[i]);
+            }
+            
+        
+            this.finalizeMeeting();
+
+            const title = document.getElementById('saveTitleInput').value;
+            if (!title) return { success: false, message: 'Title is required' };
+
+            this.meetingData.id = this.meetingData.id || Date.now();
+            this.meetingData.title = title;
+
             // Ensure data is properly formatted
             const formattedData = {
+                id: this.meetingData.id,
+                title: this.meetingData.title,
                 dialogs: this.meetingData.dialogs,
                 summaries: this.meetingData.summaries,
                 suggestions: this.meetingData.suggestions,
@@ -61,6 +90,12 @@ export class BackupHandler {
                     duration: this.calculateMeetingDuration()
                 }
             };
+
+            // Optimize dialog data to reduce size if needed
+            if (formattedData.dialogs.length > 100) {
+                console.log(`Optimizing large meeting data (${formattedData.dialogs.length} dialogs)`);
+                // this.optimizeDialogData(formattedData);
+            }
 
             const response = await callApi(this.meetingsApiUrl, {
                 method: 'POST',
@@ -83,6 +118,22 @@ export class BackupHandler {
             console.error('Error saving meeting data:', error);
             throw new Error(error.message || 'Failed to save meeting data');
         }
+    }
+
+    // Optimize dialog data to reduce payload size
+    optimizeDialogData(data) {
+        // Keep only necessary fields and remove any redundant information
+        if (data.dialogs && data.dialogs.length > 0) {
+            data.dialogs = data.dialogs.map(dialog => {
+                // Keep only essential fields
+                return {
+                    text: dialog.text, 
+                    speaker: dialog.speaker,
+                    timestamp: dialog.timestamp
+                };
+            });
+        }
+        return data;
     }
 
     /**
@@ -123,14 +174,17 @@ export class BackupHandler {
 
     finalizeMeeting() {
         this.meetingData.metadata.endTime = new Date().toISOString();
-        this.meetingData.duration = this.calculateMeetingDuration();
+        this.meetingData.metadata.duration = this.calculateMeetingDuration();
         this.stopAutoSave();
     }
 
     calculateMeetingDuration() {
-        // Implementation depends on how you track meeting duration
-        const duration = this.meetingData.metadata.endTime - this.meetingData.metadata.startTime;
-        return duration;
+        // Calculate duration in milliseconds
+        const startTime = new Date(this.meetingData.metadata.startTime).getTime();
+        const endTime = new Date(this.meetingData.metadata.endTime).getTime();
+        
+        // Return the duration in milliseconds
+        return endTime - startTime;
     }
 
     clearMeetingData() {
