@@ -106,7 +106,7 @@ export class UIHandler {
     translateUI(lang) {
         const uiElements = {
             suggestionButton: this.suggestionButton,
-            startSessionButton: this.sessionControlButton, // Renommé pour clarté
+            startSessionButton: this.sessionControlButton,
             saveMeetingInfosButton: this.saveMeetingInfosButton,
             closeMeetingInfosButton: this.closeMeetingInfosButton,
         };
@@ -119,10 +119,19 @@ export class UIHandler {
             }
         });
         
-        this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
-        this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
-        this.updateTranscription(this.selectedTranslations.transcriptionPlaceholder);
-        this.updateSuggestions(this.selectedTranslations.suggestionsPlaceholder);
+        // Only update button text if the elements exist
+        if (this.systemCaptureButton) {
+            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+        }
+        if (this.micCaptureButton) {
+            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+        }
+        if (this.transcriptionDiv) {
+            this.updateTranscription(this.selectedTranslations.transcriptionPlaceholder);
+        }
+        if (this.suggestionsDiv) {
+            this.updateSuggestions(this.selectedTranslations.suggestionsPlaceholder);
+        }
         this.meetingsInfosLabels = this.selectedTranslations.meetingsInfosLabels;
     }
   
@@ -132,11 +141,21 @@ export class UIHandler {
      */
     initialize(onLangChange) {
         this.populateLangOptions();
-        this.langSelect.addEventListener("change", () => {
-            const selectedLang = this.langSelect.value;
-            onLangChange(selectedLang);
-        });
+        if (this.langSelect) {
+            this.langSelect.addEventListener("change", () => {
+                const selectedLang = this.langSelect.value;
+                onLangChange(selectedLang);
+            });
+        }
         this.translateUI(this.defaultLang);
+        
+        // S'assurer que la fenêtre modale est cachée par défaut
+        if (this.meetingModal) {
+            this.meetingModal.style.display = "none";
+        }
+        if (this.modalOverlay) {
+            this.modalOverlay.style.display = "none";
+        }
         
         // Renommer le bouton pour "Démarrer une session"
         if (this.sessionControlButton) {
