@@ -1,5 +1,5 @@
-import { HomePage } from '../pages/HomePage.js';
-import { MeetingPage } from '../pages/MeetingPage.js';
+import { HomePage } from '../pages/js/HomePage.js';
+import { MeetingPage } from '../pages/js/MeetingPage.js';
 export class Router {
   constructor(app) {
     this.app = app;
@@ -15,18 +15,6 @@ export class Router {
     // Ajouter un écouteur d'événements pour le changement d'URL
     window.addEventListener('hashchange', () => this.handleRouteChange());
     
-    // Ajouter des gestionnaires d'événements pour les onglets
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        const tabId = e.currentTarget.getAttribute('data-tab');
-        if (tabId === 'current-meeting') {
-          this.navigateTo('meeting');
-        } else {
-          this.navigateTo('home');
-        }
-      });
-    });
-    
     // Navigation initiale
     this.handleRouteChange();
   }
@@ -41,30 +29,11 @@ export class Router {
     window.location.hash = route;
   }
 
-  loadPage(route) {
-    // Déterminer quelle page charger
+  async loadPage(route) {
     const PageClass = this.routes[route] || this.routes.home;
-    
-    // Instancier la nouvelle page
     this.currentPage = new PageClass(this.app);
-    
-    // Rendre la page
-    this.currentPage.render();
-    
-    // Mettre à jour les classes actives sur les onglets
-    this.updateActiveTab(route);
-  }
-
-  updateActiveTab(route) {
-    // Mettre à jour les classes actives sur les onglets
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.classList.remove('active');
-      
-      const tabId = tab.getAttribute('data-tab');
-      if ((route === 'home' && (tabId === 'dashboard' || tabId === 'history' || tabId === 'settings')) || 
-          (route === 'meeting' && tabId === 'current-meeting')) {
-        tab.classList.add('active');
-      }
-    });
+    if (typeof this.currentPage.render === 'function') {
+      await this.currentPage.render();
+    }
   }
 } 

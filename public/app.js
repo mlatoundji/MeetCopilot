@@ -103,6 +103,17 @@ class App {
 
     // Initialize key event listeners
     this.uiHandler.initializeKeydownEventListeners();
+
+    // Sidebar nav links
+    document.addEventListener('click', (e) => {
+      const button = e.target.closest('.sidebar-link');
+      if (button) {
+        const hash = button.getAttribute('data-hash');
+        if (hash) {
+          window.location.hash = hash;
+        }
+      }
+    });
   }
 
   async handleSessionControl() {

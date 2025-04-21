@@ -1,4 +1,4 @@
-import { callApi } from '../utils.js';
+import { callApi } from '../../utils.js';
 
 export class HomePageHistory {
     constructor(app) {
@@ -69,69 +69,84 @@ export class HomePageHistory {
         container.innerHTML = '';
         container.appendChild(list);
 
-        // Add styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .meeting-title {
-                font-size: 1.2em;
-                font-weight: bold;
-                color: ${isDarkTheme ? '#ffffff' : '#000000'};
-            }
-            .meetings-list {
-                padding: 20px;
-                gap: 20px;
-                display: flex;
-                flex-direction: column;
-            }
-            .meeting-item {
-                padding: 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                background: ${isDarkTheme ? '#2d2d2d' : '#ffffff'};
-                border: 1px solid ${isDarkTheme ? '#404040' : '#e0e0e0'};
-            }
-            .meeting-item:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
-            .meeting-info h3 {
-                margin: 0 0 8px 0;
-                font-size: 1.2em;
-            }
-            .meeting-id {
-                font-size: 0.9em;
-                color: #666;
-                margin: 4px 0;
-            }
-            .meeting-meta {
-                display: flex;
-                gap: 15px;
-                font-size: 0.9em;
-                margin-top: 10px;
-            }
-            .save-method {
-                padding: 2px 8px;
-                border-radius: 12px;
-                font-size: 0.8em;
-            }
-            .save-method.local {
-                background: #e3f2fd;
-                color: #1976d2;
-            }
-            .save-method.cloud {
-                background: #e8f5e9;
-                color: #2e7d32;
-            }
-            .no-meetings {
-                text-align: center;
-                padding: 40px;
-                color: #666;
-                font-size: 1.1em;
-            }
-        `;
-        document.head.appendChild(style);
+        // Add styles dynamically (to avoid duplicate insertion, check id)
+        if (!document.getElementById('home-history-styles')) {
+            const style = document.createElement('style');
+            style.id = 'home-history-styles';
+            style.textContent = `
+                .main-content {
+                    overflow: hidden;
+                }
+                .meetings-list {
+                     padding: 20px;
+                     gap: 20px;
+                     display: flex;
+                     flex-direction: column;
+                     max-height: calc(100vh - 150px);
+                     overflow-y: auto;
+                }
+                .meetings-list::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .meetings-list::-webkit-scrollbar-track {
+                    background: ${isDarkTheme ? '#1a1a1a' : '#f1f1f1'};
+                    border-radius:4px;
+                }
+                .meetings-list::-webkit-scrollbar-thumb {
+                    background: ${isDarkTheme ? '#4a9eff' : '#4285f4'};
+                    border-radius:4px;
+                }
+                .meeting-item {
+                    padding: 20px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    background: ${isDarkTheme ? '#2d2d2d' : '#ffffff'};
+                    border-left:4px solid ${isDarkTheme ? '#4a9eff' : '#2196f3'};
+                }
+                .meeting-item:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+                .meeting-info h3 {
+                    margin: 0 0 8px 0;
+                    font-size: 1.2em;
+                }
+                .meeting-id {
+                    font-size: 0.9em;
+                    color: #666;
+                    margin: 4px 0;
+                }
+                .meeting-meta {
+                    display: flex;
+                    gap: 15px;
+                    font-size: 0.9em;
+                    margin-top: 10px;
+                }
+                .save-method {
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 0.8em;
+                }
+                .save-method.local {
+                    background: #e3f2fd;
+                    color: #1976d2;
+                }
+                .save-method.cloud {
+                    background: #e8f5e9;
+                    color: #2e7d32;
+                }
+                .no-meetings {
+                    text-align: center;
+                    padding: 40px;
+                    color: #666;
+                    font-size: 1.1em;
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
+        // Setup search bar events again because main content replaced
         this.setupSearch();
     }
 
@@ -147,17 +162,16 @@ export class HomePageHistory {
                     const meetingId = meeting.id.toLowerCase();
                     return companyName.includes(query) || meetingId.includes(query);
                 });
-                
-                // Re-render with filtered meetings
-                const container = document.querySelector('#history .meetings-list');
+
+                const container = document.querySelector('.meetings-list');
                 if (container) {
                     if (filteredMeetings.length === 0) {
-                        container.innerHTML = '<div class="no-meetings">No meetings found matching your search</div>';
+                        container.innerHTML = '<div class="no-meetings">No meetings match your search</div>';
                     } else {
                         container.innerHTML = '';
                         filteredMeetings.forEach(meeting => {
                             const item = document.createElement('div');
-                            item.className = `meeting-item ${document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light'}`;
+                            item.className = 'meeting-item';
                             item.innerHTML = `
                                 <div class="meeting-info">
                                     <h3>${meeting.metadata.meetingInfo?.companyName || 'Unknown'}</h3>
@@ -167,15 +181,14 @@ export class HomePageHistory {
                                         <span class="duration">Duration: ${this.formatDuration(meeting.metadata.duration)}</span>
                                         <span class="save-method ${meeting.metadata.saveMethod}">${meeting.metadata.saveMethod === 'local' ? 'Local' : 'Cloud'}</span>
                                     </div>
-                                </div>
-                            `;
+                                </div>`;
                             item.addEventListener('click', () => this.navigateToMeeting(meeting.id));
                             container.appendChild(item);
                         });
                     }
                 }
             };
-    
+
             searchButton.addEventListener('click', performSearch);
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -185,29 +198,20 @@ export class HomePageHistory {
         }
     }
 
-
     formatDuration(duration) {
         const hours = Math.floor(duration / 3600000);
         const minutes = Math.floor((duration % 3600000) / 60000);
         const seconds = Math.floor((duration % 60000) / 1000);
-        
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     navigateToMeeting(meetingId) {
-        console.log(`Navigating to meeting: ${meetingId}`);
         window.location.hash = `#/meeting/${meetingId}`;
     }
 
     showError(message) {
         const container = document.querySelector('.main-content');
         if (!container) return;
-
-        container.innerHTML = `
-            <div class="error-message">
-                <h2>Error</h2>
-                <p>${message}</p>
-            </div>
-        `;
+        container.innerHTML = `<div class="error-message"><h2>Error</h2><p>${message}</p></div>`;
     }
 } 

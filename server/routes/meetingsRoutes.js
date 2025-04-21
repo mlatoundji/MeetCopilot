@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
 
         if (saveMethod === 'local') {
             // Save locally
-            const filename = `meeting_${Date.now()}.json`;
+            const filename = `meeting_${meetingData.id}.json`;
             const filepath = path.join(meetingsDir, filename);
             
             fs.writeFileSync(filepath, JSON.stringify(meetingData, null, 2));

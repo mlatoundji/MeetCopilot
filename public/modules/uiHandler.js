@@ -335,5 +335,11 @@ export class UIHandler {
     getMode() {
         return this.mode;
     }
+
+    refreshMeetingElements() {
+        this.videoElement = document.getElementById("screen-capture");
+        this.suggestionsDiv = document.getElementById("suggestions");
+        this.transcriptionDiv = document.getElementById("transcription");
+    }
 }
   
