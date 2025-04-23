@@ -100,6 +100,7 @@ export class HomePage {
     // Show sidebar navigation links
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (sidebarNav) sidebarNav.style.display = 'block';
+    this.app.ui.showSidebar();
 
     if (this.transcriptionSection) {
       this.transcriptionSection.style.display = 'none';

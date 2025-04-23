@@ -170,4 +170,13 @@ export class UI {
       }, 300);
     }, 3000);
   }
+
+  hideSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if(sidebar) sidebar.style.display='none';
+  }
+  showSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if(sidebar) sidebar.style.display='';
+  }
 } 
