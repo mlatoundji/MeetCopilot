@@ -44,9 +44,21 @@ export class AudioCapture {
     }
   
     async startSystemCapture() {
-      if (!this.isSystemRecording) {
-        this.systemMediaStream = await this.getSystemAudioMedia();
-        if (this.systemMediaStream) {
+      try {
+        if (!this.isSystemRecording) {
+          this.systemMediaStream = await this.getSystemAudioMedia();
+          
+          if (!this.systemMediaStream) {
+            console.log('User cancelled screen capture');
+            return false;
+          }
+
+          // Ajouter un gestionnaire pour la fin de la capture
+          this.systemMediaStream.getVideoTracks()[0].onended = () => {
+            console.log('Screen capture ended by user');
+            this.stopSystemCapture();
+          };
+
           this.systemAudioContext = new AudioContext();
           const source = this.systemAudioContext.createMediaStreamSource(this.systemMediaStream);
           this.systemRecorder = this.systemAudioContext.createScriptProcessor(4096, 1, 1);
@@ -60,16 +72,31 @@ export class AudioCapture {
           };
   
           this.isSystemRecording = true;
+          return true;
         }
+        return false;
+      } catch (error) {
+        console.error('Error in startSystemCapture:', error);
+        if (error.name === 'NotAllowedError') {
+          console.error('Permission denied for screen capture');
+        } else if (error.name === 'NotFoundError') {
+          console.error('No screen capture source found');
+        } else if (error.name === 'NotReadableError') {
+          console.error('Screen capture source is not readable');
+        }
+        return false;
       }
     }
   
     stopSystemCapture() {
       if (this.isSystemRecording) {
         this.systemMediaStream?.getTracks().forEach((track) => track.stop());
-        this.systemAudioContext.close();
+        if (this.systemAudioContext) {
+          this.systemAudioContext.close();
+        }
         this.isSystemRecording = false;
         this.systemBuffer = [];
+        this.systemMediaStream = null;
       }
     }
   
@@ -97,9 +124,12 @@ export class AudioCapture {
     stopMicCapture() {
       if (this.isMicRecording) {
         this.micMediaStream?.getTracks().forEach((track) => track.stop());
-        this.micAudioContext.close();
+        if (this.micAudioContext) {
+          this.micAudioContext.close();
+        }
         this.isMicRecording = false;
         this.micBuffer = [];
+        this.micMediaStream = null;
       }
     }
   }

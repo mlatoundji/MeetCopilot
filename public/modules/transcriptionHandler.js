@@ -39,7 +39,7 @@ export class TranscriptionHandler {
       });
       return response.transcription || '';
     } catch (error) {
-      console.error('Error during transcription:', error);
+      console.error('Error during transcription:', error.message || error);
       return '';
     }
   }

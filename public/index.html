@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,33 +12,141 @@
     <!-- HEADER -->
     <header class="header">
       <h1>Virtual Meeting Assistant</h1>
+      <div class="header-controls">
+        <button id="themeToggle" class="button-icon" title="Toggle Theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button id="userProfile" class="button-icon" title="User Profile">
+          <span class="profile-icon">👤</span>
+        </button>
+      </div>
     </header>
     
     <!-- SIDEBAR -->
     <aside class="sidebar">
-      <button id="systemCaptureButton" class="button">Start System Capture</button>
-      <button id="micCaptureButton" class="button">Start Mic</button>
-      <button id="suggestionButton" class="button">Generate Suggestions</button>
-      <button id="addMeetingInfosButton" class="button">Add Meeting Infos</button>
-
-      <!-- Language dropdown below the buttons -->
-      <label for="langSelect" class="language-label">Language:</label>
-      <select id="langSelect" class="dropdown-languages"></select>
+      <div class="sidebar-header">
+        <h3>Controls</h3>
+        <button id="collapseSidebar" class="button-icon">☰</button>
+      </div>
+      <div class="sidebar-content">
+        <!-- Éléments de la page d'accueil - toujours visibles -->
+        <div id="home-controls">
+          <button id="sessionControlButton" class="button">
+            <span class="button-icon">🚀</span>
+            Démarrer une session
+          </button>
+        </div>
+        
+        <!-- Sidebar navigation links -->
+        <div class="sidebar-nav">
+          <button class="button sidebar-link" data-hash="home">🏠 Dashboard</button>
+          <button class="button sidebar-link" data-hash="history">📜 History</button>
+          <button class="button sidebar-link" data-hash="settings">⚙️ Settings</button>
+        </div>
+        
+        <!-- Éléments spécifiques à la page Meeting - masqués par défaut -->
+        <div id="meeting-controls" class="meeting-controls" style="display: none;">
+          <div class="capture-controls">
+            <button id="systemCaptureButton" class="button">Start System Capture</button>
+            <button id="micCaptureButton" class="button">Start Mic Capture</button>
+          </div>
+          <div class="suggestions-controls">
+            <button id="suggestionButton" class="button">Generate Suggestions</button>
+          </div>
+          <div class="meeting-actions">
+            <button id="saveAndQuitButton" class="button primary">Save and Quit</button>
+            <button id="quitButton" class="button secondary">Quit</button>
+          </div>
+        </div>
+      </div>
     </aside>
     
     <!-- MAIN CONTENT -->
     <main class="main-content">
-      <section id="suggestions" class="suggestions">
-        Suggestions will appear here...
-      </section>
-      <section id="screen-capture-section">
-        <video id="screen-capture" class="video" autoplay muted></video>
-      </section>
+      <nav class="tabs">
+        <button class="tab active" data-tab="dashboard" style="display: block;">Dashboard</button>
+        <button class="tab" data-tab="current-meeting" style="display: none;">Current Meeting</button>
+        <button class="tab" data-tab="history" style="display: none;">History</button>
+        <button class="tab" data-tab="settings" style="display: none;">Settings</button>
+      </nav>
+      
+      <div class="tab-content">
+        <section id="dashboard" class="tab-pane active">
+          <div class="dashboard-grid">
+            <div class="stats-card">
+              <h3>Meeting Statistics</h3>
+              <div class="stats-content">
+                <!-- Stats will be populated by JavaScript -->
+              </div>
+            </div>
+            <div class="recent-summaries">
+              <h3>Recent Summaries</h3>
+              <div class="summaries-list">
+                <!-- Recent summaries will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section id="current-meeting" class="tab-pane">
+          <div class="suggestions-container">
+            <section id="suggestions" class="suggestions">
+              Suggestions will appear here...
+            </section>
+            <section id="screen-capture-section">
+              <video id="screen-capture" class="video" autoplay muted></video>
+            </section>
+          </div>
+        </section>
+        
+        <section id="history" class="tab-pane">
+          <div class="search-bar">
+            <input type="text" placeholder="Search past meetings..." class="search-input">
+            <button class="search-button">🔍</button>
+          </div>
+          <div class="meetings-list">
+            <!-- Past meetings will be populated by JavaScript -->
+          </div>
+        </section>
+        
+        <section id="settings" class="tab-pane">
+          <div class="settings-grid">
+            <div class="settings-section">
+              <h3>Appearance</h3>
+              <div class="setting-item">
+                <label>Theme</label>
+                <select id="themeSelect" class="setting-select">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="system">System</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>Language Settings</h3>
+              <div class="setting-item">
+                <label for="langSelect">Interface Language</label>
+                <select id="langSelect" class="setting-select dropdown-languages"></select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>Audio Settings</h3>
+              <div class="setting-item">
+                <label>Input Device</label>
+                <select id="audioInputSelect" class="setting-select"></select>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- TRANSCRIPTION AREA -->
-    <aside class="transcription">
-      <!-- Make sure the container has scroll enabled -->
+    <aside class="transcription" style="display: none;">
+      <div class="transcription-header">
+        <h3>Transcription</h3>
+        <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
+      </div>
       <div id="transcription" class="transcription-box">
         Transcription will appear here...
       </div>
@@ -53,6 +161,17 @@
     <div class="modal-buttons">
       <button id="saveMeetingInfosButton" class="button">Validate</button>
       <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
+    </div>
+  </div>
+  <div id="saveMethodModal" class="meeting-modal">
+    <h2>Choose Save Method</h2>
+    <div class="save-methods">
+      <input type="text" id="saveTitleInput" placeholder="Enter a title for the meeting">
+      <button id="localSaveButton" class="button primary">Save Locally</button>
+      <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
+    </div>
+    <div class="modal-buttons">
+      <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
     </div>
   </div>
   <script type="module" src="app.js"></script>

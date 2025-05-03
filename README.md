@@ -12,7 +12,7 @@ This application serves as a **virtual assistant** to:
 1. **System Audio Capture**: Allows selecting a browser tab or window, with the option to share audio.  
 2. **Microphone Capture**: Records local microphone input.  
 3. **Real-Time Transcription**:  
-   - **Whisper**: via OpenAI’s \(`/transcribe/whisper`\) endpoint, or  
+   - **Whisper**: via OpenAI's \(`/transcribe/whisper`\) endpoint, or  
    - **AssemblyAI**: via \(`/transcribe/assemblyai`\).  
 4. **Summaries**:  
    - Generates or requests a summary every **X** minutes to keep the conversation streamlined.  
@@ -58,13 +58,49 @@ This application serves as a **virtual assistant** to:
    ```
    Then open [http://localhost:8000](http://localhost:8000) in your browser.
 2. **Capturing Audio**:  
-   - *System Capture*: Click **“Start System Capture”** to record an active tab/window.  
-   - *Microphone*: Click **“Start Mic”** to record locally from the mic.
+   - *System Capture*: Click **"Start System Capture"** to record an active tab/window.  
+   - *Microphone*: Click **"Start Mic"** to record locally from the mic.
 3. **Transcription**: View recognized text on-screen (e.g., the transcription panel).  
 4. **Generate Summaries**: The system periodically creates short summaries (e.g., every 15 minutes) to condense conversation segments.  
-5. **Suggestions**: Click **“Generate Suggestions”** to get 3 response ideas from ChatGPT/GPT-4.
+5. **Suggestions**: Click **"Generate Suggestions"** to get 3 response ideas from ChatGPT/GPT-4.
 
 ![alt text](https://github.com/MMyster/MeetCopilot/blob/develop/img/test.png?raw=true)
+
+## Testing the Application
+
+You can test the application's endpoints using either `curl` or PowerShell's `Invoke-WebRequest` commands:
+
+### Using PowerShell
+```powershell
+# Test local suggestions endpoint
+Invoke-WebRequest -Uri "http://localhost:3000/api/suggestions/local" -Method Post -ContentType "application/json" -Body '{"context": "Votre texte ici"}'
+
+# Test transcription endpoint (Whisper)
+Invoke-WebRequest -Uri "http://localhost:3000/api/transcribe/whisper" -Method Post -ContentType "application/json" -Body '{"audio": "base64_encoded_audio_data"}'
+
+# Test transcription endpoint (AssemblyAI)
+Invoke-WebRequest -Uri "http://localhost:3000/api/transcribe/assemblyai" -Method Post -ContentType "application/json" -Body '{"audio": "base64_encoded_audio_data"}'
+
+# Test summary generation
+Invoke-WebRequest -Uri "http://localhost:3000/api/summary" -Method Post -ContentType "application/json" -Body '{"text": "Your long text here"}'
+```
+
+### Using curl
+```bash
+# Test local suggestions endpoint
+curl -X POST -H "Content-Type: application/json" -d '{"context": "Votre texte ici"}' http://localhost:3000/api/suggestions/local
+
+# Test transcription endpoint (Whisper)
+curl -X POST -H "Content-Type: application/json" -d '{"audio": "base64_encoded_audio_data"}' http://localhost:3000/api/transcribe/whisper
+
+# Test transcription endpoint (AssemblyAI)
+curl -X POST -H "Content-Type: application/json" -d '{"audio": "base64_encoded_audio_data"}' http://localhost:3000/api/transcribe/assemblyai
+
+# Test summary generation
+curl -X POST -H "Content-Type: application/json" -d '{"text": "Your long text here"}' http://localhost:3000/api/summary
+```
+
+Note: Replace `base64_encoded_audio_data` with actual base64-encoded audio data when testing transcription endpoints.
 
 ## Contributions
 

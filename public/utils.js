@@ -13,7 +13,7 @@ export const callApi = async (url, options) => {
       }
       return data;
     } catch (error) {
-      console.error(`API call to ${url} failed:`, error.message);
+      console.error(`API call to ${url} failed:`, error.message || error);
       throw error;
     }
 };
@@ -47,7 +47,18 @@ export const filterTranscription = (text, lang) => {
             "Thanks for watching!",
             "Sous-titrage Société Radio-Canada",
             "sous-titres faits par la communauté d'Amara.org",
-            "Merci."
+            "Merci.",
+            "Au revoir.",
+            "Merci de votre attention.",
+            "la page Youtube de POP'N POP'N, voici la page YouTube de POP'N POP'N.",
+            "Ciao !",
+            "Sous-titres fait par la communauté d'Amara.org",
+            "et je vous dis à très vite pour une prochaine vidéo. Au revoir et à bientôt !",
+            "– Sous-titrage par Le Crayon d'oreille-de-la-mer –",
+            "Sous-titrage",
+            "Sous-titres",
+            "Merci à tous d'avoir regardé cette vidéo",
+            "Vap'n'Roll Thierry"
         ],
         en: [
             "Thank you for watching this video.",
@@ -65,7 +76,7 @@ export const filterTranscription = (text, lang) => {
             "Thanks for watching!",
             "Subtitling Société Radio-Canada",
             "subtitles made by the Amara.org community",
-            "Thank you."
+            "Thank you.",
         ]
     };
 
