@@ -1,12 +1,15 @@
 import { HomePage } from '../pages/js/HomePage.js';
 import { MeetingPage } from '../pages/js/MeetingPage.js';
 import { LandingPage } from '../pages/js/LandingPage.js';
+import { LoginPage } from '../pages/js/LoginPage.js';
+
 export class Router {
   constructor(app) {
     this.app = app;
     this.currentPage = null;
     this.routes = {
       'landing': LandingPage,
+      'login': LoginPage,
       'home': HomePage,
       'meeting': MeetingPage,
     };

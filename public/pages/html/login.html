@@ -1,0 +1,155 @@
+<!-- Login & Register Page -->
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeetCopilot • Connexion / Inscription</title>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-blue: #2196F3;
+      --light-gray: #F5F5F5;
+      --dark-gray: #424242;
+      --white: #FFFFFF;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Roboto", Arial, sans-serif;
+    }
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--light-gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .container-login {
+      width: 100%;
+      max-width: 500px;
+      background: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Top button group */
+    .btn-group {
+      width: 300px;
+      margin: 2rem auto 0 auto;
+      height: 56px;
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      background: var(--light-gray);
+    }
+    .btn-group button {
+      flex: 1;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--dark-gray);
+      cursor: pointer;
+      z-index: 2;
+    }
+    .slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      height: 100%;
+      background: var(--primary-blue);
+      border-radius: 28px;
+      transition: all 0.4s ease-in-out;
+      z-index: 1;
+    }
+    .moveslider { left: 50%; }
+
+    /* Form section */
+    .form-section {
+      width: 200%;
+      display: flex;
+      transition: all 0.4s ease-in-out;
+    }
+    .form-section-move { transform: translateX(-50%); }
+
+    .form-box {
+      width: 50%;
+      padding: 2rem 2.5rem 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .form-box h2 {
+      margin-bottom: 0.5rem;
+      color: var(--dark-gray);
+    }
+    .form-box input {
+      height: 48px;
+      padding: 0 1rem;
+      border: 1px solid var(--light-gray);
+      border-radius: 4px;
+      background: var(--light-gray);
+      outline: none;
+    }
+    .form-box button.submit-btn {
+      margin-top: 0.5rem;
+      height: 48px;
+      background: var(--primary-blue);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .form-box button.submit-btn:hover { background: #1e88e5; }
+
+    .form-extra {
+      font-size: 0.85rem;
+      text-align: right;
+    }
+    .form-extra a { color: var(--primary-blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container-login">
+    <div class="btn-group">
+      <div class="slider"></div>
+      <button class="login-btn">Connexion</button>
+      <button class="signup-btn">Inscription</button>
+    </div>
+    <div class="form-section">
+      <!-- Login form -->
+      <form class="form-box" id="login-form">
+        <h2>Bienvenue !</h2>
+        <input type="email" placeholder="Email" required />
+        <input type="password" placeholder="Mot de passe" required />
+        <div class="form-extra"><a href="#">Mot de passe oublié ?</a></div>
+        <button class="submit-btn" id="login-submit">Se connecter</button>
+      </form>
+      <!-- Signup form -->
+      <form class="form-box" id="register-form">
+        <h2>Créer un compte</h2>
+        <input type="text" placeholder="Nom complet" required />
+        <input type="email" placeholder="Email" required />
+        <input type="password" placeholder="Mot de passe" required />
+        <input type="password" placeholder="Confirmer le mot de passe" required />
+        <button class="submit-btn" id="register-submit">S'inscrire</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html> 
