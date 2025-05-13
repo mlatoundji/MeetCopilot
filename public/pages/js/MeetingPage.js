@@ -21,8 +21,6 @@ export class MeetingPage {
     this.transcriptionBox = document.querySelector('.transcription-box');
     this.screenCaptureSection = document.getElementById('screen-capture-section');
     this.suggestionsContainer = document.querySelector('.suggestions-container');
-    this.homeControls = document.getElementById('home-controls');
-    this.meetingControls = document.getElementById('meeting-controls');
     this.transcriptionSection = document.querySelector('.transcription');
     this.container = document.querySelector('.container');
     this.saveAndQuitButton = document.getElementById('saveAndQuitButton');
@@ -69,28 +67,37 @@ export class MeetingPage {
 
   updateButtonStates() {
     if (this.systemCaptureButton) {
-      this.systemCaptureButton.textContent = this.app.audioCapture.isSystemRecording ? 
-        this.app.uiHandler.selectedTranslations.systemButtonStop : 
-        this.app.uiHandler.selectedTranslations.systemButtonStart;
+      const label = this.systemCaptureButton.querySelector('.meeting-label');
+      if (label) {
+        label.textContent = this.app.audioCapture.isSystemRecording ? 
+          this.app.uiHandler.selectedTranslations.systemButtonStop : 
+          this.app.uiHandler.selectedTranslations.systemButtonStart;
+      }
     }
     if (this.micCaptureButton) {
-      this.micCaptureButton.textContent = this.app.audioCapture.isMicRecording ? 
-        this.app.uiHandler.selectedTranslations.micButtonStop : 
-        this.app.uiHandler.selectedTranslations.micButtonStart;
+      const label = this.micCaptureButton.querySelector('.meeting-label');
+      if (label) {
+        label.textContent = this.app.audioCapture.isMicRecording ? 
+          this.app.uiHandler.selectedTranslations.micButtonStop : 
+          this.app.uiHandler.selectedTranslations.micButtonStart;
+      }
     }
   }
 
   async render() {
     await this.loadFragment();
     this.app.uiHandler.refreshMeetingElements();
-    // Hide sidebar navigation links in meeting
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav) sidebarNav.style.display = 'none';
+    // Hide main sidebar entirely during meeting
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = 'none';
+    // Show meeting controls sidebar
+    const meetingSidebar = document.querySelector('.meeting-sidebar');
+    if (meetingSidebar) {
+      meetingSidebar.style.display = 'flex';
+      meetingSidebar.classList.remove('collapsed');
+    }
     this.initializeElements();
     this.bindEvents();
-
-    if (this.homeControls) this.homeControls.style.display = 'none';
-    if (this.meetingControls) this.meetingControls.style.display = 'block';
 
     if (this.transcriptionSection) {
       this.transcriptionSection.style.display = 'flex';

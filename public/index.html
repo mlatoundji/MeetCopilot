@@ -24,41 +24,83 @@
     
     <!-- SIDEBAR -->
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <h3>Controls</h3>
-        <button id="collapseSidebar" class="button-icon">☰</button>
-      </div>
-      <div class="sidebar-content">
-        <!-- Éléments de la page d'accueil - toujours visibles -->
-        <div id="home-controls">
-          <button id="sessionControlButton" class="button">
-            <span class="button-icon">🚀</span>
-            Démarrer une session
-          </button>
-        </div>
-        
-        <!-- Sidebar navigation links -->
-        <div class="sidebar-nav">
-          <button class="button sidebar-link" data-hash="home">🏠 Dashboard</button>
-          <button class="button sidebar-link" data-hash="history">📜 History</button>
-          <button class="button sidebar-link" data-hash="settings">⚙️ Settings</button>
-        </div>
-        
-        <!-- Éléments spécifiques à la page Meeting - masqués par défaut -->
-        <div id="meeting-controls" class="meeting-controls" style="display: none;">
-          <div class="capture-controls">
-            <button id="systemCaptureButton" class="button">Start System Capture</button>
-            <button id="micCaptureButton" class="button">Start Mic Capture</button>
-          </div>
-          <div class="suggestions-controls">
-            <button id="suggestionButton" class="button">Generate Suggestions</button>
-          </div>
-          <div class="meeting-actions">
-            <button id="saveAndQuitButton" class="button primary">Save and Quit</button>
-            <button id="quitButton" class="button secondary">Quit</button>
-          </div>
-        </div>
-      </div>
+      <nav class="sidebar-nav">
+        <button id="collapseSidebar" class="sidebar-menu-btn" title="Menu">
+          <img src="icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
+        </button>
+        <ul class="sidebar-menu">
+          <!-- Section 1: Principale -->
+          <li class="sidebar-item" data-hash="home">
+            <img src="icons/accueil.png" alt="Dashboard" style="width:28px;height:28px;" />
+            <span class="sidebar-label">Dashboard</span>
+          </li>
+          <li class="sidebar-item" data-hash="history">
+            <img src="icons/history.png" alt="History" style="width:28px;height:28px;" />
+            <span class="sidebar-label">History</span>
+          </li>
+        </ul>
+        <div class="sidebar-separator"></div>
+        <ul class="sidebar-menu">
+          <!-- Section 2: Paramètres -->
+          <li class="sidebar-item" data-hash="settings">
+            <img src="icons/parametres-cog.png" alt="Settings" style="width:28px;height:28px;" />
+            <span class="sidebar-label">Settings</span>
+          </li>
+        </ul>
+        <div class="sidebar-separator"></div>
+        <ul class="sidebar-menu">
+          <!-- Section 3: Autres Options (placeholder for future) -->
+          <li class="sidebar-item" data-hash="account">
+            <img src="icons/utilisateur.png" alt="Account" style="width:28px;height:28px;" />
+            <span class="sidebar-label">Account</span>
+          </li>
+          <li class="sidebar-item" data-hash="other">
+            <img src="icons/question-signe-en-cercles.png" alt="Other" style="width:28px;height:28px;" />
+            <span class="sidebar-label">Other</span>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    
+    <!-- MEETING CONTROLS SIDEBAR -->
+    <aside class="meeting-sidebar" style="display:none;">
+      <nav class="meeting-sidebar-nav">
+        <button id="collapseMeetingSidebar" class="meeting-sidebar-menu-btn" title="Menu">
+          <img src="icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
+        </button>
+        <ul class="meeting-sidebar-menu">
+          <li>
+            <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
+              <span class="meeting-icon">🎥</span>
+              <span class="meeting-label">Capture Système</span>
+            </button>
+          </li>
+          <li>
+            <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
+              <span class="meeting-icon">🎙️</span>
+              <span class="meeting-label">Capture Micro</span>
+            </button>
+          </li>
+          <li>
+            <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
+              <span class="meeting-icon">💡</span>
+              <span class="meeting-label">Suggestions</span>
+            </button>
+          </li>
+          <li>
+            <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
+              <span class="meeting-icon">💾</span>
+              <span class="meeting-label">Sauvegarder & Quitter</span>
+            </button>
+          </li>
+          <li>
+            <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
+              <span class="meeting-icon">🚪</span>
+              <span class="meeting-label">Quitter</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
     </aside>
     
     <!-- MAIN CONTENT -->

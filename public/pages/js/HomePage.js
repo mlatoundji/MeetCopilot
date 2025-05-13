@@ -12,18 +12,12 @@ export class HomePage {
 
   initializeElements() {
     this.dashboardContainer = document.querySelector('.dashboard-grid');
-    this.sessionControlButton = document.getElementById('sessionControlButton');
     this.homeControls = document.getElementById('home-controls');
     this.meetingControls = document.getElementById('meeting-controls');
-    this.transcriptionSection = document.querySelector('.transcription');
-    this.container = document.querySelector('.container');
     this.mainContent = document.querySelector('.main-content');
   }
 
   bindEvents() {
-    if (this.sessionControlButton) {
-      this.sessionControlButton.addEventListener('click', () => this.app.handleSessionControl());
-    }
 
     // Listen for hash changes to handle meeting details navigation
     window.addEventListener('hashchange', () => {
@@ -73,6 +67,12 @@ export class HomePage {
     const html = await response.text();
     if (this.mainContent) this.mainContent.innerHTML = html;
     document.body.style.overflow = '';
+
+    // Hide transcription area on home
+    const transcription = document.querySelector('.transcription');
+    const containerElem = document.querySelector('.container');
+    if (transcription) transcription.style.display = 'none';
+    if (containerElem && !containerElem.classList.contains('no-transcription')) containerElem.classList.add('no-transcription');
   }
 
   async loadHistory() {
@@ -102,10 +102,9 @@ export class HomePage {
     if (sidebarNav) sidebarNav.style.display = 'block';
     this.app.ui.showSidebar();
 
-    if (this.transcriptionSection) {
-      this.transcriptionSection.style.display = 'none';
-      if (this.container) this.container.classList.add('no-transcription');
-    }
+    const meetingSidebar = document.querySelector('.meeting-sidebar');
+    if (meetingSidebar) meetingSidebar.style.display = 'none';
+
     if (this.sessionControlButton) {
       this.sessionControlButton.textContent = this.app.uiHandler.selectedTranslations.startSessionButton;
     }
@@ -118,6 +117,115 @@ export class HomePage {
       await this.loadSettings();
     } else {
       await this.loadDashboard();
+      // Bind session start button inside dashboard
+     this.bindSessionStartButton();
+      // After dashboard loads, render recent meetings as cards
+      this.renderRecentMeetingsCards();
+    }
+  }
+
+  async renderRecentMeetingsCards() {
+    // Fetch recent meetings from API
+    try {
+      const response = await fetch(this.app.MEETINGS_API_URL + '?saveMethod=local');
+      const data = await response.json();
+      if (!data.success || !Array.isArray(data.data)) return;
+      const meetings = data.data;
+      const dashboardGrid = document.querySelector('.dashboard-grid');
+      if (!dashboardGrid) return;
+      // Remove old recent-summaries section if present
+      const oldSummaries = dashboardGrid.querySelector('.recent-summaries');
+      if (oldSummaries) oldSummaries.remove();
+      // Create recent meetings cards section
+      let cardsSection = dashboardGrid.querySelector('.recent-meetings-cards');
+      if (!cardsSection) {
+        cardsSection = document.createElement('div');
+        cardsSection.className = 'recent-meetings-cards';
+        dashboardGrid.appendChild(cardsSection);
+      }
+      cardsSection.innerHTML = '<h3>Réunions récentes</h3>';
+      const cardsList = document.createElement('div');
+      cardsList.className = 'meetings-cards-list';
+      if (meetings.length === 0) {
+        // Show 'Empty' label in recent-meetings-list if present
+        const emptyLabel = document.querySelector('.recent-meetings-list .no-recent-meetings');
+        if (emptyLabel) emptyLabel.style.display = '';
+        cardsSection.appendChild(cardsList);
+        return;
+      } else {
+        // Hide 'Empty' label in recent-meetings-list if present
+        const emptyLabel = document.querySelector('.recent-meetings-list .no-recent-meetings');
+        if (emptyLabel) emptyLabel.style.display = 'none';
+      }
+      meetings.slice(0, 6).forEach(meeting => {
+        const card = document.createElement('div');
+        card.className = 'meeting-card';
+        card.innerHTML = `
+          <div class="meeting-info">
+            <h3 class="meeting-title">${meeting.title || 'Sans titre'}</h3>
+            <div class="meeting-meta">
+              <span class="meeting-date">${meeting.metadata && meeting.metadata.startTime ? new Date(meeting.metadata.startTime).toLocaleString() : 'XX/XX/XXXX'}</span>
+              <span class="meeting-duration">${meeting.metadata && meeting.metadata.duration ? this.formatDuration(meeting.metadata.duration) : '00:00:00'}</span>
+              <span class="save-method">${meeting.metadata.saveMethod === 'local' ? 'Local' : 'Cloud'}</span>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          window.location.hash = `#/meeting/${meeting.id}`;
+        });
+        cardsList.appendChild(card);
+      });
+      cardsSection.appendChild(cardsList);
+      // Add styles if not present
+      if (!document.getElementById('recent-meetings-cards-styles')) {
+        const style = document.createElement('style');
+        style.id = 'recent-meetings-cards-styles';
+        style.textContent = `
+          .recent-meetings-cards { background: var(--bg-secondary); border-radius: 8px; padding: 1rem; box-shadow: 0 2px 4px var(--shadow-color); }
+          .recent-meetings-cards h3 { margin-top: 0; color: var(--text-primary); }
+          .meetings-cards-list { display: flex; flex-wrap: wrap; gap: 20px; }
+          .meeting-card { display: flex; align-items: center; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.08); padding: 16px; min-width: 260px; max-width: 340px; flex: 1 1 260px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+          .meeting-card:hover { box-shadow: 0 6px 16px rgba(33,150,243,0.18); transform: translateY(-2px); }
+          .meeting-avatar { width: 56px; height: 56px; border-radius: 50%; margin-right: 16px; object-fit: cover; background: #f5f5f5; }
+          .meeting-title { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; color: #424242; }
+          .meeting-meta { font-size: 14px; color: #607D8B; display: flex; gap: 16px; }
+        `;
+        document.head.appendChild(style);
+      }
+    } catch (e) {
+      // Optionally show error
+    }
+  }
+
+  formatDuration(duration) {
+    if (!duration || isNaN(duration)) return '';
+    const hours = Math.floor(duration / 3600000);
+    const minutes = Math.floor((duration % 3600000) / 60000);
+    const seconds = Math.floor((duration % 60000) / 1000);
+    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+  }
+
+  // Placeholder for upcoming meetings logic
+  hideUpcomingEmptyLabelIfItems() {
+    const upcomingList = document.querySelector('.upcoming-meetings-list');
+    const emptyLabel = upcomingList ? upcomingList.querySelector('.no-upcoming-meetings') : null;
+    if (upcomingList && upcomingList.children.length > 1 && emptyLabel) {
+      // If there are items besides the empty label, hide the empty label
+      emptyLabel.style.display = 'none';
+    } else if (emptyLabel) {
+      emptyLabel.style.display = '';
+    }
+  }
+
+  bindSessionStartButton() {
+    const btn = document.getElementById('sessionControlButton');
+    if (btn) {
+      // Remove previous listener if any to avoid duplicates
+      btn.replaceWith(btn.cloneNode(true));
+      const newBtn = document.getElementById('sessionControlButton');
+      if (newBtn) {
+        newBtn.addEventListener('click', () => this.app.handleSessionControl());
+      }
     }
   }
 } 

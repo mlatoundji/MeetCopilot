@@ -6,6 +6,7 @@ export class UI {
     this.setupSidebar();
     this.setupTranscription();
     this.setupResponsive();
+    this.setupMeetingSidebar();
   }
 
   setupTheme() {
@@ -70,14 +71,43 @@ export class UI {
   setupSidebar() {
     const collapseButton = document.getElementById('collapseSidebar');
     const sidebar = document.querySelector('.sidebar');
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
 
+    // Collapse/expand logic
     if (collapseButton && sidebar) {
       collapseButton.addEventListener('click', () => {
         sidebar.classList.toggle('collapsed');
         // Update button icon
-        collapseButton.textContent = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+        const icon = collapseButton.querySelector('.material-icons');
+        if (icon) {
+          icon.textContent = sidebar.classList.contains('collapsed') ? 'menu' : 'close';
+        }
       });
     }
+
+    // Active state and navigation
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        sidebarItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const hash = item.getAttribute('data-hash');
+        if (hash) {
+          window.location.hash = hash;
+        }
+      });
+    });
+
+    // Highlight active item on hash change
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      sidebarItems.forEach(item => {
+        if (item.getAttribute('data-hash') === hash) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    });
   }
 
   setupTranscription() {
@@ -178,5 +208,15 @@ export class UI {
   showSidebar() {
     const sidebar = document.querySelector('.sidebar');
     if(sidebar) sidebar.style.display='';
+  }
+
+  setupMeetingSidebar() {
+    const collapseBtn = document.getElementById('collapseMeetingSidebar');
+    const meetingSidebar = document.querySelector('.meeting-sidebar');
+    if (!collapseBtn || !meetingSidebar) return;
+
+    collapseBtn.addEventListener('click', () => {
+      meetingSidebar.classList.toggle('collapsed');
+    });
   }
 } 
