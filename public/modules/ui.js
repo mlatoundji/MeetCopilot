@@ -75,14 +75,9 @@ export class UI {
 
     // Collapse/expand logic
     if (collapseButton && sidebar) {
-      collapseButton.addEventListener('click', () => {
+      collapseButton.onclick = () => {
         sidebar.classList.toggle('collapsed');
-        // Update button icon
-        const icon = collapseButton.querySelector('.material-icons');
-        if (icon) {
-          icon.textContent = sidebar.classList.contains('collapsed') ? 'menu' : 'close';
-        }
-      });
+      };
     }
 
     // Active state and navigation
@@ -211,12 +206,17 @@ export class UI {
   }
 
   setupMeetingSidebar() {
-    const collapseBtn = document.getElementById('collapseMeetingSidebar');
-    const meetingSidebar = document.querySelector('.meeting-sidebar');
-    if (!collapseBtn || !meetingSidebar) return;
-
-    collapseBtn.addEventListener('click', () => {
-      meetingSidebar.classList.toggle('collapsed');
-    });
+    const initToggle = () => {
+      const collapseBtn = document.getElementById('collapseMeetingSidebar');
+      const meetingSidebar = document.querySelector('.meeting-sidebar');
+      if (!collapseBtn || !meetingSidebar) return;
+      // Avoid multiple listeners
+      collapseBtn.onclick = () => {
+        meetingSidebar.classList.toggle('collapsed');
+      };
+    };
+    // run now and whenever hash changes (home→meeting etc.)
+    initToggle();
+    window.addEventListener('hashchange', initToggle);
   }
 } 

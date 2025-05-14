@@ -90,6 +90,7 @@ body {
 }
 
 .sidebar {
+  grid-area: sidebar;
   width: 240px;
   min-width: 64px;
   background: #181818;

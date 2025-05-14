@@ -1,3 +1,44 @@
+<!-- Meeting controls sidebar -->
+<aside class="meeting-sidebar" style="display:flex;">
+  <nav class="meeting-sidebar-nav">
+    <button id="collapseMeetingSidebar" class="meeting-sidebar-menu-btn" title="Menu">
+      <img src="../../icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
+    </button>
+    <ul class="meeting-sidebar-menu">
+      <li>
+        <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
+          <span class="meeting-icon">🎥</span>
+          <span class="meeting-label">Capture Système</span>
+        </button>
+      </li>
+      <li>
+        <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
+          <span class="meeting-icon">🎙️</span>
+          <span class="meeting-label">Capture Micro</span>
+        </button>
+      </li>
+      <li>
+        <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
+          <span class="meeting-icon">💡</span>
+          <span class="meeting-label">Suggestions</span>
+        </button>
+      </li>
+      <li>
+        <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
+          <span class="meeting-icon">💾</span>
+          <span class="meeting-label">Sauvegarder & Quitter</span>
+        </button>
+      </li>
+      <li>
+        <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
+          <span class="meeting-icon">🚪</span>
+          <span class="meeting-label">Quitter</span>
+        </button>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
 <!-- Meeting fragment: suggestions and screen capture -->
 <div class="suggestions-container">
   <section id="suggestions" class="suggestions">
@@ -6,4 +47,26 @@
   <section id="screen-capture-section">
     <video id="screen-capture" class="video" autoplay muted></video>
   </section>
+</div>
+
+<!-- TRANSCRIPTION AREA (will be moved to container by MeetingPage.js) -->
+<aside class="transcription" style="display:flex; grid-area: transcription;">
+  <div class="transcription-header">
+    <h3>Transcription</h3>
+    <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
+  </div>
+  <div id="transcription" class="transcription-box">Transcription will appear here...</div>
+</aside>
+
+<!-- SAVE METHOD MODAL (Meeting) -->
+<div id="saveMethodModal" class="meeting-modal">
+  <h2>Choose Save Method</h2>
+  <div class="save-methods">
+    <input type="text" id="saveTitleInput" placeholder="Enter a title for the meeting">
+    <button id="localSaveButton" class="button primary">Save Locally</button>
+    <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
+  </div>
+  <div class="modal-buttons">
+    <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
+  </div>
 </div> 

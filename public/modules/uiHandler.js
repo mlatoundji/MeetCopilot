@@ -140,8 +140,9 @@ export class UIHandler {
      * @param {Function} onLangChange - Callback for language change.
      */
     initialize(onLangChange) {
-        this.populateLangOptions();
+        // Populate language dropdown only if element exists
         if (this.langSelect) {
+            this.populateLangOptions();
             this.langSelect.addEventListener("change", () => {
                 const selectedLang = this.langSelect.value;
                 onLangChange(selectedLang);
@@ -175,6 +176,7 @@ export class UIHandler {
      * Populates the language selection dropdown.
      */
     populateLangOptions() {
+        if (!this.langSelect) return;
         this.supportedLangs.forEach((lang) => {
             const option = document.createElement("option");
             option.value = lang.code;
@@ -189,7 +191,9 @@ export class UIHandler {
      * @param {string} transcription - The transcription text to display.
      */
     updateTranscription(transcription) {
-        this.transcriptionDiv.innerText = transcription;
+        if (this.transcriptionDiv) {
+            this.transcriptionDiv.innerText = transcription;
+        }
     }
   
     /**
@@ -197,7 +201,9 @@ export class UIHandler {
      * @param {string} suggestions - The suggestions text to display.
      */
     updateSuggestions(suggestions) {
-        this.suggestionsDiv.innerText = suggestions || "No suggestions generated.";
+        if (this.suggestionsDiv) {
+            this.suggestionsDiv.innerText = suggestions || "No suggestions generated.";
+        }
     }
   
     /**
@@ -236,6 +242,13 @@ export class UIHandler {
             modalTitle.textContent = this.selectedTranslations.modalTitle;
         }
         
+        // Ensure references exist
+        if (!this.meetingModal) this.meetingModal = document.getElementById("meetingModal");
+        if (!this.modalOverlay) this.modalOverlay = document.getElementById("modalOverlay");
+        if (!this.dynamicFields) this.dynamicFields = document.getElementById("dynamicFields");
+
+        if (!this.dynamicFields) return; // safety
+
         // Création du contenu de la modale avec onglets
         this.dynamicFields.innerHTML = `
             <div class="modal-tabs">

@@ -62,8 +62,8 @@ export class HomePage {
     this.app.handleSessionControl();
   }
 
-  async loadDashboard() {
-    const response = await fetch('pages/html/dashboard.html');
+  async loadHomePage() {
+    const response = await fetch('pages/html/home.html');
     const html = await response.text();
     if (this.mainContent) this.mainContent.innerHTML = html;
     document.body.style.overflow = '';
@@ -73,6 +73,32 @@ export class HomePage {
     const containerElem = document.querySelector('.container');
     if (transcription) transcription.style.display = 'none';
     if (containerElem && !containerElem.classList.contains('no-transcription')) containerElem.classList.add('no-transcription');
+
+    // Refresh UIHandler references for modal elements now present in DOM
+    const uiH = this.app.uiHandler;
+    uiH.meetingModal = document.getElementById('meetingModal');
+    uiH.modalOverlay = document.getElementById('modalOverlay'); // overlay is global
+    uiH.dynamicFields = document.getElementById('dynamicFields');
+    uiH.saveMeetingInfosButton = document.getElementById('saveMeetingInfosButton');
+    uiH.closeMeetingInfosButton = document.getElementById('closeMeetingInfosButton');
+    uiH.sessionControlButton = document.getElementById('sessionControlButton');
+
+    // If sidebar exists inside mainContent, move it to container root (before main-content)
+    const container = document.querySelector('.container');
+    const sidebarInFragment = this.mainContent ? this.mainContent.querySelector('.sidebar') : null;
+    if (container && sidebarInFragment) {
+      // Prevent duplicate insertion
+      if (!document.querySelector('.container > .sidebar')) {
+        container.insertBefore(sidebarInFragment, container.querySelector('.main-content'));
+      } else {
+        // If sidebar already exists in container, remove duplicate in fragment
+        sidebarInFragment.remove();
+      }
+      // Reinitialize sidebar collapse handlers
+      if (this.app && this.app.ui) {
+        this.app.ui.setupSidebar();
+      }
+    }
   }
 
   async loadHistory() {
@@ -116,7 +142,7 @@ export class HomePage {
     } else if (hash === 'settings') {
       await this.loadSettings();
     } else {
-      await this.loadDashboard();
+      await this.loadHomePage();
       // Bind session start button inside dashboard
      this.bindSessionStartButton();
       // After dashboard loads, render recent meetings as cards

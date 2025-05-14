@@ -72,20 +72,22 @@ class App {
 
     
 
-    // Save meeting info button
-    this.saveMeetingInfosButton.addEventListener('click', () => {
-      this.handleSaveMeetingInfos();
-    });
+    if (this.saveMeetingInfosButton) {
+      this.saveMeetingInfosButton.addEventListener('click', () => {
+        this.handleSaveMeetingInfos();
+      });
+    }
+    if (this.closeMeetingInfosButton) {
+      this.closeMeetingInfosButton.addEventListener('click', () => {
+        this.handleCloseMeetingInfos();
+      });
+    }
 
-    // Close meeting info button
-    this.closeMeetingInfosButton.addEventListener('click', () => {
-      this.handleCloseMeetingInfos();
-    });
-
-    // Language selection
-    this.langSelect.addEventListener('change', (e) => {
-      this.handleLanguageChange(e.target.value);
-    });
+    if (this.langSelect) {
+      this.langSelect.addEventListener('change', (e) => {
+        this.handleLanguageChange(e.target.value);
+      });
+    }
 
     // Search functionality
     const searchInput = document.querySelector('.search-input');

@@ -1,0 +1,54 @@
+<!-- HOME PAGE FRAGMENT -->
+<!-- Sidebar markup (will be moved to container by HomePage.js) -->
+<aside class="sidebar">
+  <nav class="sidebar-nav">
+    <button id="collapseSidebar" class="sidebar-menu-btn" title="Menu">
+      <img src="icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
+    </button>
+    <ul class="sidebar-menu">
+      <!-- Section 1: Principale -->
+      <li class="sidebar-item" data-hash="home">
+        <img src="icons/accueil.png" alt="Dashboard" style="width:28px;height:28px;" />
+        <span class="sidebar-label">Dashboard</span>
+      </li>
+      <li class="sidebar-item" data-hash="history">
+        <img src="icons/history.png" alt="History" style="width:28px;height:28px;" />
+        <span class="sidebar-label">History</span>
+      </li>
+    </ul>
+    <div class="sidebar-separator"></div>
+    <ul class="sidebar-menu">
+      <!-- Section 2: Paramètres -->
+      <li class="sidebar-item" data-hash="settings">
+        <img src="icons/parametres-cog.png" alt="Settings" style="width:28px;height:28px;" />
+        <span class="sidebar-label">Settings</span>
+      </li>
+    </ul>
+    <div class="sidebar-separator"></div>
+    <ul class="sidebar-menu">
+      <!-- Section 3: Autres Options -->
+      <li class="sidebar-item" data-hash="account">
+        <img src="icons/utilisateur.png" alt="Account" style="width:28px;height:28px;" />
+        <span class="sidebar-label">Account</span>
+      </li>
+      <li class="sidebar-item" data-hash="other">
+        <img src="icons/question-signe-en-cercles.png" alt="Other" style="width:28px;height:28px;" />
+        <span class="sidebar-label">Other</span>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
+<!-- Main dashboard UI -->
+<button id="sessionControlButton" class="button session-start-btn" style="margin-bottom:1.5rem;">Démarrer une session</button>
+
+<div class="dashboard-grid">
+  <div class="stats-card">
+    <h3>Meeting Statistics</h3>
+    <div class="stats-content"><!-- Stats populated by JS --></div>
+  </div>
+  <div class="recent-meetings">
+    <h3>Réunions récentes</h3>
+    <div class="recent-meetings-list"><div class="no-recent-meetings">Empty</div></div>
+  </div>
+</div> 

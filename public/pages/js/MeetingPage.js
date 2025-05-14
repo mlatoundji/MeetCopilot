@@ -86,6 +86,15 @@ export class MeetingPage {
 
   async render() {
     await this.loadFragment();
+    // Move transcription panel to container root (if still inside main-content)
+    const container = document.querySelector('.container');
+    const mainContent = document.querySelector('.main-content');
+    if (container && mainContent) {
+      const transcriptionInMain = mainContent.querySelector('.transcription');
+      if (transcriptionInMain) {
+        container.appendChild(transcriptionInMain);
+      }
+    }
     this.app.uiHandler.refreshMeetingElements();
     // Hide main sidebar entirely during meeting
     const mainSidebar = document.querySelector('.sidebar');
@@ -96,6 +105,13 @@ export class MeetingPage {
       meetingSidebar.style.display = 'flex';
       meetingSidebar.classList.remove('collapsed');
     }
+
+    // Ensure collapse toggle listener attached
+    if (this.app && this.app.ui) {
+      this.app.ui.setupMeetingSidebar();
+      this.app.ui.setupTranscription();
+    }
+
     this.initializeElements();
     this.bindEvents();
 

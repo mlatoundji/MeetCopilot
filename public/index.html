@@ -22,200 +22,21 @@
       </div>
     </header>
     
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <nav class="sidebar-nav">
-        <button id="collapseSidebar" class="sidebar-menu-btn" title="Menu">
-          <img src="icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
-        </button>
-        <ul class="sidebar-menu">
-          <!-- Section 1: Principale -->
-          <li class="sidebar-item" data-hash="home">
-            <img src="icons/accueil.png" alt="Dashboard" style="width:28px;height:28px;" />
-            <span class="sidebar-label">Dashboard</span>
-          </li>
-          <li class="sidebar-item" data-hash="history">
-            <img src="icons/history.png" alt="History" style="width:28px;height:28px;" />
-            <span class="sidebar-label">History</span>
-          </li>
-        </ul>
-        <div class="sidebar-separator"></div>
-        <ul class="sidebar-menu">
-          <!-- Section 2: Paramètres -->
-          <li class="sidebar-item" data-hash="settings">
-            <img src="icons/parametres-cog.png" alt="Settings" style="width:28px;height:28px;" />
-            <span class="sidebar-label">Settings</span>
-          </li>
-        </ul>
-        <div class="sidebar-separator"></div>
-        <ul class="sidebar-menu">
-          <!-- Section 3: Autres Options (placeholder for future) -->
-          <li class="sidebar-item" data-hash="account">
-            <img src="icons/utilisateur.png" alt="Account" style="width:28px;height:28px;" />
-            <span class="sidebar-label">Account</span>
-          </li>
-          <li class="sidebar-item" data-hash="other">
-            <img src="icons/question-signe-en-cercles.png" alt="Other" style="width:28px;height:28px;" />
-            <span class="sidebar-label">Other</span>
-          </li>
-        </ul>
-      </nav>
-    </aside>
-    
-    <!-- MEETING CONTROLS SIDEBAR -->
-    <aside class="meeting-sidebar" style="display:none;">
-      <nav class="meeting-sidebar-nav">
-        <button id="collapseMeetingSidebar" class="meeting-sidebar-menu-btn" title="Menu">
-          <img src="icons/menu.png" alt="Menu" style="width:28px;height:28px;" />
-        </button>
-        <ul class="meeting-sidebar-menu">
-          <li>
-            <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
-              <span class="meeting-icon">🎥</span>
-              <span class="meeting-label">Capture Système</span>
-            </button>
-          </li>
-          <li>
-            <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
-              <span class="meeting-icon">🎙️</span>
-              <span class="meeting-label">Capture Micro</span>
-            </button>
-          </li>
-          <li>
-            <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
-              <span class="meeting-icon">💡</span>
-              <span class="meeting-label">Suggestions</span>
-            </button>
-          </li>
-          <li>
-            <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
-              <span class="meeting-icon">💾</span>
-              <span class="meeting-label">Sauvegarder & Quitter</span>
-            </button>
-          </li>
-          <li>
-            <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
-              <span class="meeting-icon">🚪</span>
-              <span class="meeting-label">Quitter</span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </aside>
-    
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-      <nav class="tabs">
-        <button class="tab active" data-tab="dashboard" style="display: block;">Dashboard</button>
-        <button class="tab" data-tab="current-meeting" style="display: none;">Current Meeting</button>
-        <button class="tab" data-tab="history" style="display: none;">History</button>
-        <button class="tab" data-tab="settings" style="display: none;">Settings</button>
-      </nav>
-      
-      <div class="tab-content">
-        <section id="dashboard" class="tab-pane active">
-          <div class="dashboard-grid">
-            <div class="stats-card">
-              <h3>Meeting Statistics</h3>
-              <div class="stats-content">
-                <!-- Stats will be populated by JavaScript -->
-              </div>
-            </div>
-            <div class="recent-summaries">
-              <h3>Recent Summaries</h3>
-              <div class="summaries-list">
-                <!-- Recent summaries will be populated by JavaScript -->
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        <section id="current-meeting" class="tab-pane">
-          <div class="suggestions-container">
-            <section id="suggestions" class="suggestions">
-              Suggestions will appear here...
-            </section>
-            <section id="screen-capture-section">
-              <video id="screen-capture" class="video" autoplay muted></video>
-            </section>
-          </div>
-        </section>
-        
-        <section id="history" class="tab-pane">
-          <div class="search-bar">
-            <input type="text" placeholder="Search past meetings..." class="search-input">
-            <button class="search-button">🔍</button>
-          </div>
-          <div class="meetings-list">
-            <!-- Past meetings will be populated by JavaScript -->
-          </div>
-        </section>
-        
-        <section id="settings" class="tab-pane">
-          <div class="settings-grid">
-            <div class="settings-section">
-              <h3>Appearance</h3>
-              <div class="setting-item">
-                <label>Theme</label>
-                <select id="themeSelect" class="setting-select">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="system">System</option>
-                </select>
-              </div>
-            </div>
-            <div class="settings-section">
-              <h3>Language Settings</h3>
-              <div class="setting-item">
-                <label for="langSelect">Interface Language</label>
-                <select id="langSelect" class="setting-select dropdown-languages"></select>
-              </div>
-            </div>
-            <div class="settings-section">
-              <h3>Audio Settings</h3>
-              <div class="setting-item">
-                <label>Input Device</label>
-                <select id="audioInputSelect" class="setting-select"></select>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+    <!-- MAIN CONTENT (empty, will be filled by fragments) -->
+    <main class="main-content"></main>
 
-    <!-- TRANSCRIPTION AREA -->
-    <aside class="transcription" style="display: none;">
-      <div class="transcription-header">
-        <h3>Transcription</h3>
-        <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
+    <!-- MODAL + OVERLAY -->
+    <div id="modalOverlay" class="modal-overlay"></div>
+    <div id="meetingModal" class="meeting-modal">
+      <h2>Add Meeting Infos</h2>
+      <div id="dynamicFields"></div>
+      <div class="modal-buttons">
+        <button id="saveMeetingInfosButton" class="button">Validate</button>
+        <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
       </div>
-      <div id="transcription" class="transcription-box">
-        Transcription will appear here...
-      </div>
-    </aside>
+    </div>
   </div>
 
-  <!-- MODAL + OVERLAY -->
-  <div id="modalOverlay" class="modal-overlay"></div>
-  <div id="meetingModal" class="meeting-modal">
-    <h2>Add Meeting Infos</h2>
-    <div id="dynamicFields"></div>
-    <div class="modal-buttons">
-      <button id="saveMeetingInfosButton" class="button">Validate</button>
-      <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
-    </div>
-  </div>
-  <div id="saveMethodModal" class="meeting-modal">
-    <h2>Choose Save Method</h2>
-    <div class="save-methods">
-      <input type="text" id="saveTitleInput" placeholder="Enter a title for the meeting">
-      <button id="localSaveButton" class="button primary">Save Locally</button>
-      <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
-    </div>
-    <div class="modal-buttons">
-      <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
-    </div>
-  </div>
   <script type="module" src="app.js"></script>
 </body>
 </html>
