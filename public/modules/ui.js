@@ -76,7 +76,12 @@ export class UI {
     // Collapse/expand logic
     if (collapseButton && sidebar) {
       collapseButton.onclick = () => {
-        sidebar.classList.toggle('collapsed');
+        const meetingSidebar = document.querySelector('.meeting-sidebar');
+        if (meetingSidebar && meetingSidebar.style.display !== 'none') {
+          meetingSidebar.classList.toggle('collapsed');
+        } else if (sidebar) {
+          sidebar.classList.toggle('collapsed');
+        }
       };
     }
 

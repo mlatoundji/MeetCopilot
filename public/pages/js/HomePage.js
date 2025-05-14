@@ -63,10 +63,10 @@ export class HomePage {
   }
 
   async loadHomePage() {
-    const response = await fetch('pages/html/home.html');
-    const html = await response.text();
-    if (this.mainContent) this.mainContent.innerHTML = html;
-    document.body.style.overflow = '';
+    // 1) Load sidebar fragment
+    const sidebarResp = await fetch('pages/html/home.html');
+    const sidebarHtml = await sidebarResp.text();
+    if (this.mainContent) this.mainContent.innerHTML = sidebarHtml;
 
     // Hide transcription area on home
     const transcription = document.querySelector('.transcription');
@@ -99,6 +99,15 @@ export class HomePage {
         this.app.ui.setupSidebar();
       }
     }
+
+    // 2) Load dashboard fragment into mainContent (after sidebar was removed)
+    const dashResp = await fetch('pages/html/dashboard.html');
+    const dashHtml = await dashResp.text();
+    if (this.mainContent) this.mainContent.innerHTML = dashHtml;
+
+    // Re-bind again for session button, etc.
+    this.bindSessionStartButton();
+    this.renderRecentMeetingsCards();
   }
 
   async loadHistory() {
@@ -143,10 +152,6 @@ export class HomePage {
       await this.loadSettings();
     } else {
       await this.loadHomePage();
-      // Bind session start button inside dashboard
-     this.bindSessionStartButton();
-      // After dashboard loads, render recent meetings as cards
-      this.renderRecentMeetingsCards();
     }
   }
 
@@ -210,7 +215,7 @@ export class HomePage {
           .recent-meetings-cards { background: var(--bg-secondary); border-radius: 8px; padding: 1rem; box-shadow: 0 2px 4px var(--shadow-color); }
           .recent-meetings-cards h3 { margin-top: 0; color: var(--text-primary); }
           .meetings-cards-list { display: flex; flex-wrap: wrap; gap: 20px; }
-          .meeting-card { display: flex; align-items: center; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.08); padding: 16px; min-width: 260px; max-width: 340px; flex: 1 1 260px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+          .meeting-card { display: flex; align-items: center; background: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.08); padding: 16px; min-width: 260px; max-width: 340px; flex: 1 1 260px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
           .meeting-card:hover { box-shadow: 0 6px 16px rgba(33,150,243,0.18); transform: translateY(-2px); }
           .meeting-avatar { width: 56px; height: 56px; border-radius: 50%; margin-right: 16px; object-fit: cover; background: #f5f5f5; }
           .meeting-title { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; color: #424242; }

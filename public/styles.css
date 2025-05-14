@@ -17,6 +17,7 @@
   --summary-border: #4caf50;
   --suggestion-border: #ff9800;
   --error-text: #d32f2f;
+  --sidebar-bg: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -28,6 +29,16 @@
   --accent-color: #4a9eff;
   --accent-hover: #3a8eff;
   --shadow-color: rgba(0, 0, 0, 0.3);
+  --card-bg: #2d2d2d;
+  --local-bg: #e3f2fd;
+  --local-text: #1976d2;
+  --cloud-bg: #e8f5e9;
+  --cloud-text: #2e7d32;
+  --dialog-border: #2196f3;
+  --summary-border: #4caf50;
+  --suggestion-border: #ff9800;
+  --error-text: #d32f2f;
+  --sidebar-bg: #2d2d2d;
 }
 
 body {
@@ -61,8 +72,8 @@ body {
 
 .header {
   grid-area: header;
-  background-color: var(--accent-color);
-  color: #fff;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -78,7 +89,7 @@ body {
 .button-icon {
   background: none;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
   padding: 8px;
   border-radius: 4px;
@@ -93,7 +104,7 @@ body {
   grid-area: sidebar;
   width: 240px;
   min-width: 64px;
-  background: #181818;
+  background: var(--sidebar-bg);
   color: #fff;
   height: 100vh;
   display: flex;
@@ -153,12 +164,12 @@ body {
   border-radius: 8px;
   transition: background 0.2s, color 0.2s;
   font-size: 16px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .sidebar-item.active, .sidebar-item:hover {
-  background: #232323;
-  color: #2196F3;
+  background: rgba(0,0,0,0.08);
+  color: var(--accent-color);
 }
 
 .sidebar-item .material-icons {
@@ -1191,7 +1202,7 @@ body {
   top: 80px;
   height: calc(100vh - 80px);
   width: 240px;
-  background: #181818;
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   padding-top: 16px;
@@ -1234,7 +1245,7 @@ body {
   min-height: 48px;
   border: none;
   background: transparent;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 16px;
   display: flex;
   align-items: center;
@@ -1249,6 +1260,7 @@ body {
 .meeting-icon {
   font-size: 24px;
   line-height: 1;
+  color: var(--accent-color);
 }
 /* Hide labels when collapsed */
 .meeting-sidebar.collapsed .meeting-label {
@@ -1267,3 +1279,26 @@ body {
     width: 60px;
   }
 }
+
+/* Logo */
+.logo-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.menu-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+.menu-toggle:hover {
+  background-color: rgba(0,0,0,0.06);
+}
+
+.logo-link:hover .logo-text { color: var(--accent-color);}
