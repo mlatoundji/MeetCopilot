@@ -75,58 +75,64 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const { saveMethod } = req.query;
+        let meetings = [];
 
-        if (!saveMethod) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Missing saveMethod parameter' 
-            });
+        // 1. Local
+        if (!saveMethod || saveMethod === 'local') {
+            try {
+                const files = fs.readdirSync(meetingsDir);
+                const localMeetings = files.map(filename => {
+                    const filepath = path.join(meetingsDir, filename);
+                    const content = fs.readFileSync(filepath, 'utf8');
+                    const meeting = JSON.parse(content);
+                    return {
+                        ...meeting,
+                        id: meeting.id || filename.replace('.json', ''),
+                        metadata: {
+                            ...meeting.metadata,
+                            saveMethod: 'local'
+                        }
+                    };
+                });
+                meetings = meetings.concat(localMeetings);
+            } catch (err) {
+                console.error('Erreur lecture réunions locales:', err);
+            }
         }
 
-        if (saveMethod === 'local') {
-            // Read local files
-            const files = fs.readdirSync(meetingsDir);
-            const meetings = files.map(filename => {
-                const filepath = path.join(meetingsDir, filename);
-                const content = fs.readFileSync(filepath, 'utf8');
-                const meeting = JSON.parse(content);
-                // Add id and saveMethod to each meeting
-                return {
-                    ...meeting,
-                    id: meeting.id || filename.replace('.json', ''),
-                    metadata: {
-                        ...meeting.metadata,
-                        saveMethod: 'local'
-                    }
-                };
-            });
-            res.json({ 
-                success: true,
-                data: meetings 
-            });
-        } else if (saveMethod === 'supabase') {
-            // Get from Supabase
-            const { data, error } = await supabase
-                .from('meetings')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            res.json({
-                success: true,
-                data: data
-            });
-        } else {
-            res.status(400).json({ 
-                success: false, 
-                error: 'Invalid save method' 
-            });
+        // 2. Supabase
+        if (!saveMethod || saveMethod === 'supabase') {
+            try {
+                const { data: supabaseMeetings, error } = await supabase
+                    .from('meetings')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                if (supabaseMeetings) {
+                    meetings = meetings.concat(
+                        supabaseMeetings.map(m => ({
+                            ...m,
+                            metadata: {
+                                ...m.metadata,
+                                saveMethod: 'supabase'
+                            }
+                        }))
+                    );
+                }
+            } catch (err) {
+                console.error('Erreur lecture réunions Supabase:', err);
+            }
         }
+
+        return res.json({
+            success: true,
+            data: meetings
+        });
     } catch (error) {
         console.error('Error fetching meetings:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 });

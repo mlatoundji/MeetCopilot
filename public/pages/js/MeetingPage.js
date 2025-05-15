@@ -1,8 +1,31 @@
 import { BackupHandler } from '../../modules/backupHandler.js';
+import { APIHandler } from '../../modules/apiHandler.js';
+import { UIHandler } from '../../modules/uiHandler.js';
+import { TranscriptionHandler } from '../../modules/transcriptionHandler.js';
+import { SuggestionsHandler } from '../../modules/suggestionsHandler.js';
+import { DataStore } from '../../modules/dataStore.js';
+import { AudioCapture } from '../../modules/audioCapture.js';
+import { LayoutManager } from '../../modules/layoutManager.js';
 
 export class MeetingPage {
   constructor(app) {
     this.app = app;
+    this.apiHandler = app?.apiHandler || new APIHandler();
+    this.dataStore = app?.dataStore || new DataStore(this.apiHandler);
+    this.uiHandler = app?.uiHandler || new UIHandler();
+    this.transcriptionHandler = app?.transcriptionHandler || new TranscriptionHandler(this.apiHandler);
+    this.suggestionsHandler = app?.suggestionsHandler || new SuggestionsHandler(this.apiHandler);
+    this.audioCapture = app?.audioCapture || new AudioCapture();
+    this.layoutManager = new LayoutManager();
+
+    // Constantes pour les sources audio
+    this.SYSTEM_SOURCE = 'system';
+    this.MIC_SOURCE = 'mic';
+
+    this.isRecording = false;
+    this.systemCapture = null;
+    this.micCapture = null;
+    this.selectedTranslations = this.uiHandler.getTranslations();
   }
 
   async loadFragment() {
@@ -25,43 +48,90 @@ export class MeetingPage {
     this.container = document.querySelector('.container');
     this.saveAndQuitButton = document.getElementById('saveAndQuitButton');
     this.quitButton = document.getElementById('quitButton');
+    this.meetingContentGrid = document.getElementById('meetingContentGrid');
+    this.meetingSidebar = document.getElementById('meetingSidebar');
+
+    // Masquer la sidebar principale dans la page meeting
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = 'none';
   }
 
   bindEvents() {
     if (this.systemCaptureButton) {
-      this.systemCaptureButton.addEventListener('click', () => this.app.handleSystemCapture());
+      this.systemCaptureButton.addEventListener('click', () => this.toggleSystemCapture());
     }
     if (this.micCaptureButton) {
-      this.micCaptureButton.addEventListener('click', () => this.app.handleMicCapture());
+      this.micCaptureButton.addEventListener('click', () => this.toggleMicCapture());
     }
     if (this.suggestionButton) {
-      this.suggestionButton.addEventListener('click', () => this.app.handleGenerateSuggestions());
+      this.suggestionButton.addEventListener('click', () => this.generateSuggestion());
     }
     if (this.saveAndQuitButton) {
-      this.saveAndQuitButton.addEventListener('click', () => this.handleSaveAndQuit());
+      this.saveAndQuitButton.addEventListener('click', () => this.saveAndQuitMeeting());
     }
     if (this.quitButton) {
-      this.quitButton.addEventListener('click', () => this.handleQuit());
+      this.quitButton.addEventListener('click', () => this.quitMeeting());
+    }
+    
+    // Eléments d'agencement flexible
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    if (toggleSidebar) {
+      toggleSidebar.addEventListener('click', () => this.toggleSidebar());
+    }
+    
+    const toggleLayoutPresets = document.getElementById('toggleLayoutPresets');
+    if (toggleLayoutPresets) {
+      toggleLayoutPresets.addEventListener('click', () => this.layoutManager.toggleLayoutPresetsPanel());
+    }
+    
+    // Boutons de préréglage d'agencement
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        this.applyLayoutPreset(button.dataset.preset);
+      });
+    });
+  }
+
+  saveAndQuitMeeting() {
+    if (this.app && this.app.backupHandler) {
+      this.app.backupHandler.saveMeetingData()
+        .then(() => {
+          if (this.saveAndQuitButton) {
+            this.saveAndQuitButton.classList.add('save-success');
+          }
+          setTimeout(() => {
+            if (this.saveAndQuitButton) {
+              this.saveAndQuitButton.classList.remove('save-success');
+            }
+            this.quitMeeting();
+          }, 500);
+        })
+        .catch(error => {
+          console.error('Error saving meeting data:', error);
+          alert('Error saving meeting data. Please try again.');
+        });
+    } else {
+      console.error('No backup handler available');
+      this.quitMeeting();
     }
   }
 
-  async handleSaveAndQuit() {
-    this.app.backupHandler.saveMeetingData()
-      .then(() => {
-        this.saveAndQuitButton.classList.add('save-success');
-        setTimeout(() => {
-          this.saveAndQuitButton.classList.remove('save-success');
-          this.handleQuit();
-        }, 500);
-      })
-      .catch(error => {
-        console.error('Error saving meeting data:', error);
-        alert('Error saving meeting data. Please try again.');
-      });
-  }
-
-  handleQuit() {
-    this.app.backupHandler.clearMeetingData();
+  quitMeeting() {
+    // Arrêter les enregistrements audio
+    if (this.audioCapture.isSystemRecording) {
+      this.toggleSystemCapture();
+    }
+    if (this.audioCapture.isMicRecording) {
+      this.toggleMicCapture();
+    }
+    
+    // Nettoyer les données de réunion
+    if (this.app && this.app.backupHandler) {
+      this.app.backupHandler.clearMeetingData();
+    }
+    
+    // Revenir à la page d'accueil
     window.location.hash = 'home';
   }
 
@@ -69,7 +139,7 @@ export class MeetingPage {
     if (this.systemCaptureButton) {
       const label = this.systemCaptureButton.querySelector('.meeting-label');
       if (label) {
-        label.textContent = this.app.audioCapture.isSystemRecording ? 
+        label.textContent = this.audioCapture.isSystemRecording ? 
           this.app.uiHandler.selectedTranslations.systemButtonStop : 
           this.app.uiHandler.selectedTranslations.systemButtonStart;
       }
@@ -77,7 +147,7 @@ export class MeetingPage {
     if (this.micCaptureButton) {
       const label = this.micCaptureButton.querySelector('.meeting-label');
       if (label) {
-        label.textContent = this.app.audioCapture.isMicRecording ? 
+        label.textContent = this.audioCapture.isMicRecording ? 
           this.app.uiHandler.selectedTranslations.micButtonStop : 
           this.app.uiHandler.selectedTranslations.micButtonStart;
       }
@@ -86,40 +156,231 @@ export class MeetingPage {
 
   async render() {
     await this.loadFragment();
-    // Move transcription panel to container root (if still inside main-content)
+    
+    // Récupérer le container et mainContent
     const container = document.querySelector('.container');
     const mainContent = document.querySelector('.main-content');
-    if (container && mainContent) {
-      const transcriptionInMain = mainContent.querySelector('.transcription');
-      if (transcriptionInMain) {
-        container.appendChild(transcriptionInMain);
-      }
-    }
-    this.app.uiHandler.refreshMeetingElements();
-    // Hide main sidebar entirely during meeting
+    
+    this.uiHandler.refreshMeetingElements();
+    
+    // Cacher la sidebar principale
     const mainSidebar = document.querySelector('.sidebar');
     if (mainSidebar) mainSidebar.style.display = 'none';
-    // Show meeting controls sidebar
+    
+    // Afficher la sidebar de réunion
     const meetingSidebar = document.querySelector('.meeting-sidebar');
     if (meetingSidebar) {
       meetingSidebar.style.display = 'flex';
       meetingSidebar.classList.remove('collapsed');
     }
 
-    // Ensure collapse toggle listener attached
-    if (this.app && this.app.ui) {
-      this.app.ui.setupMeetingSidebar();
-      this.app.ui.setupTranscription();
-    }
-
+    // S'assurer que les éléments responsive sont correctement initialisés
     this.initializeElements();
     this.bindEvents();
 
+    // S'assurer que l'affichage de la transcription est activé
     if (this.transcriptionSection) {
       this.transcriptionSection.style.display = 'flex';
-      if (this.container) this.container.classList.remove('no-transcription');
+      if (container) container.classList.remove('no-transcription');
     }
 
     this.updateButtonStates();
+  }
+
+  async initialize() {
+    console.log("MeetingPage initializing");
+    
+    // Initialiser les éléments UI
+    this.initializeElements();
+    this.bindEvents();
+    
+    // Initialiser le gestionnaire de mise en page responsive
+    this.layoutManager.initialize();
+    this.layoutManager.loadLayoutsFromLocalStorage();
+    
+    console.log("MeetingPage initialized");
+  }
+
+  // Fonctions pour la mise en page responsive
+  toggleSidebar() {
+    if (this.meetingSidebar) {
+      this.meetingSidebar.classList.toggle('collapsed');
+      if (this.meetingContentGrid) {
+        this.meetingContentGrid.style.marginLeft = 
+          this.meetingSidebar.classList.contains('collapsed') ? '60px' : '250px';
+      }
+    }
+  }
+
+  applyLayoutPreset(preset) {
+    this.layoutManager.applyLayoutPreset(preset);
+  }
+
+  // Fonctions pour la gestion des captures audio
+  toggleSystemCapture() {
+    if (this.audioCapture.isSystemRecording) {
+      this.stopSystemCapture();
+    } else {
+      this.startSystemCapture();
+    }
+  }
+
+  toggleMicCapture() {
+    if (this.audioCapture.isMicRecording) {
+      this.stopMicCapture();
+    } else {
+      this.startMicCapture();
+    }
+  }
+
+  async startSystemCapture() {
+    try {
+      if (!this.audioCapture.isSystemRecording) {
+        // Réinitialiser le contexte de conversation
+        if (this.app && this.app.conversationContextHandler) {
+          this.app.conversationContextHandler.resetConversationContext();
+          this.app.conversationContextHandler.lastSummaryTime = Date.now();
+        }
+        
+        // Démarrer la capture système
+        const started = await this.audioCapture.startSystemCapture();
+        if (!started) {
+          // Si la capture n'a pas démarré (annulation), on ne fait rien
+          return;
+        }
+        
+        // Mettre à jour l'interface
+        this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, true);
+        this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
+        
+        // Démarrer la transcription
+        await this.startTranscription(this.SYSTEM_SOURCE);
+        
+        // Mettre à jour l'état des boutons
+        this.updateButtonStates();
+      }
+    } catch (error) {
+      console.error('Error starting system capture:', error);
+      // En cas d'erreur, on s'assure que le bouton reste dans son état initial
+      this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, false);
+    }
+  }
+
+  stopSystemCapture() {
+    if (this.audioCapture.isSystemRecording) {
+      this.audioCapture.stopSystemCapture();
+      this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, false);
+      this.uiHandler.closeVideoElement();
+      this.updateButtonStates();
+    }
+  }
+
+  async startMicCapture() {
+    try {
+      if (!this.audioCapture.isMicRecording) {
+        await this.audioCapture.startMicCapture();
+        this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
+        await this.startTranscription(this.MIC_SOURCE);
+        this.updateButtonStates();
+      }
+    } catch (error) {
+      console.error('Error starting mic capture:', error);
+      this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, false);
+    }
+  }
+
+  stopMicCapture() {
+    if (this.audioCapture.isMicRecording) {
+      this.audioCapture.stopMicCapture();
+      this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, false);
+      this.updateButtonStates();
+    }
+  }
+
+  async startTranscription(source) {
+    const intervalId = setInterval(async () => {
+      const buffer = source === this.SYSTEM_SOURCE ? this.audioCapture.systemBuffer : this.audioCapture.micBuffer;
+      const contextLabel = source === this.SYSTEM_SOURCE ? 
+        this.app.conversationContextHandler.systemLabel : 
+        this.app.conversationContextHandler.micLabel;
+
+      if (buffer.length > 0) {
+        const audioBuffer = buffer.reduce((acc, val) => {
+          const tmp = new Float32Array(acc.length + val.length);
+          tmp.set(acc, 0);
+          tmp.set(val, acc.length);
+          return tmp;
+        }, new Float32Array());
+
+        const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
+        buffer.length = 0; // Clear buffer
+
+        const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+        if (transcription) {
+          console.log(`Transcription (${contextLabel}):`, transcription);
+          if (this.app.filterTranscription) {
+            const filteredText = this.app.filterTranscription(transcription, this.app.currentLanguage);
+            if(filteredText === "") return;
+            
+            this.app.conversationContextHandler.conversationContextDialogs.push({
+              speaker: contextLabel, 
+              text: filteredText, 
+              time: Date.now(), 
+              language: this.app.currentLanguage, 
+              source: source
+            });
+            await this.app.conversationContextHandler.updateConversationContext();
+            this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+          }
+        }
+      }
+    }, this.audioCapture.timeslice);
+
+    if (source === this.SYSTEM_SOURCE) {
+      this.audioCapture.systemTranscriptionInterval = intervalId;
+    } else {
+      this.audioCapture.micTranscriptionInterval = intervalId;
+    }
+  }
+
+  async generateSuggestion() {
+    try {
+      let context;
+      if (this.app && this.app.conversationContextHandler) {
+        context = this.app.conversationContextHandler.conversationContextText;
+      } else {
+        context = document.getElementById('transcription').innerText;
+      }
+      
+      if (!context || context.trim() === '') {
+        this.uiHandler.displaySuggestion("Pas de contexte de conversation suffisant pour générer des suggestions.");
+        return;
+      }
+
+      const suggestions = await this.suggestionsHandler.generateSuggestions(context);
+      
+      if (this.uiHandler.updateSuggestions) {
+        this.uiHandler.updateSuggestions(suggestions);
+      } else {
+        this.uiHandler.displaySuggestion(suggestions);
+      }
+      
+      // Enregistrer la suggestion dans le conversationContextHandler
+      if (this.app && this.app.conversationContextHandler) {
+        this.app.conversationContextHandler.conversationContextSuggestions.push({
+          text: suggestions,
+          time: Date.now(),
+          language: this.app.currentLanguage
+        });
+      }
+      
+      // Enregistrer la suggestion dans le backupHandler si disponible
+      if (this.app && this.app.backupHandler) {
+        this.app.backupHandler.addSuggestion(suggestions);
+      }
+    } catch (error) {
+      console.error("Error generating suggestion:", error);
+      this.uiHandler.displaySuggestion("Erreur lors de la génération des suggestions.");
+    }
   }
 } 

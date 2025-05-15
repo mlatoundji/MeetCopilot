@@ -1,20 +1,28 @@
 import { callApi } from '../utils.js';
 
 export class BackupHandler {
-    constructor(meetingsApiUrl, app) {
-        this.app = app;
-        this.meetingsApiUrl = meetingsApiUrl;
+    constructor(meetingsApiUrlOrAppWithApiHandler, app = null) {
+        if (typeof meetingsApiUrlOrAppWithApiHandler === 'string') {
+            this.meetingsApiUrl = meetingsApiUrlOrAppWithApiHandler;
+            this.apiHandler = app?.apiHandler || null;
+            this.app = app;
+        } else {
+            this.app = meetingsApiUrlOrAppWithApiHandler;
+            this.apiHandler = this.app?.apiHandler;
+            this.meetingsApiUrl = this.app?.MEETINGS_API_URL || `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
+        }
+        
         this.meetingData = {
             id: null,
-            title: null,
-            dialogs: [],
-            summaries: [],
+            title: '',
+            transcription: '',
             suggestions: [],
+            summaries: [],
             metadata: {
                 startTime: null,
                 endTime: null,
                 duration: null,
-                meetingInfo: {}
+                participants: [],
             }
         };
         // this.autoSaveInterval = null;
@@ -200,5 +208,136 @@ export class BackupHandler {
             }
         };
         this.stopAutoSave();
+    }
+
+    /**
+     * Initializes a new meeting
+     * @param {string} title - The title of the meeting
+     */
+    initMeeting(title) {
+        this.meetingData = {
+            id: Date.now().toString(),
+            title: title || `Meeting ${new Date().toLocaleString()}`,
+            transcription: '',
+            suggestions: [],
+            summaries: [],
+            metadata: {
+                startTime: new Date().toISOString(),
+                endTime: null,
+                duration: null,
+                participants: [],
+            }
+        };
+    }
+
+    /**
+     * Adds a transcription to the meeting data
+     * @param {string} transcription - The transcription to add
+     * @param {string} source - The source of the transcription (system or mic)
+     */
+    addTranscription(transcription, source) {
+        if (!transcription || transcription.trim() === '') return;
+        
+        const timestamp = new Date().toISOString();
+        const formattedTranscription = `[${timestamp}] [${source}] ${transcription}\n`;
+        this.meetingData.transcription += formattedTranscription;
+    }
+
+    /**
+     * Adds a suggestion to the meeting data
+     * @param {string} suggestion - The suggestion to add
+     */
+    addSuggestion(suggestion) {
+        if (!suggestion || suggestion.trim() === '') return;
+        
+        this.meetingData.suggestions.push({
+            text: suggestion,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    /**
+     * Adds a summary to the meeting data
+     * @param {string} summary - The summary to add
+     */
+    addSummary(summary) {
+        if (!summary || summary.trim() === '') return;
+        
+        this.meetingData.summaries.push({
+            text: summary,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    /**
+     * Finalizes the meeting and calculates duration
+     */
+    finalizeMeeting() {
+        this.meetingData.metadata.endTime = new Date().toISOString();
+        
+        // Calculate duration in seconds
+        const startTime = new Date(this.meetingData.metadata.startTime).getTime();
+        const endTime = new Date(this.meetingData.metadata.endTime).getTime();
+        this.meetingData.metadata.duration = Math.round((endTime - startTime) / 1000);
+    }
+
+    /**
+     * Saves the meeting data to the API or local storage
+     * @returns {Promise<Object>} - Result of the save operation
+     */
+    async saveMeeting() {
+        try {
+            if (!this.meetingData.id) {
+                throw new Error('No active meeting to save');
+            }
+            
+            this.finalizeMeeting();
+            
+            if (this.apiHandler) {
+                return await this.apiHandler.saveMeeting(this.meetingData);
+            } else if (this.app?.dataStore) {
+                return await this.app.dataStore.saveMeetingData(this.meetingData);
+            } else {
+                // Fallback to localStorage if no API handler or dataStore
+                const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
+                const existingIndex = meetings.findIndex(m => m.id === this.meetingData.id);
+                
+                if (existingIndex >= 0) {
+                    meetings[existingIndex] = this.meetingData;
+                } else {
+                    meetings.push(this.meetingData);
+                }
+                
+                localStorage.setItem('meetings', JSON.stringify(meetings));
+                return { success: true, id: this.meetingData.id };
+            }
+        } catch (error) {
+            console.error('Error saving meeting:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Fetch meetings from the remote API (Supabase) if available.
+     * @returns {Promise<Array>} List of meetings or empty array on failure.
+     */
+    async fetchMeetings(saveMethod = 'local') {
+        if (this.apiHandler && typeof this.apiHandler.getMeetings === 'function') {
+            try {
+                const response = await this.apiHandler.getMeetings(saveMethod);
+
+                // L'API retourne un objet { success, data }. Nous ne voulons renvoyer que le tableau de réunions.
+                if (response && response.success && Array.isArray(response.data)) {
+                    return response.data;
+                }
+
+                // Si la structure n'est pas celle attendue, retourner telle quelle afin que l'appelant puisse gérer.
+                return response;
+            } catch (error) {
+                console.error('Error fetching meetings from API:', error);
+                return [];
+            }
+        }
+        return [];
     }
 } 

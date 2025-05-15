@@ -1,59 +1,95 @@
 <!-- Meeting controls sidebar -->
-<aside class="meeting-sidebar" style="display:flex;">
-  <nav class="meeting-sidebar-nav">
-    <ul class="meeting-sidebar-menu">
-      <li>
-        <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
-          <span class="meeting-icon">🎥</span>
-          <span class="meeting-label">Capture Système</span>
-        </button>
-      </li>
-      <li>
-        <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
-          <span class="meeting-icon">🎙️</span>
-          <span class="meeting-label">Capture Micro</span>
-        </button>
-      </li>
-      <li>
-        <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
-          <span class="meeting-icon">💡</span>
-          <span class="meeting-label">Suggestions</span>
-        </button>
-      </li>
-      <li>
-        <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
-          <span class="meeting-icon">💾</span>
-          <span class="meeting-label">Sauvegarder & Quitter</span>
-        </button>
-      </li>
-      <li>
-        <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
-          <span class="meeting-icon">🚪</span>
-          <span class="meeting-label">Quitter</span>
-        </button>
-      </li>
-    </ul>
-  </nav>
-</aside>
+<div class="meeting-page-container">
+  <aside class="meeting-sidebar" id="meetingSidebar">
+    <button id="toggleSidebar" class="toggle-sidebar-btn" title="Réduire/Agrandir la sidebar">
+      <span class="toggle-icon">◀</span>
+    </button>
+    <nav class="meeting-sidebar-nav">
+      <ul class="meeting-sidebar-menu">
+        <li>
+          <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
+            <span class="meeting-icon">🎥</span>
+            <span class="meeting-label">Capture Système</span>
+          </button>
+        </li>
+        <li>
+          <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
+            <span class="meeting-icon">🎙️</span>
+            <span class="meeting-label">Capture Micro</span>
+          </button>
+        </li>
+        <li>
+          <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
+            <span class="meeting-icon">💡</span>
+            <span class="meeting-label">Suggestions</span>
+          </button>
+        </li>
+        <li>
+          <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
+            <span class="meeting-icon">💾</span>
+            <span class="meeting-label">Sauvegarder & Quitter</span>
+          </button>
+        </li>
+        <li>
+          <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
+            <span class="meeting-icon">🚪</span>
+            <span class="meeting-label">Quitter</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </aside>
 
-<!-- Meeting fragment: suggestions and screen capture -->
-<div class="suggestions-container">
-  <section id="suggestions" class="suggestions">
-    Suggestions will appear here...
-  </section>
-  <section id="screen-capture-section">
-    <video id="screen-capture" class="video" autoplay muted></video>
-  </section>
+  <!-- Main content grid: suggestions, screen capture and transcription -->
+  <main class="meeting-content-grid" id="meetingContentGrid">
+    <!-- Suggestions area with resize/move controls -->
+    <section id="suggestionsArea" class="content-area suggestions-area" data-area="suggestions">
+      <div class="area-header">
+        <h3>Suggestions</h3>
+        <div class="area-controls">
+          <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
+          <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
+          <button class="area-control opacity-toggle" title="Ajuster l'opacité"><span>👁️</span></button>
+          <button class="area-control hide-toggle" title="Masquer"><span>✕</span></button>
+        </div>
+      </div>
+      <div id="suggestions" class="area-content">
+        Suggestions will appear here...
+      </div>
+    </section>
+
+    <!-- Screen capture area with resize/fullscreen controls -->
+    <section id="screenCaptureArea" class="content-area screen-capture-area" data-area="screenCapture">
+      <div class="area-header">
+        <h3>Screen Capture</h3>
+        <div class="area-controls">
+          <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
+          <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
+          <button class="area-control fullscreen-toggle" title="Plein écran"><span>⛶</span></button>
+        </div>
+      </div>
+      <div class="area-content">
+        <video id="screen-capture" class="video" autoplay muted></video>
+      </div>
+    </section>
+
+    <!-- Transcription area with resize/move controls -->
+    <section id="transcriptionArea" class="content-area transcription-area" data-area="transcription">
+      <div class="area-header">
+        <h3>Transcription</h3>
+        <div class="area-controls">
+          <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
+          <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
+          <button class="area-control opacity-toggle" title="Ajuster l'opacité"><span>👁️</span></button>
+          <button class="area-control hide-toggle" title="Masquer"><span>✕</span></button>
+        </div>
+      </div>
+      <div id="transcription" class="area-content transcription-box">
+        Transcription will appear here...
+      </div>
+    </section>
+  </main>
 </div>
-
-<!-- TRANSCRIPTION AREA (will be moved to container by MeetingPage.js) -->
-<aside class="transcription" style="display:flex; grid-area: transcription;">
-  <div class="transcription-header">
-    <h3>Transcription</h3>
-    <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
-  </div>
-  <div id="transcription" class="transcription-box">Transcription will appear here...</div>
-</aside>
 
 <!-- SAVE METHOD MODAL (Meeting) -->
 <div id="saveMethodModal" class="meeting-modal">
@@ -65,5 +101,21 @@
   </div>
   <div class="modal-buttons">
     <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
+  </div>
+</div>
+
+<!-- Layout presets selector -->
+<div class="layout-presets-container">
+  <button id="toggleLayoutPresets" class="toggle-presets-btn">Agencements</button>
+  <div id="layoutPresetsPanel" class="layout-presets-panel">
+    <h4>Préréglages d'agencement</h4>
+    <div class="preset-buttons">
+      <button data-preset="standard" class="preset-btn active">Standard</button>
+      <button data-preset="focusVideo" class="preset-btn">Focus Vidéo</button>
+      <button data-preset="focusTranscription" class="preset-btn">Focus Transcription</button>
+      <button data-preset="compact" class="preset-btn">Compact</button>
+      <button data-preset="overlay" class="preset-btn">Superposition</button>
+    </div>
+    <button id="saveCurrentLayout" class="save-layout-btn">Sauvegarder cet agencement</button>
   </div>
 </div> 

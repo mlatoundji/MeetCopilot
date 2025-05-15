@@ -6,11 +6,11 @@
   <title>Virtual Meeting Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/meeting-responsive.css">
 </head>
 <body>
   <div class="container">
-    <!-- HEADER -->
-    <header class="header">
+    <header class="header" style="grid-area: header;">
       <button id="collapseSidebar" class="menu-toggle" title="Menu" style="margin-right:1rem;">
         <img src="icons/menu.png" alt="Menu" style="width:24px;height:24px;" />
       </button>
@@ -19,6 +19,9 @@
         <span class="logo-text">Meet Copilot</span>
       </a>
       <div class="header-controls" style="margin-left:auto;">
+        <select id="langSelect" class="lang-select" title="Language">
+          <!-- Will be populated by JavaScript -->
+        </select>
         <button id="themeToggle" class="button-icon" title="Toggle Theme">
           <span class="theme-icon">🌙</span>
         </button>
@@ -28,8 +31,7 @@
       </div>
     </header>
     
-    <!-- MAIN CONTENT (empty, will be filled by fragments) -->
-    <main class="main-content"></main>
+    <main class="main-content" style="grid-area: main-content;"></main>
 
     <!-- MODAL + OVERLAY -->
     <div id="modalOverlay" class="modal-overlay"></div>

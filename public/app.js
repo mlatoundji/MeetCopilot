@@ -7,6 +7,8 @@ import { Router } from './modules/Router.js';
 import { filterTranscription } from './utils.js';
 import { UI } from './modules/ui.js';
 import { BackupHandler } from './modules/backupHandler.js';
+import { APIHandler } from './modules/apiHandler.js';
+import { DataStore } from './modules/dataStore.js';
 
 // URLs for API endpoints
 const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
@@ -16,30 +18,39 @@ const SUGGESTIONS_LOCAL_API_URL = "http://localhost:3000/suggestions/local";
 const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
 const SUMMARY_MISTRAL_API_URL = "http://localhost:3000/summary/mistral";
 const SUMMARY_LOCAL_API_URL = "http://localhost:3000/summary/local";
-const MEETINGS_API_URL = "http://localhost:3000/api/meetings";
+// L'URL sera définie dynamiquement après la création d'APIHandler
+let MEETINGS_API_URL = null;
 
 const SYSTEM_SOURCE = 'system';
 const MIC_SOURCE = 'mic';
 
 class App {
   constructor() {
-    // Initialize UI
-    this.ui = new UI();
+    // Initialize API Handler first
+    this.apiHandler = new APIHandler();
     
-    // API URLs
-    this.MEETINGS_API_URL = MEETINGS_API_URL;
+    // Déterminer l'URL des réunions sur la base de l'APIHandler
+    MEETINGS_API_URL = `${this.apiHandler.baseURL}/api/meetings`;
     
-    // Initialize handlers
+    // Initialize handlers that depend on API
     this.audioCapture = new AudioCapture();
     this.uiHandler = new UIHandler();
-    this.transcriptionHandler = new TranscriptionHandler(TRANSCRIBE_ASSEMBLYAI_API_URL);
-    this.suggestionsHandler = new SuggestionsHandler(SUGGESTIONS_MISTRAL_API_URL);
-    this.conversationContextHandler = new ConversationContextHandler(SUMMARY_MISTRAL_API_URL);
-
-    this.backupHandler = new BackupHandler(MEETINGS_API_URL, this);
+    this.dataStore = new DataStore(this.apiHandler);
+    this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
+    this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);
+    this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
+    this.backupHandler = new BackupHandler(this, this.apiHandler);
+    this.ui = new UI();
     
-    // Current language
-    this.currentLanguage = this.uiHandler.defaultLang;
+    // Set up router
+    this.router = new Router(this);
+
+    // Current app state
+    this.filterTranscription = filterTranscription;
+    this.currentLanguage = 'fr';
+
+    // API URLs
+    this.MEETINGS_API_URL = MEETINGS_API_URL;
     
     this.sessionActive = false;
     this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
@@ -116,6 +127,17 @@ class App {
         }
       }
     });
+
+    // Collapse sidebar
+    const collapseBtn = document.getElementById('collapseSidebar');
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+        const container = document.querySelector('.container');
+        if (sidebar) sidebar.classList.toggle('collapsed');
+        if (container) container.classList.toggle('sidebar-collapsed');
+      });
+    }
   }
 
   async handleSessionControl() {
@@ -199,7 +221,7 @@ class App {
         const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
         if (transcription) {
           console.log(`Transcription (${contextLabel}):`, transcription);
-          const filteredText = filterTranscription(transcription, this.currentLanguage);
+          const filteredText = this.filterTranscription(transcription, this.currentLanguage);
           if(filteredText === "") return;
           this.conversationContextHandler.conversationContextDialogs.push({
             speaker: contextLabel, 
@@ -346,7 +368,7 @@ class App {
 
     
     // Naviguer vers la page de réunion
-    this.router.navigateTo('meeting');
+    this.router.navigate('meeting');
     
     // Démarrer les captures audio
     // if (!this.audioCapture.isSystemRecording) {
@@ -382,15 +404,49 @@ class App {
     }
     
     // Naviguer vers la page d'accueil
-    this.router.navigateTo('home');
+    this.router.navigate('home');
     
     // Mettre à jour l'interface utilisateur
     if (this.router.currentPage) {
       this.router.currentPage.render();
     }
   }
+
+  async init() {
+    console.log("App initializing");
+    this.uiHandler.setupLanguageSwitcher();
+    this.router.initialize();
+    
+    // Ajout du listener pour initialiser les pages après leur chargement
+    window.addEventListener('pageLoaded', (event) => {
+      const pageName = event.detail.page;
+      console.log(`Page loaded: ${pageName}`);
+      
+      if (pageName === 'meeting') {
+        // Initialiser la page de réunion
+        const meetingPage = this.router.getCurrentPage();
+        if (meetingPage && typeof meetingPage.initialize === 'function') {
+          meetingPage.initialize();
+        }
+      } else if (pageName === 'home') {
+        // Initialiser la page d'accueil
+        const homePage = this.router.getCurrentPage();
+        if (homePage && typeof homePage.render === 'function') {
+          homePage.render();
+        }
+      }
+    });
+    
+    // Set the initial page based on the current URL or go to home
+    const initialPage = this.router.parseLocationUrl() || 'home';
+    await this.router.navigate(initialPage);
+    
+    console.log("App initialized");
+  }
 }
 
-// Initialize the app
+// Start the app
 const app = new App();
-window.app = app; // Make app available globally for debugging
+document.addEventListener('DOMContentLoaded', () => {
+    app.init();
+});

@@ -5,8 +5,14 @@ import { callApi } from '../utils.js';
  */
 
 export class TranscriptionHandler {
-  constructor(transcriptionApiUrl) {
-    this.transcriptionApiUrl = transcriptionApiUrl;
+  constructor(transcriptionApiUrlOrApiHandler) {
+    if (typeof transcriptionApiUrlOrApiHandler === 'string') {
+      this.transcriptionApiUrl = transcriptionApiUrlOrApiHandler;
+      this.apiHandler = null;
+    } else {
+      this.apiHandler = transcriptionApiUrlOrApiHandler;
+      this.transcriptionApiUrl = null;
+    }
     this.model = 'whisper-1';
     this.language = 'fr';
     this.mimeType = 'audio/wav';
@@ -33,10 +39,20 @@ export class TranscriptionHandler {
     formData.append('fileName', this.fileName);
 
     try {
-      const response = await callApi(this.transcriptionApiUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      let response;
+      if (this.apiHandler) {
+        response = await this.apiHandler.transcribeAudio(audioBlob, 'assemblyai', {
+          langCode: this.language,
+          model: this.model,
+          mimeType: this.mimeType,
+          fileName: this.fileName
+        });
+      } else {
+        response = await callApi(this.transcriptionApiUrl, {
+          method: 'POST',
+          body: formData,
+        });
+      }
       return response.transcription || '';
     } catch (error) {
       console.error('Error during transcription:', error.message || error);

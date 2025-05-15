@@ -5,8 +5,14 @@ import { callApi } from '../utils.js';
  */
 
 export class SuggestionsHandler {
-  constructor(suggestionsApiUrl) {
-    this.suggestionsApiUrl = suggestionsApiUrl;
+  constructor(suggestionsApiUrlOrApiHandler) {
+    if (typeof suggestionsApiUrlOrApiHandler === 'string') {
+      this.suggestionsApiUrl = suggestionsApiUrlOrApiHandler;
+      this.apiHandler = null;
+    } else {
+      this.apiHandler = suggestionsApiUrlOrApiHandler;
+      this.suggestionsApiUrl = null;
+    }
   }
 
   /**
@@ -16,11 +22,16 @@ export class SuggestionsHandler {
    */
   async generateSuggestions(context) {
     try {
-      const response = await callApi(this.suggestionsApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context }),
-      });
+      let response;
+      if (this.apiHandler) {
+        response = await this.apiHandler.generateSuggestions(context, 'mistral');
+      } else {
+        response = await callApi(this.suggestionsApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ context }),
+        });
+      }
       return response.suggestions || 'No suggestions found';
     } catch (error) {
       console.error('Error generating suggestions:', error);

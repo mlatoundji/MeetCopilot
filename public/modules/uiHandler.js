@@ -367,6 +367,37 @@ export class UIHandler {
         this.systemCaptureButton = document.getElementById("systemCaptureButton");
         this.micCaptureButton = document.getElementById("micCaptureButton");
         this.suggestionButton = document.getElementById("suggestionButton");
+        // Refresh other UI elements
+        this.langSelect = document.getElementById("langSelect");
+    }
+    
+    /**
+     * Sets up the language switcher in the UI.
+     * This is a wrapper around populateLangOptions to ensure language switcher is properly initialized.
+     */
+    setupLanguageSwitcher() {
+        // Make sure we have the latest reference to the language select element
+        this.langSelect = document.getElementById("langSelect");
+        
+        if (this.langSelect) {
+            // Clear existing options to avoid duplicates
+            this.langSelect.innerHTML = '';
+            
+            // Populate language options
+            this.populateLangOptions();
+            
+            console.log("Language switcher set up successfully");
+        } else {
+            console.warn("Language select element not found in the DOM");
+        }
+    }
+    
+    /**
+     * Returns the currently selected translations object.
+     * @returns {Object} - The current translations object.
+     */
+    getTranslations() {
+        return this.selectedTranslations || this.translations[this.defaultLang];
     }
 }
   

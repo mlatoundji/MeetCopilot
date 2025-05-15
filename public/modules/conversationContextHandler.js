@@ -5,7 +5,15 @@ import { callApi } from '../utils.js';
  */
 
 export class ConversationContextHandler {
-    constructor(summaryApiUrl) {
+    constructor(summaryApiUrlOrApiHandler) {
+        if (typeof summaryApiUrlOrApiHandler === 'string') {
+            this.summaryApiUrl = summaryApiUrlOrApiHandler;
+            this.apiHandler = null;
+        } else {
+            this.apiHandler = summaryApiUrlOrApiHandler;
+            this.summaryApiUrl = null;
+        }
+        
         this.conversationContextText = "";
         this.conversationContextHeaderText = "== Contexte de la conversation ==\n";
         this.conversationContextSummariesHeaderText = "== Résumé de chaque quart d'heure précédent ==\n";
@@ -22,7 +30,6 @@ export class ConversationContextHandler {
         this.systemLabel = "System";
         this.micLabel = "Mic";
         this.conversationContextMeetingInfosText = "";
-        this.summaryApiUrl = summaryApiUrl;
 
         this.conversationContextDialogsIndexStart = 0;
 
@@ -156,11 +163,16 @@ export class ConversationContextHandler {
     async generateSummary(context) {
         try {
           let start = Date.now();
-          const response = await callApi(this.summaryApiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ context }),
-          });
+          let response;
+          if (this.apiHandler) {
+            response = await this.apiHandler.generateSummary(context, 'mistral');
+          } else {
+            response = await callApi(this.summaryApiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ context }),
+            });
+          }
           console.log("Summary generated in ", Date.now() - start, "ms");
           return response.summary || 'No summary generated';
         } catch (error) {

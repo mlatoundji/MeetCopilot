@@ -1,3 +1,6 @@
+import { APIHandler } from '../../modules/apiHandler.js';
+import { DataStore } from '../../modules/dataStore.js';
+import { UIHandler } from '../../modules/uiHandler.js';
 import { BackupHandler } from '../../modules/backupHandler.js';
 import { HomePageHistory } from './HomePageHistory.js';
 import { MeetingDetailsPage } from './MeetingDetailsPage.js';
@@ -5,9 +8,34 @@ import { MeetingDetailsPage } from './MeetingDetailsPage.js';
 export class HomePage {
   constructor(app) {
     this.app = app;
+    this.apiHandler = app?.apiHandler || new APIHandler();
+    this.dataStore = app?.dataStore || new DataStore(this.apiHandler);
+    this.uiHandler = app?.uiHandler || new UIHandler();
+    this.backupHandler = app?.backupHandler || new BackupHandler(app);
+
+    this.meetings = [];
+    this.filteredMeetings = [];
+    this.currentMeetingDetails = null;
+    this.infoModal = null;
+
+    this.homePageHistory = new HomePageHistory(this.app);
+  }
+
+  async render() {
+    await this.loadSavedMeetings();
     this.initializeElements();
     this.bindEvents();
-    this.homePageHistory = new HomePageHistory(this.app);
+    this.displayMeetings();
+    await this.loadDashboardFragment();
+  }
+
+  async loadFragment() {
+    const response = await fetch('pages/html/home.html');
+    const html = await response.text();
+    const main = document.querySelector('.main-content');
+    if (main) {
+      main.innerHTML = html;
+    }
   }
 
   initializeElements() {
@@ -15,10 +43,36 @@ export class HomePage {
     this.homeControls = document.getElementById('home-controls');
     this.meetingControls = document.getElementById('meeting-controls');
     this.mainContent = document.querySelector('.main-content');
+
+    // Boutons et contrôles
+    this.startSessionBtn = document.getElementById('startSessionBtn');
+    this.sessionControlBtn = document.getElementById('sessionControlBtn');
+    this.closeInfoBtn = document.getElementById('closeInfoBtn');
+    this.saveMeetingInfoBtn = document.getElementById('saveMeetingInfoBtn');
+    this.searchInput = document.getElementById('searchMeetings');
+    
+    // Conteneurs
+    this.meetingsContainer = document.getElementById('meetingsContainer');
+    this.meetingInfoContainer = document.getElementById('meetingInfoContainer');
+    this.meetingInfoTitle = document.getElementById('meetingInfoTitle');
+    this.meetingInfoDate = document.getElementById('meetingInfoDate');
+    this.meetingInfoTranscription = document.getElementById('meetingInfoTranscription');
+    this.meetingInfoSuggestions = document.getElementById('meetingInfoSuggestions');
+    
+    // Boîtes de dialogue/modales
+    this.sessionModal = document.getElementById('sessionModal');
+    this.meetingTitleInput = document.getElementById('meetingTitleInput');
+    
+    // Activer la sidebar principale si elle était cachée
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = 'block';
+    
+    // Cacher la sidebar de réunion si elle était visible
+    const meetingSidebar = document.querySelector('.meeting-sidebar');
+    if (meetingSidebar) meetingSidebar.style.display = 'none';
   }
 
   bindEvents() {
-
     // Listen for hash changes to handle meeting details navigation
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash;
@@ -27,87 +81,305 @@ export class HomePage {
         this.showMeetingDetails(meetingId);
       }
     });
+
+    // Contrôles de session
+    if (this.startSessionBtn) {
+      this.startSessionBtn.addEventListener('click', () => this.handleSessionControl());
+    }
+    
+    if (this.sessionControlBtn) {
+      this.sessionControlBtn.addEventListener('click', () => this.handleStartSession());
+    }
+    
+    // Contrôles d'information de réunion
+    if (this.closeInfoBtn) {
+      this.closeInfoBtn.addEventListener('click', () => this.handleCloseMeetingInfos());
+    }
+    
+    if (this.saveMeetingInfoBtn) {
+      this.saveMeetingInfoBtn.addEventListener('click', () => this.handleSaveMeetingInfos());
+    }
+    
+    // Recherche de réunion
+    if (this.searchInput) {
+      this.searchInput.addEventListener('input', () => this.searchMeetings());
+    }
   }
 
-  async showMeetingDetails(meetingId) {
+  async loadSavedMeetings() {
     try {
-      // Clear main content area
-      if (this.mainContent) {
-        this.mainContent.innerHTML = '<div class="loading">Chargement des détails de la réunion...</div>';
+      // Charger les réunions du stockage local
+      const result = await this.dataStore.getMeetingsList('local');
+      this.meetings = result.success ? result.data : [];
+      this.filteredMeetings = [...this.meetings];
+      
+      // Si nous avons une API, essayer de charger depuis Supabase également
+      if (this.apiHandler) {
+        const remoteMeetings = await this.backupHandler.fetchMeetings('local');
+        if (remoteMeetings && remoteMeetings.length > 0) {
+          // Fusionner avec les réunions locales en évitant les doublons
+          const localIds = this.meetings.map(m => m.id);
+          const uniqueRemoteMeetings = remoteMeetings.filter(rm => !localIds.includes(rm.id));
+          
+          this.meetings = [...this.meetings, ...uniqueRemoteMeetings];
+          this.filteredMeetings = [...this.meetings];
+        }
       }
-
-      // Create and initialize meeting details page
-      const meetingDetailsPage = new MeetingDetailsPage(
-        meetingId, 
-        this.app.MEETINGS_API_URL.replace(/\/$/, ''), // Remove trailing slash if present
-        this.app
-      );
-      await meetingDetailsPage.init();
-
+      
+      // Trier par date, les plus récentes en premier
+      this.meetings.sort((a, b) => {
+        const dateA = a.metadata?.startTime || 0;
+        const dateB = b.metadata?.startTime || 0;
+        return dateB - dateA;
+      });
+      
+      this.filteredMeetings = [...this.meetings];
     } catch (error) {
-      console.error('Error showing meeting details:', error);
-      if (this.mainContent) {
-        this.mainContent.innerHTML = `
-          <div class="error-message">
-            <h2>Erreur</h2>
-            <p>Impossible de charger les détails de la réunion: ${error.message}</p>
-            <button onclick="window.location.hash = '#/history'">Retour à l'historique</button>
-          </div>
-        `;
+      console.error('Error loading saved meetings:', error);
+    }
+  }
+
+  displayMeetings() {
+    if (!this.meetingsContainer) return;
+    
+    // Vider le conteneur
+    this.meetingsContainer.innerHTML = '';
+    
+    if (this.filteredMeetings.length === 0) {
+      this.meetingsContainer.innerHTML = '<div class="no-meetings">Aucune réunion trouvée.</div>';
+      return;
+    }
+    
+    // Créer une carte pour chaque réunion
+    this.filteredMeetings.forEach(meeting => {
+      const meetingCard = this.createMeetingCard(meeting);
+      this.meetingsContainer.appendChild(meetingCard);
+    });
+  }
+
+  createMeetingCard(meeting) {
+    const card = document.createElement('div');
+    card.className = 'meeting-card';
+    card.dataset.id = meeting.id;
+    
+    // Formater la date
+    const date = meeting.metadata?.startTime ? new Date(meeting.metadata.startTime) : new Date();
+    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    
+    // Créer le contenu de la carte
+    card.innerHTML = `
+      <div class="meeting-card-content">
+        <h3 class="meeting-card-title">${meeting.title || 'Sans titre'}</h3>
+        <div class="meeting-card-date">${formattedDate}</div>
+        <div class="meeting-card-summary">${this.getSummaryPreview(meeting)}</div>
+      </div>
+      <div class="meeting-card-actions">
+        <button class="view-meeting-btn" title="Voir les détails">👁️</button>
+        <button class="delete-meeting-btn" title="Supprimer">🗑️</button>
+      </div>
+    `;
+    
+    // Ajouter des écouteurs d'événements
+    card.querySelector('.view-meeting-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showMeetingDetails(meeting);
+    });
+    
+    card.querySelector('.delete-meeting-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.deleteMeeting(meeting.id);
+    });
+    
+    // Ouvrir les détails au clic sur la carte
+    card.addEventListener('click', () => {
+      this.showMeetingDetails(meeting);
+    });
+    
+    return card;
+  }
+
+  getSummaryPreview(meeting) {
+    // Utiliser le résumé s'il existe, sinon extraire du texte de la transcription
+    if (meeting.summaries && meeting.summaries.length > 0) {
+      return meeting.summaries[0].text.substr(0, 100) + '...';
+    } else if (meeting.dialogs && meeting.dialogs.length > 0) {
+      // Construire une transcription à partir des dialogues
+      const transcription = meeting.dialogs.map(dialog => dialog.text).join(' ');
+      return transcription.substr(0, 100) + '...';
+    } else {
+      return 'Aucun contenu disponible';
+    }
+  }
+
+  showMeetingDetails(meeting) {
+    this.currentMeetingDetails = meeting;
+    
+    // Mettre à jour les éléments d'information
+    if (this.meetingInfoTitle) {
+      this.meetingInfoTitle.value = meeting.title || '';
+    }
+    
+    if (this.meetingInfoDate && meeting.metadata?.startTime) {
+      const date = new Date(meeting.metadata.startTime);
+      this.meetingInfoDate.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+    
+    if (this.meetingInfoTranscription) {
+      if (meeting.dialogs && meeting.dialogs.length > 0) {
+        // Construire une transcription à partir des dialogues
+        const transcription = meeting.dialogs.map(dialog => 
+          `[${dialog.speaker}]: ${dialog.text}`
+        ).join('\n');
+        this.meetingInfoTranscription.textContent = transcription;
+      } else {
+        this.meetingInfoTranscription.textContent = 'Aucune transcription disponible';
       }
+    }
+    
+    if (this.meetingInfoSuggestions) {
+      this.meetingInfoSuggestions.innerHTML = '';
+      if (meeting.suggestions && meeting.suggestions.length > 0) {
+        meeting.suggestions.forEach(suggestion => {
+          const suggestionEl = document.createElement('div');
+          suggestionEl.className = 'suggestion-item';
+          suggestionEl.textContent = suggestion.text || suggestion;
+          this.meetingInfoSuggestions.appendChild(suggestionEl);
+        });
+      } else {
+        this.meetingInfoSuggestions.textContent = 'Aucune suggestion disponible';
+      }
+    }
+    
+    // Afficher le conteneur
+    if (this.meetingInfoContainer) {
+      this.meetingInfoContainer.style.display = 'block';
+    }
+  }
+
+  searchMeetings() {
+    if (!this.searchInput) return;
+    
+    const searchTerm = this.searchInput.value.toLowerCase();
+    
+    if (!searchTerm) {
+      this.filteredMeetings = [...this.meetings];
+    } else {
+      this.filteredMeetings = this.meetings.filter(meeting => {
+        // Rechercher dans le titre
+        if (meeting.title && meeting.title.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Rechercher dans la transcription
+        if (meeting.transcription && meeting.transcription.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Rechercher dans les suggestions
+        if (meeting.suggestions && meeting.suggestions.some(s => s.toLowerCase().includes(searchTerm))) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
+    
+    this.displayMeetings();
+  }
+
+  async deleteMeeting(meetingId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réunion ?')) {
+      return;
+    }
+    
+    try {
+      // Supprimer localement
+      await this.dataStore.deleteMeeting(meetingId);
+      
+      // Supprimer à distance si possible
+      if (this.apiHandler) {
+        await this.backupHandler.deleteMeeting(meetingId);
+      }
+      
+      // Mettre à jour la liste
+      this.meetings = this.meetings.filter(m => m.id !== meetingId);
+      this.filteredMeetings = this.filteredMeetings.filter(m => m.id !== meetingId);
+      this.displayMeetings();
+      
+      // Fermer les détails si c'est la réunion actuellement affichée
+      if (this.currentMeetingDetails && this.currentMeetingDetails.id === meetingId) {
+        this.handleCloseMeetingInfos();
+      }
+    } catch (error) {
+      console.error('Error deleting meeting:', error);
+      alert('Erreur lors de la suppression de la réunion.');
     }
   }
 
   handleSessionControl() {
-    this.app.handleSessionControl();
-  }
-
-  async loadHomePage() {
-    // 1) Load sidebar fragment
-    const sidebarResp = await fetch('pages/html/home.html');
-    const sidebarHtml = await sidebarResp.text();
-    if (this.mainContent) this.mainContent.innerHTML = sidebarHtml;
-
-    // Hide transcription area on home
-    const transcription = document.querySelector('.transcription');
-    const containerElem = document.querySelector('.container');
-    if (transcription) transcription.style.display = 'none';
-    if (containerElem && !containerElem.classList.contains('no-transcription')) containerElem.classList.add('no-transcription');
-
-    // Refresh UIHandler references for modal elements now present in DOM
-    const uiH = this.app.uiHandler;
-    uiH.meetingModal = document.getElementById('meetingModal');
-    uiH.modalOverlay = document.getElementById('modalOverlay'); // overlay is global
-    uiH.dynamicFields = document.getElementById('dynamicFields');
-    uiH.saveMeetingInfosButton = document.getElementById('saveMeetingInfosButton');
-    uiH.closeMeetingInfosButton = document.getElementById('closeMeetingInfosButton');
-    uiH.sessionControlButton = document.getElementById('sessionControlButton');
-
-    // If sidebar exists inside mainContent, move it to container root (before main-content)
-    const container = document.querySelector('.container');
-    const sidebarInFragment = this.mainContent ? this.mainContent.querySelector('.sidebar') : null;
-    if (container && sidebarInFragment) {
-      // Prevent duplicate insertion
-      if (!document.querySelector('.container > .sidebar')) {
-        container.insertBefore(sidebarInFragment, container.querySelector('.main-content'));
-      } else {
-        // If sidebar already exists in container, remove duplicate in fragment
-        sidebarInFragment.remove();
-      }
-      // Reinitialize sidebar collapse handlers
-      if (this.app && this.app.ui) {
-        this.app.ui.setupSidebar();
+    if (this.sessionModal) {
+      this.sessionModal.style.display = 'block';
+      if (this.meetingTitleInput) {
+        this.meetingTitleInput.focus();
       }
     }
+  }
 
-    // 2) Load dashboard fragment into mainContent (after sidebar was removed)
-    const dashResp = await fetch('pages/html/dashboard.html');
-    const dashHtml = await dashResp.text();
-    if (this.mainContent) this.mainContent.innerHTML = dashHtml;
+  handleStartSession() {
+    if (this.meetingTitleInput) {
+      const meetingTitle = this.meetingTitleInput.value.trim();
+      if (meetingTitle) {
+        // Initialiser les données de réunion
+        if (this.app && this.app.backupHandler) {
+          this.app.backupHandler.initializeMeeting(meetingTitle);
+        }
+        
+        // Fermer la modale
+        if (this.sessionModal) {
+          this.sessionModal.style.display = 'none';
+        }
+        
+        // Naviguer vers la page de réunion
+        window.location.hash = 'meeting';
+      } else {
+        alert('Veuillez entrer un titre pour la réunion.');
+      }
+    }
+  }
 
-    // Re-bind again for session button, etc.
-    this.bindSessionStartButton();
-    this.renderRecentMeetingsCards();
+  handleCloseMeetingInfos() {
+    this.currentMeetingDetails = null;
+    if (this.meetingInfoContainer) {
+      this.meetingInfoContainer.style.display = 'none';
+    }
+  }
+
+  async handleSaveMeetingInfos() {
+    if (!this.currentMeetingDetails || !this.meetingInfoTitle) return;
+    
+    const newTitle = this.meetingInfoTitle.value.trim();
+    if (newTitle === '') {
+      alert('Le titre ne peut pas être vide.');
+      return;
+    }
+    
+    try {
+      // Mettre à jour localement
+      this.currentMeetingDetails.title = newTitle;
+      await this.dataStore.saveMeeting(this.currentMeetingDetails);
+      
+      // Mettre à jour à distance si possible
+      if (this.apiHandler) {
+        await this.backupHandler.updateMeeting(this.currentMeetingDetails);
+      }
+      
+      // Mettre à jour l'affichage
+      this.displayMeetings();
+      alert('Informations de réunion mises à jour avec succès.');
+    } catch (error) {
+      console.error('Error saving meeting info:', error);
+      alert('Erreur lors de la sauvegarde des informations de réunion.');
+    }
   }
 
   async loadHistory() {
@@ -128,67 +400,52 @@ export class HomePage {
     document.body.style.overflow = '';
   }
 
-  async render() {
-    if (this.homeControls) this.homeControls.style.display = 'block';
-    if (this.meetingControls) this.meetingControls.style.display = 'none';
-
-    // Show sidebar navigation links
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav) sidebarNav.style.display = 'block';
-    this.app.ui.showSidebar();
-
-    const meetingSidebar = document.querySelector('.meeting-sidebar');
-    if (meetingSidebar) meetingSidebar.style.display = 'none';
-
-    if (this.sessionControlButton) {
-      this.sessionControlButton.textContent = this.app.uiHandler.selectedTranslations.startSessionButton;
-    }
-
-    // decide which fragment based on hash
-    const hash = window.location.hash.replace('#','');
-    if (hash === 'history') {
-      await this.loadHistory();
-    } else if (hash === 'settings') {
-      await this.loadSettings();
-    } else {
-      await this.loadHomePage();
-    }
-  }
-
   async renderRecentMeetingsCards() {
     // Fetch recent meetings from API
     try {
-      const response = await fetch(this.app.MEETINGS_API_URL + '?saveMethod=local');
-      const data = await response.json();
-      if (!data.success || !Array.isArray(data.data)) return;
-      const meetings = data.data;
-      const dashboardGrid = document.querySelector('.dashboard-grid');
-      if (!dashboardGrid) return;
-      // Remove old recent-summaries section if present
-      const oldSummaries = dashboardGrid.querySelector('.recent-summaries');
-      if (oldSummaries) oldSummaries.remove();
-      // Create recent meetings cards section
-      let cardsSection = dashboardGrid.querySelector('.recent-meetings-cards');
-      if (!cardsSection) {
-        cardsSection = document.createElement('div');
-        cardsSection.className = 'recent-meetings-cards';
-        dashboardGrid.appendChild(cardsSection);
-      }
-      cardsSection.innerHTML = '<h3>Réunions récentes</h3>';
-      const cardsList = document.createElement('div');
-      cardsList.className = 'meetings-cards-list';
-      if (meetings.length === 0) {
-        // Show 'Empty' label in recent-meetings-list if present
-        const emptyLabel = document.querySelector('.recent-meetings-list .no-recent-meetings');
+      console.log("Début du chargement des réunions récentes");
+      
+      // Utiliser l'API directement pour garantir l'obtention des données
+      const response = await fetch('http://localhost:3000/api/meetings?saveMethod=local');
+      const result = await response.json();
+      console.log("Résultat de l'API:", result);
+      
+      if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+        // S'assurer que le message Empty reste visible
+        const emptyLabel = document.querySelector('.no-recent-meetings');
+        console.log("Message Empty conservé visible, aucune réunion trouvée");
         if (emptyLabel) emptyLabel.style.display = '';
-        cardsSection.appendChild(cardsList);
         return;
-      } else {
-        // Hide 'Empty' label in recent-meetings-list if present
-        const emptyLabel = document.querySelector('.recent-meetings-list .no-recent-meetings');
-        if (emptyLabel) emptyLabel.style.display = 'none';
       }
-      meetings.slice(0, 6).forEach(meeting => {
+
+      const meetings = result.data;
+      console.log("Nombre de réunions trouvées:", meetings.length);
+      
+      // Cacher le message Empty
+      const emptyLabel = document.querySelector('.no-recent-meetings');
+      console.log("Élément Empty trouvé:", !!emptyLabel);
+      if (emptyLabel) emptyLabel.style.display = 'none';
+      
+      const dashboardGrid = document.querySelector('.dashboard-grid');
+      const recentMeetingsList = document.querySelector('.recent-meetings-list');
+      console.log("Liste des réunions récentes trouvée:", !!recentMeetingsList);
+      
+      if (!recentMeetingsList) return;
+      
+      // Supprime tous les éléments existants sauf le message Empty
+      while (recentMeetingsList.firstChild) {
+        if (recentMeetingsList.firstChild.classList && recentMeetingsList.firstChild.classList.contains('no-recent-meetings')) {
+          // Ne pas supprimer l'élément Empty
+          recentMeetingsList.firstChild.style.display = 'none';
+          break;
+        } else {
+          recentMeetingsList.removeChild(recentMeetingsList.firstChild);
+        }
+      }
+      
+      // Ajouter les cartes de réunion
+      meetings.slice(0, 6).forEach((meeting, index) => {
+        console.log(`Création de la carte pour la réunion ${index}:`, meeting.title);
         const card = document.createElement('div');
         card.className = 'meeting-card';
         card.innerHTML = `
@@ -197,34 +454,20 @@ export class HomePage {
             <div class="meeting-meta">
               <span class="meeting-date">${meeting.metadata && meeting.metadata.startTime ? new Date(meeting.metadata.startTime).toLocaleString() : 'XX/XX/XXXX'}</span>
               <span class="meeting-duration">${meeting.metadata && meeting.metadata.duration ? this.formatDuration(meeting.metadata.duration) : '00:00:00'}</span>
-              <span class="save-method">${meeting.metadata.saveMethod === 'local' ? 'Local' : 'Cloud'}</span>
+              <span class="save-method">${meeting.metadata && meeting.metadata.saveMethod ? (meeting.metadata.saveMethod === 'local' ? 'Local' : 'Cloud') : 'Local'}</span>
             </div>
           </div>
         `;
         card.addEventListener('click', () => {
           window.location.hash = `#/meeting/${meeting.id}`;
         });
-        cardsList.appendChild(card);
+        recentMeetingsList.appendChild(card);
       });
-      cardsSection.appendChild(cardsList);
-      // Add styles if not present
-      if (!document.getElementById('recent-meetings-cards-styles')) {
-        const style = document.createElement('style');
-        style.id = 'recent-meetings-cards-styles';
-        style.textContent = `
-          .recent-meetings-cards { background: var(--bg-secondary); border-radius: 8px; padding: 1rem; box-shadow: 0 2px 4px var(--shadow-color); }
-          .recent-meetings-cards h3 { margin-top: 0; color: var(--text-primary); }
-          .meetings-cards-list { display: flex; flex-wrap: wrap; gap: 20px; }
-          .meeting-card { display: flex; align-items: center; background: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.08); padding: 16px; min-width: 260px; max-width: 340px; flex: 1 1 260px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
-          .meeting-card:hover { box-shadow: 0 6px 16px rgba(33,150,243,0.18); transform: translateY(-2px); }
-          .meeting-avatar { width: 56px; height: 56px; border-radius: 50%; margin-right: 16px; object-fit: cover; background: #f5f5f5; }
-          .meeting-title { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; color: #424242; }
-          .meeting-meta { font-size: 14px; color: #607D8B; display: flex; gap: 16px; }
-        `;
-        document.head.appendChild(style);
-      }
+      
+      console.log("Réunions affichées avec succès:", meetings.length);
+      
     } catch (e) {
-      // Optionally show error
+      console.error("Erreur lors du chargement des réunions:", e);
     }
   }
 
@@ -259,4 +502,29 @@ export class HomePage {
       }
     }
   }
-} 
+
+  async loadDashboardFragment() {
+    // Vérifie si le conteneur existe déjà, sinon le créer
+    let dashboardContainer = document.getElementById('dashboard-fragment');
+    if (!dashboardContainer) {
+      dashboardContainer = document.createElement('div');
+      dashboardContainer.id = 'dashboard-fragment';
+      document.querySelector('.main-content').appendChild(dashboardContainer);
+    }
+
+    // Charge le fragment dashboard.html
+    const response = await fetch('pages/html/dashboard.html');
+    const html = await response.text();
+    dashboardContainer.innerHTML = html;
+    
+    // Lier les boutons
+    this.bindSessionStartButton();
+    
+    // Afficher les réunions récentes
+    await this.renderRecentMeetingsCards();
+    
+    console.log("Dashboard fragment chargé avec succès");
+  }
+}
+
+export default HomePage; 
