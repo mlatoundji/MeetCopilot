@@ -213,12 +213,22 @@ export class UIHandler {
      */
     toggleCaptureButton(type, isRecording) {
         this.isRecording = isRecording;
+        const updateLabel = (button, startText, stopText) => {
+            if (!button) return;
+            const labelSpan = button.querySelector('.meeting-label');
+            if (labelSpan) {
+                labelSpan.textContent = this.isRecording ? stopText : startText;
+            } else {
+                // Fallback: update full button text
+                button.textContent = this.isRecording ? stopText : startText;
+            }
+        };
         switch (type) {
         case SYSTEM_SOURCE:
-            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+            updateLabel(this.systemCaptureButton, this.selectedTranslations.systemButtonStart, this.selectedTranslations.systemButtonStop);
             break;
         default:
-            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+            updateLabel(this.micCaptureButton, this.selectedTranslations.micButtonStart, this.selectedTranslations.micButtonStop);
             break;
         }
     }
@@ -353,6 +363,10 @@ export class UIHandler {
         this.videoElement = document.getElementById("screen-capture");
         this.suggestionsDiv = document.getElementById("suggestions");
         this.transcriptionDiv = document.getElementById("transcription");
+        // Refresh buttons that are only available on the meeting page
+        this.systemCaptureButton = document.getElementById("systemCaptureButton");
+        this.micCaptureButton = document.getElementById("micCaptureButton");
+        this.suggestionButton = document.getElementById("suggestionButton");
     }
 }
   
