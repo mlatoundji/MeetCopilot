@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Virtual Meeting Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="pages/css/theme.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="pages/css/meeting-responsive.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header" style="grid-area: header;">
+  <div class="app-layout-vertical">
+    <!-- Horizontal header at the top -->
+    <div class="header-horizontal">
       <button id="collapseSidebar" class="menu-toggle" title="Menu" style="margin-right:1rem;">
         <img src="icons/menu.png" alt="Menu" style="width:24px;height:24px;" />
       </button>
@@ -20,9 +20,7 @@
         <span class="logo-text">Meet Copilot</span>
       </a>
       <div class="header-controls" style="margin-left:auto;">
-        <select id="langSelect" class="lang-select" title="Language">
-          <!-- Will be populated by JavaScript -->
-        </select>
+        <select id="langSelect" class="lang-select" title="Language"></select>
         <button id="themeToggle" class="button-icon" title="Toggle Theme">
           <span class="theme-icon">🌙</span>
         </button>
@@ -30,10 +28,43 @@
           <span class="profile-icon">👤</span>
         </button>
       </div>
-    </header>
-    
-    <main class="main-content" style="grid-area: main-content;"></main>
-
+    </div>
+    <!-- Main flex row: sidebar + main content -->
+    <div class="main-row">
+      <aside class="sidebar" id="main-sidebar">
+        <nav class="sidebar-nav">
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="dashboard">
+              <img src="icons/accueil.png" alt="Dashboard" style="width:28px;height:28px;" />
+              <span class="sidebar-label">Dashboard</span>
+            </li>
+            <li class="sidebar-item" data-nav="history">
+              <img src="icons/history.png" alt="History" style="width:28px;height:28px;" />
+              <span class="sidebar-label">History</span>
+            </li>
+          </ul>
+          <div class="sidebar-separator"></div>
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="settings">
+              <img src="icons/parametres-cog.png" alt="Settings" style="width:28px;height:28px;" />
+              <span class="sidebar-label">Settings</span>
+            </li>
+          </ul>
+          <div class="sidebar-separator"></div>
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="account">
+              <img src="icons/utilisateur.png" alt="Account" style="width:28px;height:28px;" />
+              <span class="sidebar-label">Account</span>
+            </li>
+            <li class="sidebar-item" data-nav="other">
+              <img src="icons/question-signe-en-cercles.png" alt="Other" style="width:28px;height:28px;" />
+              <span class="sidebar-label">Other</span>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <main class="main-content" id="main-content"></main>
+    </div>
     <!-- MODAL + OVERLAY -->
     <div id="modalOverlay" class="modal-overlay"></div>
     <div id="meetingModal" class="meeting-modal">
@@ -45,7 +76,6 @@
       </div>
     </div>
   </div>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -128,16 +128,12 @@ class App {
       }
     });
 
-    // Collapse sidebar
-    const collapseBtn = document.getElementById('collapseSidebar');
-    if (collapseBtn) {
-      collapseBtn.addEventListener('click', () => {
-        const sidebar = document.querySelector('.sidebar');
-        const container = document.querySelector('.container');
-        if (sidebar) sidebar.classList.toggle('collapsed');
-        if (container) container.classList.toggle('sidebar-collapsed');
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const nav = item.getAttribute('data-nav');
+        this.loadFragment(nav);
       });
-    }
+    });
   }
 
   async handleSessionControl() {
@@ -416,6 +412,26 @@ class App {
     console.log("App initializing");
     this.uiHandler.setupLanguageSwitcher();
     this.router.initialize();
+    // Attacher le listener du bouton menu/sidebar UNE SEULE FOIS après que le DOM soit prêt
+    const collapseBtn = document.getElementById('collapseSidebar');
+    const sidebar = document.getElementById('main-sidebar');
+    if (collapseBtn && sidebar) {
+      collapseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.innerWidth <= 600) {
+          sidebar.classList.toggle('open');
+        } else {
+          sidebar.classList.toggle('collapsed');
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 600 && sidebar.classList.contains('open')) {
+          if (!sidebar.contains(e.target) && e.target !== collapseBtn) {
+            sidebar.classList.remove('open');
+          }
+        }
+      });
+    }
     
     // Ajout du listener pour initialiser les pages après leur chargement
     window.addEventListener('pageLoaded', (event) => {
@@ -442,6 +458,25 @@ class App {
     await this.router.navigate(initialPage);
     
     console.log("App initialized");
+  }
+
+  loadFragment(nav) {
+    if (nav === 'home' || nav === 'dashboard') {
+      if (this.router) {
+        this.router.navigate('home');
+      }
+      return;
+    }
+    fetch(`pages/html/${nav}.html`)
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('main-content').innerHTML = html;
+        // Réinitialise les listeners JS spécifiques à la page
+        this.setupEventListeners();
+      })
+      .catch(() => {
+        document.getElementById('main-content').innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';
+      });
   }
 }
 
