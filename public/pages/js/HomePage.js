@@ -3,7 +3,7 @@ import { DataStore } from '../../modules/dataStore.js';
 import { UIHandler } from '../../modules/uiHandler.js';
 import { BackupHandler } from '../../modules/backupHandler.js';
 import { HomePageHistory } from './HomePageHistory.js';
-import { MeetingDetailsPage } from './MeetingDetailsPage.js';
+import HomePageDashboard from './HomePageDashboard.js';
 
 export class HomePage {
   constructor(app) {
@@ -19,14 +19,12 @@ export class HomePage {
     this.infoModal = null;
 
     this.homePageHistory = new HomePageHistory(this.app);
+    this.homePageDashboard = new HomePageDashboard(this.app);
   }
 
   async render() {
-    await this.loadSavedMeetings();
-    this.initializeElements();
-    this.bindEvents();
-    this.displayMeetings();
-    await this.loadDashboardFragment();
+    // Initialize the home page and show dashboard fragment by default
+    await this.homePageDashboard.init();
   }
 
   async loadFragment() {
@@ -383,14 +381,7 @@ export class HomePage {
   }
 
   async loadHistory() {
-    const response = await fetch('pages/html/history.html');
-    const html = await response.text();
-    if (this.mainContent) this.mainContent.innerHTML = html;
-    if (this.homePageHistory) {
       await this.homePageHistory.init();
-      this.homePageHistory.render();
-    }
-    document.body.style.overflow = 'hidden';
   }
 
   async loadSettings() {
@@ -438,7 +429,7 @@ export class HomePage {
           // Ne pas supprimer l'élément Empty
           recentMeetingsList.firstChild.style.display = 'none';
           break;
-        } else {
+      } else {
           recentMeetingsList.removeChild(recentMeetingsList.firstChild);
         }
       }
@@ -504,26 +495,8 @@ export class HomePage {
   }
 
   async loadDashboardFragment() {
-    // Vérifie si le conteneur existe déjà, sinon le créer
-    let dashboardContainer = document.getElementById('dashboard-fragment');
-    if (!dashboardContainer) {
-      dashboardContainer = document.createElement('div');
-      dashboardContainer.id = 'dashboard-fragment';
-      document.querySelector('.main-content').appendChild(dashboardContainer);
-    }
-
-    // Charge le fragment dashboard.html
-    const response = await fetch('pages/html/dashboard.html');
-    const html = await response.text();
-    dashboardContainer.innerHTML = html;
-    
-    // Lier les boutons
-    this.bindSessionStartButton();
-    
-    // Afficher les réunions récentes
-    await this.renderRecentMeetingsCards();
-    
-    console.log("Dashboard fragment chargé avec succès");
+    // Delegate dashboard loading to HomePageDashboard
+    await this.homePageDashboard.init();
   }
 }
 

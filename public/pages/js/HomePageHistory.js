@@ -5,6 +5,7 @@ export class HomePageHistory {
         this.app = app;
         this.meetingsApiUrl = app.MEETINGS_API_URL;
         this.meetings = [];
+        this.filteredMeetings = [];
     }
 
     async init() {
@@ -15,9 +16,10 @@ export class HomePageHistory {
             const response = await fetch('http://localhost:3000/api/meetings?saveMethod=local');
             const result = await response.json();
             console.log("Résultat de l'API pour l'historique:", result);
-            
+
             if (result.success && Array.isArray(result.data)) {
                 this.meetings = result.data;
+                this.filteredMeetings = [...this.meetings];
                 console.log(`${this.meetings.length} réunions chargées dans l'historique`);
             } else {
                 console.error("Erreur lors du chargement des réunions:", result.error || "Format de réponse invalide");
@@ -25,6 +27,8 @@ export class HomePageHistory {
         } catch (error) {
             console.error("Erreur lors de l'initialisation de l'historique:", error);
         }
+        // Bind search events
+        this.bindEvents();
     }
 
     render() {
@@ -37,14 +41,29 @@ export class HomePageHistory {
         // Vider le contenu existant
         mainContent.innerHTML = '';
 
+        // Ajouter un titre à la page
+        const titleElement = document.createElement('h1');
+        titleElement.className = 'page-title';
+        titleElement.textContent = 'Historique des réunions';
+        mainContent.appendChild(titleElement);
+
+        // Insert search bar fragment
+        const searchBarHtml = `
+            <div class="search-bar">
+                <input type="text" placeholder="Recherche..." class="search-input" />
+                <button class="search-button">🔍</button>
+                        </div>
+        `;
+        mainContent.innerHTML += searchBarHtml;
+
         // Si aucune réunion n'est disponible
-        if (!this.meetings || this.meetings.length === 0) {
-            mainContent.innerHTML = `
+        if (!this.filteredMeetings || this.filteredMeetings.length === 0) {
+            mainContent.innerHTML += `
                 <div class="no-meetings-message">
                     <h2>Aucune réunion trouvée</h2>
                     <p>Vous n'avez pas encore de réunions enregistrées.</p>
-                </div>
-            `;
+                    </div>
+                `;
             return;
         }
 
@@ -55,11 +74,11 @@ export class HomePageHistory {
         // Ajouter les styles CSS pour les cartes directement dans le head
         this.addCardStyles();
 
-        // Pour chaque réunion, créer une carte
-        this.meetings.forEach(meeting => {
+        // Render filtered meetings
+        this.filteredMeetings.forEach(meeting => {
             const card = this.createMeetingCard(meeting);
             meetingsContainer.appendChild(card);
-        });
+            });
 
         mainContent.appendChild(meetingsContainer);
     }
@@ -76,50 +95,67 @@ export class HomePageHistory {
         
         // Définir les styles pour les cartes
         styleElement.textContent = `
-            .meetings-list {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                gap: 20px;
+            .page-title {
                 padding: 20px;
+                margin: 0;
+                color: var(--text-color, #fff);
+                font-size: 24px;
+                }
+        
+                .meetings-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                     gap: 20px;
+                padding: 0 20px 20px 20px;
+                width: 100%;
             }
             
             .meeting-card {
-                background-color: #fff;
+                background-color: var(--card-bg-color, #2a2a2a);
                 border-radius: 8px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
                 overflow: hidden;
                 cursor: pointer;
+                height: 100%;
+                     display: flex;
+                     flex-direction: column;
+                border: 1px solid var(--border-color, #3d3d3d);
             }
             
             .meeting-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-            }
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+                border-color: var(--primary-color, #2196F3);
+                }
             
             .meeting-card-header {
-                background-color: #2196F3;
+                background-color: var(--primary-color, #2196F3);
                 color: white;
                 padding: 15px;
-            }
+                }
             
             .meeting-card-header h3 {
                 margin: 0;
                 font-size: 18px;
                 font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             
             .meeting-card-body {
                 padding: 15px;
-            }
-            
-            .meeting-date, .meeting-duration, .meeting-summary {
-                margin-bottom: 10px;
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                color: var(--text-color, #fff);
             }
             
             .meeting-date, .meeting-duration {
+                margin-bottom: 10px;
                 font-size: 0.9em;
-                color: #607D8B;
+                color: var(--secondary-text-color, #b0b0b0);
             }
             
             .meeting-summary {
@@ -130,36 +166,82 @@ export class HomePageHistory {
                 -webkit-line-clamp: 3;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+                flex-grow: 1;
             }
             
             .meeting-footer {
                 padding: 10px 15px;
-                background-color: #f5f5f5;
-                color: #757575;
+                background-color: var(--footer-bg-color, #1f1f1f);
+                color: var(--secondary-text-color, #b0b0b0);
                 font-size: 0.85em;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-            }
+                border-top: 1px solid var(--border-color, #3d3d3d);
+                }
             
             .meeting-type {
                 display: inline-block;
                 padding: 3px 8px;
                 border-radius: 4px;
-                background-color: #e3f2fd;
-                color: #2196F3;
+                background-color: var(--tag-bg-color, #1e3a5a);
+                color: var(--primary-color, #2196F3);
+            }
+            
+            .meeting-action {
+                color: var(--primary-color, #2196F3);
+                font-weight: 500;
             }
             
             .no-meetings-message {
                 text-align: center;
                 padding: 50px;
+                color: var(--text-color, #fff);
+            }
+            
+            /* Support pour le thème clair */
+            html[data-theme="light"] .meeting-card {
+                background-color: #ffffff;
+                border-color: #e0e0e0;
+            }
+            
+            html[data-theme="light"] .meeting-card-body {
+                color: #333333;
+                }
+            
+            html[data-theme="light"] .meeting-date, 
+            html[data-theme="light"] .meeting-duration {
                 color: #757575;
+            }
+            
+            html[data-theme="light"] .meeting-footer {
+                background-color: #f5f5f5;
+                border-color: #e0e0e0;
+                }
+            
+            html[data-theme="light"] .meeting-type {
+                background-color: #e3f2fd;
+            }
+            
+            html[data-theme="light"] .no-meetings-message {
+                color: #333333;
+            }
+            
+            html[data-theme="light"] .page-title {
+                color: #333333;
+            }
+            
+            /* Styles responsifs */
+            @media (max-width: 768px) {
+                .meetings-list {
+                    grid-template-columns: 1fr;
+                }
             }
         `;
         
         // Ajouter les styles au head
         document.head.appendChild(styleElement);
-    }
+                }
 
     createMeetingCard(meeting) {
         const card = document.createElement('div');
@@ -185,12 +267,12 @@ export class HomePageHistory {
         
         // Obtenir un résumé ou extrait de la transcription
         let summaryText = "Aucun contenu disponible";
-        if (meeting.summaries && meeting.summaries.length > 0) {
+        if (meeting.summaries && meeting.summaries.length > 0 && meeting.summaries[0].text) {
             summaryText = meeting.summaries[0].text.substr(0, 150) + '...';
         } else if (meeting.dialogs && meeting.dialogs.length > 0) {
             const transcription = meeting.dialogs.map(dialog => dialog.text).join(' ');
             summaryText = "Points clés : " + transcription.substr(0, 150) + '...';
-        }
+                }
         
         // Construire le HTML de la carte
         card.innerHTML = `
@@ -212,7 +294,7 @@ export class HomePageHistory {
         card.addEventListener('click', () => this.showMeetingDetails(meeting));
         
         return card;
-    }
+        }
 
     // Fonction pour naviguer vers la page de détails de la réunion
     showMeetingDetails(meeting) {
@@ -226,5 +308,31 @@ export class HomePageHistory {
         
         // Utiliser le hash pour la navigation
         window.location.hash = `/meeting/${meetingId}`;
+    }
+
+    bindEvents() {
+        const searchInput = document.querySelector('.search-input');
+        const searchButton = document.querySelector('.search-button');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => this.handleSearch());
+        }
+        if (searchButton) {
+            searchButton.addEventListener('click', () => this.handleSearch());
+        }
+    }
+
+    handleSearch() {
+        const query = (document.querySelector('.search-input')?.value || '').toLowerCase();
+        if (!query) {
+            this.filteredMeetings = [...this.meetings];
+                    } else {
+            this.filteredMeetings = this.meetings.filter(meeting => {
+                if (meeting.title?.toLowerCase().includes(query)) return true;
+                if (meeting.summaries?.some(s => s.text.toLowerCase().includes(query))) return true;
+                if (meeting.dialogs?.some(d => d.text.toLowerCase().includes(query))) return true;
+                return false;
+            });
+        }
+        this.render();
     }
 } 

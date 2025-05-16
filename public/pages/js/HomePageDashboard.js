@@ -1,0 +1,111 @@
+export default class HomePageDashboard {
+  constructor(app) {
+    this.app = app;
+    this.MEETINGS_API_URL = app.MEETINGS_API_URL;
+    this.dashboardContainer = null;
+  }
+
+  async init() {
+    await this.loadFragment();
+    this.bindEvents();
+    await this.render();
+  }
+
+  async loadFragment() {
+    const main = document.querySelector('.main-content');
+    if (!main) {
+      console.error('Dashboard: .main-content not found');
+      return;
+    }
+    // Clear main content and inject dashboard fragment
+    main.innerHTML = '';
+    this.dashboardContainer = document.createElement('div');
+    this.dashboardContainer.id = 'dashboard-fragment';
+    main.appendChild(this.dashboardContainer);
+    try {
+      const response = await fetch('pages/html/dashboard.html');
+      this.dashboardContainer.innerHTML = await response.text();
+    } catch (error) {
+      console.error('Erreur lors du chargement du fragment Dashboard:', error);
+    }
+  }
+
+  bindEvents() {
+    const startBtn = document.getElementById('sessionControlButton');
+    if (startBtn) {
+      startBtn.addEventListener('click', () => this.handleSessionControl());
+    }
+  }
+
+  async render() {
+    await this.renderRecentMeetingsCards();
+  }
+
+  async renderRecentMeetingsCards() {
+    const list = document.querySelector('.recent-meetings-list');
+    if (!list) {
+      console.error('Dashboard: .recent-meetings-list not found');
+      return;
+    }
+    try {
+      const res = await fetch(`${this.MEETINGS_API_URL}?saveMethod=local`);
+      const result = await res.json();
+      const emptyLabel = list.querySelector('.no-recent-meetings');
+      if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+        if (emptyLabel) emptyLabel.style.display = '';
+        return;
+      }
+      if (emptyLabel) emptyLabel.style.display = 'none';
+      // Remove old cards
+      Array.from(list.children).forEach(el => {
+        if (!el.classList.contains('no-recent-meetings')) list.removeChild(el);
+      });
+      // Add new cards
+      result.data.slice(0, 6).forEach(meeting => {
+        const card = this.createMeetingCard(meeting);
+        list.appendChild(card);
+      });
+    } catch (e) {
+      console.error('Erreur Dashboard renderRecentMeetingsCards:', e);
+    }
+  }
+
+  createMeetingCard(meeting) {
+    const card = document.createElement('div');
+    card.className = 'meeting-card';
+    card.addEventListener('click', () => {
+      window.location.hash = `/meeting/${meeting.id}`;
+    });
+    const dateStr = meeting.metadata?.startTime
+      ? new Date(meeting.metadata.startTime).toLocaleString()
+      : '';
+    const dur = meeting.metadata?.duration || 0;
+    const durationStr = this.formatDuration(dur);
+    const saveMethod = meeting.metadata?.saveMethod === 'local' ? 'Local' : 'Cloud';
+    card.innerHTML = `
+      <div class="meeting-info">
+        <h3 class="meeting-title">${meeting.title || 'Sans titre'}</h3>
+        <div class="meeting-meta">
+          <span class="meeting-date">${dateStr}</span>
+          <span class="meeting-duration">${durationStr}</span>
+          <span class="save-method">${saveMethod}</span>
+        </div>
+      </div>
+    `;
+    return card;
+  }
+
+  formatDuration(sec) {
+    const total = Math.floor(sec);
+    const h = Math.floor(total / 3600).toString().padStart(2, '0');
+    const m = Math.floor((total % 3600) / 60).toString().padStart(2, '0');
+    const s = (total % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  handleSessionControl() {
+    if (this.app && typeof this.app.handleSessionControl === 'function') {
+      this.app.handleSessionControl();
+    }
+  }
+} 
