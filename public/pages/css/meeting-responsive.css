@@ -1,5 +1,35 @@
 /* Meeting Page Responsive CSS */
 
+:root {
+  /* Light theme variables */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #333333;
+  --sidebar-hover: #004488;
+  --border-color: #e0e0e0;
+  --main-bg: #f5f5f5;
+  --card-bg: #ffffff;
+  --card-header-bg: #f9f9f9;
+  --button-hover: #e0e0e0;
+  --primary-color: #2196F3;
+  --button-bg: #e0e0e0;
+  --success-color: #4CAF50;
+}
+
+[data-theme="dark"] {
+  /* Dark theme overrides */
+  --sidebar-bg: #2d2d2d;
+  --sidebar-text: #fff;
+  --sidebar-hover: #333333;
+  --border-color: #444;
+  --main-bg: #2a2a2a;
+  --card-bg: #2a2a2a;
+  --card-header-bg: #1a1a1a;
+  --button-hover: #333333;
+  --button-bg: #333333;
+  --primary-color: #2196F3;
+  --success-color: #4CAF50;
+}
+
 /* Container principal */
 .meeting-page-container {
   display: flex;

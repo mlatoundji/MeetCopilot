@@ -1365,21 +1365,6 @@ body {
   overflow: hidden;
 }
 
-.area-header {
-  background-color: var(--primary-dark);
-  color: white;
-  padding: 8px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.area-content {
-  flex: 1;
-  padding: 16px;
-  overflow: auto;
-}
-
 /* Style pour les zones spécifiques */
 .suggestions-area {
   grid-column: 1 / 2;
