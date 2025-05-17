@@ -79,11 +79,11 @@ export class DataStore {
   async saveMeetingData(meetingData, saveMethod = 'local') {
     try {
       if (saveMethod === 'local') {
-        // Générer un ID unique si non fourni
-        const meetingId = meetingData.id || Date.now().toString();
+        // Generate a unique ID using crypto.randomUUID() if not provided
+        const meetingId = meetingData.id || crypto.randomUUID();
         meetingData.id = meetingId;
         
-        // Sauvegarder dans le localStorage
+        // Save to localStorage
         const meetings = this.getFromLocalStorage('meetings') || [];
         const existingIndex = meetings.findIndex(m => m.id === meetingId);
         

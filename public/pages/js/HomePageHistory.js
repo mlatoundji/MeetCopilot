@@ -12,9 +12,12 @@ export class HomePageHistory {
         try {
             console.log("Chargement de l'historique des réunions...");
             
-            // Utiliser l'API directement pour garantir l'obtention des données
-            const response = await fetch('http://localhost:3000/api/meetings?saveMethod=local');
-            const result = await response.json();
+            // Utiliser l'API via callApi pour une meilleure gestion des URLs
+            const result = await callApi('/api/meetings', {
+                method: 'GET',
+                params: { saveMethod: 'local' }
+            });
+            
             console.log("Résultat de l'API pour l'historique:", result);
 
             if (result.success && Array.isArray(result.data)) {
@@ -41,29 +44,42 @@ export class HomePageHistory {
         // Vider le contenu existant
         mainContent.innerHTML = '';
 
+        // Créer un fragment pour regrouper les éléments
+        const fragment = document.createDocumentFragment();
+
         // Ajouter un titre à la page
         const titleElement = document.createElement('h1');
         titleElement.className = 'page-title';
         titleElement.textContent = 'Historique des réunions';
-        mainContent.appendChild(titleElement);
+        fragment.appendChild(titleElement);
 
-        // Insert search bar fragment
-        const searchBarHtml = `
-            <div class="search-bar">
-                <input type="text" placeholder="Recherche..." class="search-input" />
-                <button class="search-button">🔍</button>
-                        </div>
-        `;
-        mainContent.innerHTML += searchBarHtml;
+        // Créer la barre de recherche
+        const searchBar = document.createElement('div');
+        searchBar.className = 'search-bar';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'search-input';
+        searchInput.placeholder = 'Recherche...';
+
+        const searchButton = document.createElement('button');
+        searchButton.className = 'search-button';
+        searchButton.textContent = '🔍';
+
+        searchBar.appendChild(searchInput);
+        searchBar.appendChild(searchButton);
+        fragment.appendChild(searchBar);
 
         // Si aucune réunion n'est disponible
         if (!this.filteredMeetings || this.filteredMeetings.length === 0) {
-            mainContent.innerHTML += `
-                <div class="no-meetings-message">
-                    <h2>Aucune réunion trouvée</h2>
-                    <p>Vous n'avez pas encore de réunions enregistrées.</p>
-                    </div>
-                `;
+            const noMeetingsMessage = document.createElement('div');
+            noMeetingsMessage.className = 'no-meetings-message';
+            noMeetingsMessage.innerHTML = `
+                <h2>Aucune réunion trouvée</h2>
+                <p>Vous n'avez pas encore de réunions enregistrées.</p>
+            `;
+            fragment.appendChild(noMeetingsMessage);
+            mainContent.appendChild(fragment);
             return;
         }
 
@@ -78,9 +94,10 @@ export class HomePageHistory {
         this.filteredMeetings.forEach(meeting => {
             const card = this.createMeetingCard(meeting);
             meetingsContainer.appendChild(card);
-            });
+        });
 
-        mainContent.appendChild(meetingsContainer);
+        fragment.appendChild(meetingsContainer);
+        mainContent.appendChild(fragment);
     }
 
     addCardStyles() {
@@ -323,16 +340,30 @@ export class HomePageHistory {
 
     handleSearch() {
         const query = (document.querySelector('.search-input')?.value || '').toLowerCase();
-        if (!query) {
-            this.filteredMeetings = [...this.meetings];
-                    } else {
-            this.filteredMeetings = this.meetings.filter(meeting => {
+        
+        // Calculate new filtered results
+        const newFilteredMeetings = !query ? 
+            [...this.meetings] : 
+            this.meetings.filter(meeting => {
                 if (meeting.title?.toLowerCase().includes(query)) return true;
                 if (meeting.summaries?.some(s => s.text.toLowerCase().includes(query))) return true;
                 if (meeting.dialogs?.some(d => d.text.toLowerCase().includes(query))) return true;
                 return false;
             });
+        
+        // Compare arrays to check if they're different
+        const hasChanged = this.filteredMeetings.length !== newFilteredMeetings.length ||
+            newFilteredMeetings.some((meeting, index) => {
+                const currentMeeting = this.filteredMeetings[index];
+                return !currentMeeting || 
+                       meeting.id !== currentMeeting.id || 
+                       meeting.metadata?.id !== currentMeeting.metadata?.id;
+            });
+        
+        // Only update and render if there's a change
+        if (hasChanged) {
+            this.filteredMeetings = newFilteredMeetings;
+            this.render();
         }
-        this.render();
     }
 } 

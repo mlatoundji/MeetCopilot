@@ -5,9 +5,12 @@
 export class APIHandler {
   constructor() {
     this.headers = {
-      'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
+    
+    // Définir le préfixe de l'API
+    this.apiPrefix = '/api';
+    
     // Détermination dynamique du backend
     // 1. L'application peut définir explicitement window.BACKEND_BASE_URL avant de charger les scripts.
     // 2. Sinon, si le fichier est servi via http(s) **et** le port vaut 3000, on garde la même origine.
@@ -31,7 +34,7 @@ export class APIHandler {
    * @returns {string} L'URL complète de l'endpoint
    */
   getEndpoint(service, provider) {
-    return `${this.baseURL}/${service}/${provider}`;
+    return `${this.baseURL}${this.apiPrefix}/${service}/${provider}`;
   }
 
   /**
@@ -42,11 +45,20 @@ export class APIHandler {
    */
   async callApi(url, options) {
     try {
-      // Fusionner les headers par défaut avec ceux spécifiés dans les options
+      // Préparer les headers en fonction du type de requête
+      let headers = { ...this.headers };
+      
+      // Si le body est FormData, ne pas définir Content-Type
+      // Sinon, ajouter Content-Type: application/json si non spécifié
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      // Fusionner avec les headers spécifiés dans les options
       const mergedOptions = {
         ...options,
         headers: {
-          ...this.headers,
+          ...headers,
           ...(options.headers || {})
         }
       };
@@ -94,9 +106,7 @@ export class APIHandler {
     const url = this.getEndpoint('transcribe', provider);
     return this.callApi(url, {
       method: 'POST',
-      body: formData,
-      // Ne pas définir Content-Type ici, il est automatiquement défini pour FormData
-      headers: {}
+      body: formData
     });
   }
 
@@ -135,7 +145,7 @@ export class APIHandler {
    * @returns {Promise<Object>} - Le statut de la sauvegarde
    */
   async saveMeeting(meetingData, saveMethod = 'local') {
-    const url = `${this.baseURL}/api/meetings`;
+    const url = `${this.baseURL}${this.apiPrefix}/meetings`;
     return this.callApi(url, {
       method: 'POST',
       body: JSON.stringify({
@@ -151,7 +161,7 @@ export class APIHandler {
    * @returns {Promise<Object>} - Les données de la réunion
    */
   async getMeeting(meetingId) {
-    const url = `${this.baseURL}/api/meetings/${meetingId}`;
+    const url = `${this.baseURL}${this.apiPrefix}/meetings/${meetingId}`;
     return this.callApi(url, {
       method: 'GET'
     });
@@ -163,7 +173,7 @@ export class APIHandler {
    * @returns {Promise<Object>} - La liste des réunions
    */
   async getMeetings(saveMethod = 'local') {
-    const url = `${this.baseURL}/api/meetings?saveMethod=${encodeURIComponent(saveMethod)}`;
+    const url = `${this.baseURL}${this.apiPrefix}/meetings?saveMethod=${encodeURIComponent(saveMethod)}`;
     return this.callApi(url, {
       method: 'GET'
     });

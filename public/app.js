@@ -44,6 +44,7 @@ class App {
     
     // Set up router
     this.router = new Router(this);
+    this.router.initialize();
 
     // Current app state
     this.filterTranscription = filterTranscription;
@@ -69,7 +70,10 @@ class App {
   }
   
   initializeRouter() {
-    this.router = new Router(this);
+    // Initialize the existing router instance
+    if (this.router) {
+      this.router.initialize();
+    }
   }
 
   setupEventListeners() {
@@ -262,10 +266,17 @@ class App {
       const input = document.getElementById(`input-${key}`);
       return input.value.trim();
     });
-    this.meetingInfos = this.uiHandler.meetingsInfosLabels.map((key, index) => ({
-      [key]: values[index]
-    }));
-    let details = Object.entries(this.meetingInfos).map(([key, value]) => `* ${key} : ${value}`).join("\n");
+    
+    // Construct meetingInfos as a single object with key-value pairs
+    this.meetingInfos = this.uiHandler.meetingsInfosLabels.reduce((acc, key, index) => {
+      acc[key] = values[index];
+      return acc;
+    }, {});
+    
+    let details = Object.entries(this.meetingInfos)
+      .map(([key, value]) => `* ${key} : ${value}`)
+      .join("\n");
+    
     this.conversationContextHandler.updateMeetingInfosText(details);
     this.conversationContextHandler.updateConversationContextHeadersText();
     console.log("Meetings details :\n", this.conversationContextHandler.conversationContextMeetingInfosText);

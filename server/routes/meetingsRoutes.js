@@ -35,7 +35,10 @@ router.post('/', async (req, res) => {
 
         if (saveMethod === 'local') {
             // Save locally
-            const filename = `${meetingData.id}.json`;
+            // Ensure the ID is a string before using path.basename to avoid type errors
+            const rawId = meetingData.id != null ? String(meetingData.id) : Date.now().toString();
+            const safeId = path.basename(rawId);
+            const filename = `${safeId}.json`;
             const filepath = path.join(meetingsDir, filename);
             
             fs.writeFileSync(filepath, JSON.stringify(meetingData, null, 2));
@@ -209,6 +212,72 @@ router.get('/:id', async (req, res) => {
         }
     } catch (error) {
         console.error('Error fetching meeting details:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// Delete meeting by ID
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { saveMethod } = req.query;
+
+        if (!saveMethod) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing saveMethod parameter' 
+            });
+        }
+
+        if (saveMethod === 'local') {
+            // Delete local file
+            const filename = `${id}.json`;
+            const filepath = path.join(meetingsDir, filename);
+            
+            if (!fs.existsSync(filepath)) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Meeting with ID ${id} not found`
+                });
+            }
+            
+            fs.unlinkSync(filepath);
+            res.json({ 
+                success: true, 
+                message: 'Meeting deleted successfully' 
+            });
+        } else if (saveMethod === 'supabase') {
+            // Delete from Supabase
+            const { error } = await supabase
+                .from('meetings')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return res.status(404).json({
+                        success: false,
+                        error: `Meeting with ID ${id} not found`
+                    });
+                }
+                throw error;
+            }
+            
+            res.json({ 
+                success: true, 
+                message: 'Meeting deleted successfully' 
+            });
+        } else {
+            res.status(400).json({ 
+                success: false, 
+                error: 'Invalid save method' 
+            });
+        }
+    } catch (error) {
+        console.error('Error deleting meeting:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 

@@ -3,13 +3,14 @@ import {
     generateSuggestionsViaMistral, 
     generateSuggestionsViaOpenAI,
     generateParallelSuggestions,
-    generateSuggestionsViaLocal
+    generateSuggestionsViaLocal,
+    generateSuggestionsWithFallback
 } from '../controllers/suggestionController.js';
 
 const router = express.Router();
 
 // Default route uses Local LLM with Mistral API fallback
-router.post('/', generateSuggestionsViaMistral);
+router.post('/', generateSuggestionsWithFallback);
 
 // Model-specific routes
 router.post('/local', generateSuggestionsViaLocal);

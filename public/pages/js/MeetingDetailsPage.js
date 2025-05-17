@@ -28,39 +28,104 @@ export class MeetingDetailsPage {
     render() {
         const container = document.querySelector('.main-content');
         if (!container) return;
+
+        // Clear container safely
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        // Create header section
         const header = document.createElement('div');
         header.className = 'meeting-header';
-        header.innerHTML = `
-            <h1>${this.meetingData.title || 'Unknown'}</h1>
-            <div class="meeting-meta">
-                <span class="date">${new Date(this.meetingData.metadata.startTime).toLocaleString()}</span>
-                <span class="duration">Duration: ${this.formatDuration(this.meetingData.metadata.duration)}</span>
-                <span class="save-method">${this.meetingData.metadata.saveMethod === 'local' ? 'Local' : 'Cloud'}</span>
-            </div>`;
+
+        // Create and append title
+        const title = document.createElement('h1');
+        title.textContent = this.meetingData?.title || 'Unknown';
+        header.appendChild(title);
+
+        // Create and append metadata section
+        const metaContainer = document.createElement('div');
+        metaContainer.className = 'meeting-meta';
+
+        // Add date if available
+        if (this.meetingData?.metadata?.startTime) {
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'date';
+            dateSpan.textContent = new Date(this.meetingData.metadata.startTime).toLocaleString();
+            metaContainer.appendChild(dateSpan);
+        }
+
+        // Add duration if available
+        if (this.meetingData?.metadata?.duration) {
+            const durationSpan = document.createElement('span');
+            durationSpan.className = 'duration';
+            durationSpan.textContent = `Duration: ${this.formatDuration(this.meetingData.metadata.duration)}`;
+            metaContainer.appendChild(durationSpan);
+        }
+
+        // Add save method if available
+        if (this.meetingData?.metadata?.saveMethod) {
+            const saveMethodSpan = document.createElement('span');
+            saveMethodSpan.className = 'save-method';
+            saveMethodSpan.textContent = this.meetingData.metadata.saveMethod === 'local' ? 'Local' : 'Cloud';
+            metaContainer.appendChild(saveMethodSpan);
+        }
+
+        header.appendChild(metaContainer);
+
+        // Create timeline section
         const timeline = document.createElement('div');
         timeline.className = 'meeting-timeline';
+
+        // Create and sort events
         const events = [
-            ...(this.meetingData.dialogs || []).map(d => ({ type: 'dialog', time: d.time, data: d })),
-            ...(this.meetingData.summaries || []).map(s => ({ type: 'summary', time: s.time, data: s })),
-            ...(this.meetingData.suggestions || []).map(su => ({ type: 'suggestion', time: su.time, data: su }))
-        ].sort((a,b)=> new Date(a.time)-new Date(b.time));
+            ...(this.meetingData?.dialogs || []).map(d => ({ type: 'dialog', time: d.time, data: d })),
+            ...(this.meetingData?.summaries || []).map(s => ({ type: 'summary', time: s.time, data: s })),
+            ...(this.meetingData?.suggestions || []).map(su => ({ type: 'suggestion', time: su.time, data: su }))
+        ].sort((a, b) => new Date(a.time) - new Date(b.time));
+
+        // Create timeline events
         events.forEach(event => {
-            const el = document.createElement('div');
-            el.className = `timeline-event ${event.type}`;
-            if(event.type==='dialog') {
-                el.innerHTML = `<div class="speaker">${event.data.speaker}</div><div class="content">${event.data.text}</div><div class="time">${new Date(event.time).toLocaleTimeString()}</div>`;
-            } else {
-                el.innerHTML = `<div class="content">${event.data.text}</div><div class="time">${new Date(event.time).toLocaleTimeString()}</div>`;
+            const eventEl = document.createElement('div');
+            eventEl.className = `timeline-event ${event.type}`;
+
+            if (event.type === 'dialog') {
+                const speakerEl = document.createElement('div');
+                speakerEl.className = 'speaker';
+                speakerEl.textContent = event.data.speaker || 'Unknown Speaker';
+                eventEl.appendChild(speakerEl);
             }
-            timeline.appendChild(el);
+
+            const contentEl = document.createElement('div');
+            contentEl.className = 'content';
+            contentEl.textContent = event.data.text || '';
+            eventEl.appendChild(contentEl);
+
+            const timeEl = document.createElement('div');
+            timeEl.className = 'time';
+            timeEl.textContent = new Date(event.time).toLocaleTimeString();
+            eventEl.appendChild(timeEl);
+
+            timeline.appendChild(eventEl);
         });
+
+        // Create navigation section
         const nav = document.createElement('div');
         nav.className = 'meeting-navigation';
-        nav.innerHTML = `<button class="back-button" onclick="window.location.hash='home'">Return Home</button>`;
-        container.innerHTML = '';
+
+        const backButton = document.createElement('button');
+        backButton.className = 'back-button';
+        backButton.textContent = 'Return Home';
+        backButton.addEventListener('click', () => {
+            window.location.hash = 'home';
+        });
+        nav.appendChild(backButton);
+
+        // Append all sections to container
         container.appendChild(header);
         container.appendChild(timeline);
         container.appendChild(nav);
+
         this.addStyles();
     }
 

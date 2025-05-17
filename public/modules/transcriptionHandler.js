@@ -5,7 +5,7 @@ import { callApi } from '../utils.js';
  */
 
 export class TranscriptionHandler {
-  constructor(transcriptionApiUrlOrApiHandler) {
+  constructor(transcriptionApiUrlOrApiHandler, provider = 'assemblyai') {
     if (typeof transcriptionApiUrlOrApiHandler === 'string') {
       this.transcriptionApiUrl = transcriptionApiUrlOrApiHandler;
       this.apiHandler = null;
@@ -17,6 +17,7 @@ export class TranscriptionHandler {
     this.language = 'fr';
     this.mimeType = 'audio/wav';
     this.fileName = 'audio.wav';
+    this.provider = provider;
   }
 
   async applyTranslation(langCode) {
@@ -32,20 +33,20 @@ export class TranscriptionHandler {
    */
   async transcribeAudio(audioBlob) {
     const formData = new FormData();
-    formData.append('audio', audioBlob);
+    formData.append('file', audioBlob);
     formData.append('langCode', this.language);
     formData.append('model', this.model);
     formData.append('mimeType', this.mimeType);
-    formData.append('fileName', this.fileName);
+    formData.append('filename', this.fileName);
 
     try {
       let response;
       if (this.apiHandler) {
-        response = await this.apiHandler.transcribeAudio(audioBlob, 'assemblyai', {
+        response = await this.apiHandler.transcribeAudio(audioBlob, this.provider, {
           langCode: this.language,
           model: this.model,
           mimeType: this.mimeType,
-          fileName: this.fileName
+          filename: this.fileName
         });
       } else {
         response = await callApi(this.transcriptionApiUrl, {

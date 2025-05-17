@@ -11,7 +11,7 @@ export class LayoutManager {
     this.contentAreas = [];
     this.toggleLayoutPresetsBtn = null;
     this.layoutPresetsPanel = null;
-    this.presetButtons = null;
+    this.presetButtonList = null;
     this.saveCurrentLayoutBtn = null;
     
     // État de la mise en page
@@ -40,7 +40,7 @@ export class LayoutManager {
     this.contentAreas = Array.from(document.querySelectorAll('.content-area'));
     this.toggleLayoutPresetsBtn = document.getElementById('toggleLayoutPresets');
     this.layoutPresetsPanel = document.getElementById('layoutPresetsPanel');
-    this.presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+    this.presetButtonList = Array.from(document.querySelectorAll('.preset-btn'));
     this.saveCurrentLayoutBtn = document.getElementById('saveCurrentLayout');
     
     // Vérifier que tous les éléments requis sont présents
@@ -76,18 +76,14 @@ export class LayoutManager {
     }
     
     // Preset buttons
-    if (this.presetButtons) {
-      this.presetButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const preset = btn.getAttribute('data-preset');
-          this.applyLayoutPreset(preset);
-          
-          // Mettre à jour l'état actif des boutons
-          this.presetButtons.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-        });
+    const buttons = this.getPresetButtons();
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-preset');
+        this.applyLayoutPreset(preset);
+        this.updatePresetButtonStates(preset);
       });
-    }
+    });
     
     // Save layout button
     if (this.saveCurrentLayoutBtn) {
@@ -102,6 +98,9 @@ export class LayoutManager {
    * Configure les contrôles pour redimensionner et déplacer les zones de contenu
    */
   setupContentAreaControls() {
+    // Cleanup existing listeners if any
+    this.cleanupEventListeners();
+    
     this.contentAreas.forEach(area => {
       const moveHandle = area.querySelector('.move-handle');
       const resizeHandle = area.querySelector('.resize-handle');
@@ -138,10 +137,30 @@ export class LayoutManager {
     });
     
     // Écouteurs globaux pour le déplacement et le redimensionnement
-    document.addEventListener('mousemove', (e) => this.onPointerMove(e));
-    document.addEventListener('touchmove', (e) => this.onPointerMove(e), { passive: false });
-    document.addEventListener('mouseup', () => this.stopDraggingOrResizing());
-    document.addEventListener('touchend', () => this.stopDraggingOrResizing());
+    this.globalMoveHandler = (e) => this.onPointerMove(e);
+    this.globalTouchHandler = (e) => this.onPointerMove(e);
+    this.globalUpHandler = () => this.stopDraggingOrResizing();
+    
+    document.addEventListener('mousemove', this.globalMoveHandler);
+    document.addEventListener('touchmove', this.globalTouchHandler, { passive: false });
+    document.addEventListener('mouseup', this.globalUpHandler);
+    document.addEventListener('touchend', this.globalUpHandler);
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', this.globalUpHandler);
+  }
+  
+  /**
+   * Nettoie les écouteurs d'événements globaux
+   */
+  cleanupEventListeners() {
+    if (this.globalMoveHandler) {
+      document.removeEventListener('mousemove', this.globalMoveHandler);
+      document.removeEventListener('touchmove', this.globalTouchHandler);
+      document.removeEventListener('mouseup', this.globalUpHandler);
+      document.removeEventListener('touchend', this.globalUpHandler);
+      window.removeEventListener('beforeunload', this.globalUpHandler);
+    }
   }
   
   /**
@@ -178,6 +197,10 @@ export class LayoutManager {
    */
   applyLayoutPreset(preset) {
     this.currentLayout = preset;
+    
+    // Reset grid template styles to default
+    this.meetingContentGrid.style.gridTemplateColumns = '';
+    this.meetingContentGrid.style.gridTemplateRows = '';
     
     // Réinitialiser les styles personnalisés
     this.contentAreas.forEach(area => {
@@ -428,6 +451,27 @@ export class LayoutManager {
   }
   
   /**
+   * Expands repeat() syntax in grid template strings
+   * @param {string} template - The grid template string
+   * @returns {string} - The expanded template string
+   */
+  expandGridTemplate(template) {
+    return template.replace(/repeat\((\d+),\s*([^)]+)\)/g, (match, count, value) => {
+      return Array(parseInt(count)).fill(value.trim()).join(' ');
+    });
+  }
+
+  /**
+   * Gets the number of tracks in a grid template
+   * @param {string} template - The grid template string
+   * @returns {number} - The number of tracks
+   */
+  getGridTrackCount(template) {
+    const expandedTemplate = this.expandGridTemplate(template);
+    return expandedTemplate.split(/\s+/).filter(track => track.trim()).length;
+  }
+
+  /**
    * Met à jour la position d'un élément pendant le déplacement
    * @param {number} dx - Différence en X
    * @param {number} dy - Différence en Y
@@ -451,8 +495,8 @@ export class LayoutManager {
     const gridTemplateColumns = computedStyle.getPropertyValue('grid-template-columns');
     const gridTemplateRows = computedStyle.getPropertyValue('grid-template-rows');
     
-    const columnCount = gridTemplateColumns.split(' ').length;
-    const rowCount = gridTemplateRows.split(' ').length;
+    const columnCount = this.getGridTrackCount(gridTemplateColumns);
+    const rowCount = this.getGridTrackCount(gridTemplateRows);
     
     // Calculer la taille d'une cellule
     const cellWidth = gridRect.width / columnCount;
@@ -535,6 +579,25 @@ export class LayoutManager {
   }
   
   /**
+   * Gets the current list of preset buttons from the DOM
+   * @returns {Array<HTMLElement>} Array of preset button elements
+   */
+  getPresetButtons() {
+    return Array.from(document.querySelectorAll('.preset-btn'));
+  }
+
+  /**
+   * Updates the active state of preset buttons
+   * @param {string} activePreset - The name of the active preset
+   */
+  updatePresetButtonStates(activePreset) {
+    const buttons = this.getPresetButtons();
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-preset') === activePreset);
+    });
+  }
+  
+  /**
    * Ajoute un préréglage d'agencement sauvegardé à l'interface
    * @param {string} layoutName - Nom de l'agencement sauvegardé
    */
@@ -542,7 +605,7 @@ export class LayoutManager {
     if (!this.layoutPresetsPanel) return;
     
     // Vérifier si un bouton pour cet agencement existe déjà
-    const existingButton = Array.from(this.presetButtons).find(btn => 
+    const existingButton = this.getPresetButtons().find(btn => 
       btn.getAttribute('data-preset') === layoutName
     );
     
@@ -556,15 +619,13 @@ export class LayoutManager {
     
     presetButton.addEventListener('click', () => {
       this.applyLayoutPreset(layoutName);
-      this.presetButtons.forEach(btn => btn.classList.remove('active'));
-      presetButton.classList.add('active');
+      this.updatePresetButtonStates(layoutName);
     });
     
     // Ajouter à la liste des boutons de préréglage
     const presetButtonsContainer = this.layoutPresetsPanel.querySelector('.preset-buttons');
     if (presetButtonsContainer) {
       presetButtonsContainer.appendChild(presetButton);
-      this.presetButtons.push(presetButton);
     }
   }
   

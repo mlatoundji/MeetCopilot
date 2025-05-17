@@ -140,32 +140,30 @@ export class MeetingPage {
       const label = this.systemCaptureButton.querySelector('.meeting-label');
       if (label) {
         label.textContent = this.audioCapture.isSystemRecording ? 
-          this.app.uiHandler.selectedTranslations.systemButtonStop : 
-          this.app.uiHandler.selectedTranslations.systemButtonStart;
+          this.uiHandler.selectedTranslations.systemButtonStop : 
+          this.uiHandler.selectedTranslations.systemButtonStart;
       }
     }
     if (this.micCaptureButton) {
       const label = this.micCaptureButton.querySelector('.meeting-label');
       if (label) {
         label.textContent = this.audioCapture.isMicRecording ? 
-          this.app.uiHandler.selectedTranslations.micButtonStop : 
-          this.app.uiHandler.selectedTranslations.micButtonStart;
+          this.uiHandler.selectedTranslations.micButtonStop : 
+          this.uiHandler.selectedTranslations.micButtonStart;
       }
     }
   }
 
   async render() {
     await this.loadFragment();
-    
-    // Récupérer le container et mainContent
-    const container = document.querySelector('.container');
-    const mainContent = document.querySelector('.main-content');
-    
-    this.uiHandler.refreshMeetingElements();
-    
-    // Cacher la sidebar principale
+
+    // Hide global header and main sidebar on meeting page
+    const header = document.querySelector('.header-horizontal');
+    if (header) header.style.display = 'none';
     const mainSidebar = document.querySelector('.sidebar');
     if (mainSidebar) mainSidebar.style.display = 'none';
+    
+    this.uiHandler.refreshMeetingElements();
     
     // Afficher la sidebar de réunion
     const meetingSidebar = document.querySelector('.meeting-sidebar');
@@ -181,13 +179,19 @@ export class MeetingPage {
     // S'assurer que l'affichage de la transcription est activé
     if (this.transcriptionSection) {
       this.transcriptionSection.style.display = 'flex';
-      if (container) container.classList.remove('no-transcription');
+      if (this.container) this.container.classList.remove('no-transcription');
     }
 
     this.updateButtonStates();
   }
 
   async initialize() {
+    // Hide global header and main sidebar on meeting page
+    const header = document.querySelector('.header-horizontal');
+    if (header) header.style.display = 'none';
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = 'none';
+
     console.log("MeetingPage initializing");
     
     // Initialiser les éléments UI
@@ -268,6 +272,12 @@ export class MeetingPage {
 
   stopSystemCapture() {
     if (this.audioCapture.isSystemRecording) {
+      // Clear the transcription interval
+      if (this.audioCapture.systemTranscriptionInterval) {
+        clearInterval(this.audioCapture.systemTranscriptionInterval);
+        this.audioCapture.systemTranscriptionInterval = null;
+      }
+      
       this.audioCapture.stopSystemCapture();
       this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, false);
       this.uiHandler.closeVideoElement();
@@ -291,6 +301,12 @@ export class MeetingPage {
 
   stopMicCapture() {
     if (this.audioCapture.isMicRecording) {
+      // Clear the transcription interval
+      if (this.audioCapture.micTranscriptionInterval) {
+        clearInterval(this.audioCapture.micTranscriptionInterval);
+        this.audioCapture.micTranscriptionInterval = null;
+      }
+      
       this.audioCapture.stopMicCapture();
       this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, false);
       this.updateButtonStates();
@@ -305,15 +321,23 @@ export class MeetingPage {
         this.app.conversationContextHandler.micLabel;
 
       if (buffer.length > 0) {
-        const audioBuffer = buffer.reduce((acc, val) => {
-          const tmp = new Float32Array(acc.length + val.length);
-          tmp.set(acc, 0);
-          tmp.set(val, acc.length);
-          return tmp;
-        }, new Float32Array());
+        // Calculate total length of all buffers
+        const totalLength = buffer.reduce((sum, chunk) => sum + chunk.length, 0);
+        
+        // Create a single Float32Array of the total length
+        const audioBuffer = new Float32Array(totalLength);
+        
+        // Copy each buffer chunk sequentially
+        let offset = 0;
+        for (const chunk of buffer) {
+          audioBuffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        // Clear the original buffer
+        buffer.length = 0;
 
         const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
-        buffer.length = 0; // Clear buffer
 
         const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
         if (transcription) {
@@ -348,22 +372,19 @@ export class MeetingPage {
       let context;
       if (this.app && this.app.conversationContextHandler) {
         context = this.app.conversationContextHandler.conversationContextText;
+        console.log("Conversation context handler text loaded");
       } else {
         context = document.getElementById('transcription').innerText;
+        console.log("Transcription box text loaded");
       }
       
       if (!context || context.trim() === '') {
-        this.uiHandler.displaySuggestion("Pas de contexte de conversation suffisant pour générer des suggestions.");
+        this.uiHandler.updateSuggestions("Pas de contexte de conversation suffisant pour générer des suggestions.");
         return;
       }
 
       const suggestions = await this.suggestionsHandler.generateSuggestions(context);
-      
-      if (this.uiHandler.updateSuggestions) {
-        this.uiHandler.updateSuggestions(suggestions);
-      } else {
-        this.uiHandler.displaySuggestion(suggestions);
-      }
+      this.uiHandler.updateSuggestions(suggestions);
       
       // Enregistrer la suggestion dans le conversationContextHandler
       if (this.app && this.app.conversationContextHandler) {
@@ -380,7 +401,7 @@ export class MeetingPage {
       }
     } catch (error) {
       console.error("Error generating suggestion:", error);
-      this.uiHandler.displaySuggestion("Erreur lors de la génération des suggestions.");
+      this.uiHandler.updateSuggestions("Erreur lors de la génération des suggestions.");
     }
   }
 } 

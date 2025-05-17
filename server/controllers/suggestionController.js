@@ -261,4 +261,61 @@ export const generateSuggestionsViaLocal = async (req, res) => {
         }
     }
 };
+
+export const generateSuggestionsWithFallback = async (req, res) => {
+    try {
+        console.log("Generate Suggestions with Local LLM and Mistral fallback...");
+        const { context } = req.body;
+
+        if (!context) {
+            return res.status(400).json({ error: 'Context is required' });
+        }
+
+        // Generate hash for caching
+        const contextHash = generateContextHash(context);
+        
+        // Check cache first
+        const cachedSuggestions = getCachedSuggestions(contextHash);
+        if (cachedSuggestions) {
+            console.log("Returning cached suggestions");
+            return res.json({ suggestions: cachedSuggestions });
+        }
+
+        // Try local LLM first
+        try {
+            console.log("Attempting to generate suggestions with Local LLM...");
+            const localSuggestions = await generateLocalSuggestions(context);
+            if (localSuggestions) {
+                console.log("Successfully generated suggestions with Local LLM");
+                setCachedSuggestions(contextHash, localSuggestions);
+                return res.json({ suggestions: localSuggestions });
+            }
+        } catch (localError) {
+            console.warn("Local LLM failed, falling back to Mistral:", localError.message);
+        }
+
+        // Fallback to Mistral if local LLM fails
+        console.log("Falling back to Mistral API...");
+        const mistralSuggestions = await retryWithExponentialBackoff(async () => {
+            return await makeAPIRequest(
+                'https://api.mistral.ai/v1/chat/completions',
+                process.env.MISTRAL_API_KEY,
+                systemPrompt,
+                context
+            );
+        });
+
+        // Cache the suggestions
+        setCachedSuggestions(contextHash, mistralSuggestions);
+        
+        console.log("Successfully generated suggestions with Mistral fallback");
+        res.json({ suggestions: mistralSuggestions });
+    } catch (error) {
+        console.error('Error generating suggestions:', error);
+        res.status(error.status || 500).json({ 
+            error: error.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+};
   

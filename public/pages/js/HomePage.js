@@ -23,6 +23,11 @@ export class HomePage {
   }
 
   async render() {
+    // Show global header and main sidebar on home page
+    const header = document.querySelector('.header-horizontal');
+    if (header) header.style.display = '';
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = '';
     // Initialize the home page and show dashboard fragment by default
     await this.homePageDashboard.init();
   }
@@ -72,11 +77,29 @@ export class HomePage {
 
   bindEvents() {
     // Listen for hash changes to handle meeting details navigation
-    window.addEventListener('hashchange', () => {
+    window.addEventListener('hashchange', async () => {
       const hash = window.location.hash;
       if (hash.startsWith('#/meeting/')) {
         const meetingId = hash.replace('#/meeting/', '');
-        this.showMeetingDetails(meetingId);
+        try {
+          // Try to find the meeting in our loaded meetings first
+          let meeting = this.meetings.find(m => m.id === meetingId);
+          
+          // If not found in loaded meetings, try to fetch it
+          if (!meeting) {
+            const result = await this.dataStore.getMeetingData(meetingId);
+            if (result.success) {
+              meeting = result.data;
+            } else {
+              console.error('Meeting not found:', meetingId);
+              return;
+            }
+          }
+          
+          this.showMeetingDetails(meeting);
+        } catch (error) {
+          console.error('Error loading meeting details:', error);
+        }
       }
     });
 
@@ -483,13 +506,13 @@ export class HomePage {
   }
 
   bindSessionStartButton() {
-    const btn = document.getElementById('sessionControlButton');
+    const btn = document.getElementById('sessionControlBtn');
     if (btn) {
       // Remove previous listener if any to avoid duplicates
       btn.replaceWith(btn.cloneNode(true));
-      const newBtn = document.getElementById('sessionControlButton');
+      const newBtn = document.getElementById('sessionControlBtn');
       if (newBtn) {
-        newBtn.addEventListener('click', () => this.app.handleSessionControl());
+        newBtn.addEventListener('click', () => this.handleSessionControl());
       }
     }
   }

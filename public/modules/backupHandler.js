@@ -16,6 +16,7 @@ export class BackupHandler {
             id: null,
             title: '',
             transcription: '',
+            dialogs: [],
             suggestions: [],
             summaries: [],
             metadata: {
@@ -172,12 +173,28 @@ export class BackupHandler {
         this.meetingData.dialogs.push(text);
     }
 
-    addSummary(text) {
-        this.meetingData.summaries.push(text);
+    addSummary(summary) {
+        if (typeof summary === 'string') {
+            this.meetingData.summaries.push({
+                text: summary,
+                time: Date.now(),
+                language: this.app?.currentLanguage || 'en'
+            });
+        } else {
+            this.meetingData.summaries.push(summary);
+        }
     }
 
     addSuggestion(suggestion) {
-        this.meetingData.suggestions.push(suggestion);
+        if (typeof suggestion === 'string') {
+            this.meetingData.suggestions.push({
+                text: suggestion,
+                time: Date.now(),
+                language: this.app?.currentLanguage || 'en'
+            });
+        } else {
+            this.meetingData.suggestions.push(suggestion);
+        }
     }
 
     finalizeMeeting() {
@@ -219,6 +236,7 @@ export class BackupHandler {
             id: Date.now().toString(),
             title: title || `Meeting ${new Date().toLocaleString()}`,
             transcription: '',
+            dialogs: [],
             suggestions: [],
             summaries: [],
             metadata: {
@@ -241,32 +259,6 @@ export class BackupHandler {
         const timestamp = new Date().toISOString();
         const formattedTranscription = `[${timestamp}] [${source}] ${transcription}\n`;
         this.meetingData.transcription += formattedTranscription;
-    }
-
-    /**
-     * Adds a suggestion to the meeting data
-     * @param {string} suggestion - The suggestion to add
-     */
-    addSuggestion(suggestion) {
-        if (!suggestion || suggestion.trim() === '') return;
-        
-        this.meetingData.suggestions.push({
-            text: suggestion,
-            timestamp: new Date().toISOString()
-        });
-    }
-
-    /**
-     * Adds a summary to the meeting data
-     * @param {string} summary - The summary to add
-     */
-    addSummary(summary) {
-        if (!summary || summary.trim() === '') return;
-        
-        this.meetingData.summaries.push({
-            text: summary,
-            timestamp: new Date().toISOString()
-        });
     }
 
     /**

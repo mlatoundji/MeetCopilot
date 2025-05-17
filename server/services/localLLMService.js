@@ -13,6 +13,7 @@ let isInitialized = false;
 let initializationPromise = null;
 let conversationMemory = [];
 let responseCache = new Map();
+let cacheCleanupInterval = null;
 
 // Cache cleanup interval (5 minutes)
 const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000;
@@ -73,7 +74,10 @@ export const initializeLocalLLM = async () => {
             console.log('Local Mistral LLM initialized successfully');
 
             // Start cache cleanup interval
-            setInterval(() => {
+            if (cacheCleanupInterval) {
+                clearInterval(cacheCleanupInterval);
+            }
+            cacheCleanupInterval = setInterval(() => {
                 responseCache.clear();
             }, CACHE_CLEANUP_INTERVAL);
 
@@ -139,6 +143,12 @@ export const generateLocalSuggestions = async (userContext) => {
             streamResponse: true,  // Enable streaming for faster response
         });
 
+        // Collect streamed response
+        let fullResponse = '';
+        for await (const chunk of response) {
+            fullResponse += chunk;
+        }
+
         // Update conversation memory
         conversationMemory.push(truncatedContext);
         if (conversationMemory.length > 3) {  // Reduced memory size
@@ -146,9 +156,9 @@ export const generateLocalSuggestions = async (userContext) => {
         }
 
         // Cache the response
-        responseCache.set(cacheKey, response.trim());
+        responseCache.set(cacheKey, fullResponse.trim());
 
-        return response.trim();
+        return fullResponse.trim();
     } catch (error) {
         console.error('Error generating local suggestions:', error);
         throw error;
@@ -184,7 +194,13 @@ export const generateSummary = async (conversationHistory) => {
             streamResponse: true,  // Enable streaming
         });
 
-        return response.trim();
+        // Collect streamed response
+        let fullResponse = '';
+        for await (const chunk of response) {
+            fullResponse += chunk;
+        }
+
+        return fullResponse.trim();
     } catch (error) {
         console.error('Error generating summary:', error);
         throw error;
@@ -216,7 +232,13 @@ export const transcribeAudio = async (audioData) => {
             streamResponse: true,  // Enable streaming
         });
 
-        return response.trim();
+        // Collect streamed response
+        let fullResponse = '';
+        for await (const chunk of response) {
+            fullResponse += chunk;
+        }
+
+        return fullResponse.trim();
     } catch (error) {
         console.error('Error transcribing audio:', error);
         throw error;
@@ -280,6 +302,10 @@ export const cleanupLocalLLM = async () => {
     if (isInitialized) {
         try {
             console.log('Cleaning up LLM resources...');
+            if (cacheCleanupInterval) {
+                clearInterval(cacheCleanupInterval);
+                cacheCleanupInterval = null;
+            }
             if (context) {
                 context = null;
             }

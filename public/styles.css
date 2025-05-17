@@ -1522,7 +1522,7 @@ body {
   display: flex;
   align-items: center;
   height: 64px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   color: #fff;
   border-bottom: 1px solid #333;
   padding: 0 24px;
@@ -1594,4 +1594,10 @@ body {
     justify-content: center !important;
     padding: 12px 0 !important;
   }
+}
+
+/* Hide global header and sidebar in meeting mode */
+body.no-global-ui .header-horizontal,
+body.no-global-ui #main-sidebar {
+    display: none !important;
 }

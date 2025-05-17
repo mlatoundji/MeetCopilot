@@ -191,9 +191,15 @@ export class UIHandler {
      * @param {string} transcription - The transcription text to display.
      */
     updateTranscription(transcription) {
-        if (this.transcriptionDiv) {
-            this.transcriptionDiv.innerText = transcription;
+        // Ensure transcriptionDiv reference is current
+        if (!this.transcriptionDiv) {
+            this.transcriptionDiv = document.getElementById("transcription");
         }
+        if (!this.transcriptionDiv) {
+            console.warn("UIHandler: Transcription element '#transcription' not found");
+            return;
+        }
+        this.transcriptionDiv.innerText = transcription;
     }
   
     /**
@@ -201,9 +207,15 @@ export class UIHandler {
      * @param {string} suggestions - The suggestions text to display.
      */
     updateSuggestions(suggestions) {
-        if (this.suggestionsDiv) {
-            this.suggestionsDiv.innerText = suggestions || "No suggestions generated.";
+        // Ensure suggestionsDiv reference is current
+        if (!this.suggestionsDiv) {
+            this.suggestionsDiv = document.getElementById("suggestions");
         }
+        if (!this.suggestionsDiv) {
+            console.warn("UIHandler: Suggestions element '#suggestions' not found");
+            return;
+        }
+        this.suggestionsDiv.innerText = suggestions || "No suggestions generated.";
     }
   
     /**
@@ -234,6 +246,14 @@ export class UIHandler {
     }
 
     populateVideoElement(stream) {
+        // Ensure videoElement reference is current
+        if (!this.videoElement) {
+            this.videoElement = document.getElementById("screen-capture");
+        }
+        if (!this.videoElement) {
+            console.warn("UIHandler: Video element '#screen-capture' not found");
+            return;
+        }
         this.videoElement.srcObject = stream;
         this.videoElement.onloadedmetadata = () => {
             this.videoElement.play();
@@ -241,6 +261,14 @@ export class UIHandler {
     }
 
     closeVideoElement() {
+        // Ensure videoElement reference is current
+        if (!this.videoElement) {
+            this.videoElement = document.getElementById("screen-capture");
+        }
+        if (!this.videoElement) {
+            console.warn("UIHandler: Video element '#screen-capture' not found");
+            return;
+        }
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }

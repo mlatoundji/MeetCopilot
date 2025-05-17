@@ -59,18 +59,22 @@ export class Router {
   }
   
   initializeHashHandler() {
-    // Gérer les changements de hash pour les routes dynamiques
-    window.addEventListener('hashchange', () => {
+    // Handle hash changes for dynamic routing
+    window.addEventListener('hashchange', (event) => {
       const hash = window.location.hash.substring(1);
-      
-      // Vérifier si c'est une route de détail de réunion
+      // Meeting details route: /meeting/:id
       if (hash.startsWith('/meeting/')) {
         const meetingId = hash.replace('/meeting/', '');
         this.navigateToMeetingDetails(meetingId);
+      } else {
+        // Generic page routes (home, login, register, etc.)
+        if (this.routes[hash]) {
+          this.navigate(hash, false);
+        }
       }
     });
     
-    // Vérifier le hash actuel au démarrage
+    // Handle initial hash for meeting details at startup
     const initialHash = window.location.hash.substring(1);
     if (initialHash.startsWith('/meeting/')) {
       const meetingId = initialHash.replace('/meeting/', '');
@@ -111,7 +115,7 @@ export class Router {
         <div class="error-message">
           <h2>Erreur</h2>
           <p>Impossible de charger les détails de la réunion: ${error.message}</p>
-          <button onclick="window.location.hash='history'">Retour à l'historique</button>
+          <button onclick="window.location.hash='home'">Retour à l'accueil</button>
         </div>
       `;
       return false;
@@ -143,6 +147,9 @@ export class Router {
       // Load page fragment into main-content
       if (mainContent) {
         const htmlResponse = await fetch(route.htmlPath);
+        if (!htmlResponse.ok) {
+          throw new Error(`Failed to load page: ${htmlResponse.status} ${htmlResponse.statusText}`);
+        }
         const htmlContent = await htmlResponse.text();
         mainContent.innerHTML = htmlContent;
       } else {
@@ -150,23 +157,35 @@ export class Router {
       }
 
       if (route.jsPath) {
+        let PageClass;
         if (this.pageModules[pageName]) {
-          this.currentPage = new this.pageModules[pageName].default(this.app);
+          // Cached PageClass
+          PageClass = this.pageModules[pageName];
         } else {
           try {
             const module = await import(`../${route.jsPath}`);
-            this.pageModules[pageName] = module;
-            if (module[pageName.charAt(0).toUpperCase() + pageName.slice(1) + 'Page']) {
-              const PageClass = module[pageName.charAt(0).toUpperCase() + pageName.slice(1) + 'Page'];
-              this.currentPage = new PageClass(this.app);
+            // Determine the export: Named Page class or default
+            const namedExport = pageName.charAt(0).toUpperCase() + pageName.slice(1) + 'Page';
+            if (module[namedExport]) {
+              PageClass = module[namedExport];
             } else if (module.default) {
-              this.currentPage = new module.default(this.app);
+              PageClass = module.default;
             } else {
-              console.error(`Module for page '${pageName}' does not have a default export or named export`);
+              console.error(`Module for page '${pageName}' does not have expected export`);
+              return false;
             }
+            // Cache the PageClass for future navigations
+            this.pageModules[pageName] = PageClass;
           } catch (error) {
             console.error(`Error importing module for page '${pageName}':`, error);
+            return false;
           }
+        }
+        try {
+          this.currentPage = new PageClass(this.app);
+        } catch (instErr) {
+          console.error(`Error instantiating page '${pageName}':`, instErr);
+          return false;
         }
         if (this.currentPage && typeof this.currentPage.init === 'function') {
           await this.currentPage.init();
@@ -183,6 +202,8 @@ export class Router {
 
       // Gérer la sidebar en fonction de la configuration de la route
       this.handleSidebar(pageName, route.hasSidebar);
+      // Toggle body class to hide/show global header and sidebar via CSS
+      document.body.classList.toggle('no-global-ui', !route.hasSidebar);
 
       return true;
     } catch (error) {

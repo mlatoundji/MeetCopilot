@@ -15,8 +15,58 @@ export class AudioCapture {
       this.isSystemRecording = false;
       this.isMicRecording = false;
       this.timeslice = 4000; // Time slice for audio chunks in milliseconds
+      
+      // Buffer management settings
+      this.maxBufferSize = 1000; // Maximum number of chunks to store
+      this.bufferCleanupInterval = 30000; // Cleanup every 30 seconds
+      this.bufferCleanupTimer = null;
     }
-  
+
+    // Helper method to manage buffer size
+    manageBuffer(buffer, newData) {
+      buffer.push(newData);
+      if (buffer.length > this.maxBufferSize) {
+        // Remove oldest entries to maintain max size
+        const excess = buffer.length - this.maxBufferSize;
+        buffer.splice(0, excess);
+      }
+    }
+
+    // Start periodic buffer cleanup
+    startBufferCleanup() {
+      if (!this.bufferCleanupTimer) {
+        this.bufferCleanupTimer = setInterval(() => {
+          this.processAndClearBuffers();
+        }, this.bufferCleanupInterval);
+      }
+    }
+
+    // Stop periodic buffer cleanup
+    stopBufferCleanup() {
+      if (this.bufferCleanupTimer) {
+        clearInterval(this.bufferCleanupTimer);
+        this.bufferCleanupTimer = null;
+      }
+    }
+
+    // Process and clear buffers
+    processAndClearBuffers() {
+      // Process system buffer if needed
+      if (this.systemBuffer.length > 0) {
+        // Here you can add logic to process the buffer data
+        // For example, send it to a server or save it
+        console.log(`Processing ${this.systemBuffer.length} system audio chunks`);
+        this.systemBuffer = [];
+      }
+
+      // Process mic buffer if needed
+      if (this.micBuffer.length > 0) {
+        // Here you can add logic to process the buffer data
+        console.log(`Processing ${this.micBuffer.length} mic audio chunks`);
+        this.micBuffer = [];
+      }
+    }
+
     async getSystemAudioMedia() {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -68,10 +118,11 @@ export class AudioCapture {
   
           this.systemRecorder.onaudioprocess = (event) => {
             const audioData = event.inputBuffer.getChannelData(0);
-            this.systemBuffer.push(new Float32Array(audioData));
+            this.manageBuffer(this.systemBuffer, new Float32Array(audioData));
           };
   
           this.isSystemRecording = true;
+          this.startBufferCleanup();
           return true;
         }
         return false;
@@ -95,8 +146,11 @@ export class AudioCapture {
           this.systemAudioContext.close();
         }
         this.isSystemRecording = false;
-        this.systemBuffer = [];
+        this.processAndClearBuffers();
         this.systemMediaStream = null;
+        if (!this.isMicRecording) {
+          this.stopBufferCleanup();
+        }
       }
     }
   
@@ -113,10 +167,11 @@ export class AudioCapture {
   
           this.micRecorder.onaudioprocess = (event) => {
             const audioData = event.inputBuffer.getChannelData(0);
-            this.micBuffer.push(new Float32Array(audioData));
+            this.manageBuffer(this.micBuffer, new Float32Array(audioData));
           };
   
           this.isMicRecording = true;
+          this.startBufferCleanup();
         }
       }
     }
@@ -128,8 +183,11 @@ export class AudioCapture {
           this.micAudioContext.close();
         }
         this.isMicRecording = false;
-        this.micBuffer = [];
+        this.processAndClearBuffers();
         this.micMediaStream = null;
+        if (!this.isSystemRecording) {
+          this.stopBufferCleanup();
+        }
       }
     }
   }
