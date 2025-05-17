@@ -9,6 +9,7 @@ import { UI } from './modules/ui.js';
 import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
 import { DataStore } from './modules/dataStore.js';
+import { HomePageHistory } from './pages/js/HomePageHistory.js';
 
 const SYSTEM_SOURCE = 'system';
 const MIC_SOURCE = 'mic';
@@ -444,19 +445,27 @@ class App {
       const pageName = event.detail.page;
       console.log(`Page loaded: ${pageName}`);
       
+      let tabKey;
       if (pageName === 'meeting') {
         // Initialiser la page de réunion
         const meetingPage = this.router.getCurrentPage();
         if (meetingPage && typeof meetingPage.initialize === 'function') {
           meetingPage.initialize();
         }
+        tabKey = null; // no sidebar tab for meeting
       } else if (pageName === 'home') {
-        // Initialiser la page d'accueil
         const homePage = this.router.getCurrentPage();
         if (homePage && typeof homePage.render === 'function') {
           homePage.render();
         }
+        tabKey = 'dashboard';
+      } else if (pageName === 'history') {
+        // For router-based history (if ever)
+        tabKey = 'history';
+      } else {
+        tabKey = null;
       }
+      if (tabKey) this.highlightSidebarItem(tabKey);
     });
     
     // Set the initial page based on the current URL or go to home
@@ -471,21 +480,40 @@ class App {
       if (this.router) {
         this.router.navigate('home');
       }
+      this.highlightSidebarItem('dashboard');
       return;
     }
     fetch(`pages/html/${nav}.html`)
       .then(res => res.text())
       .then(html => {
-        document.getElementById('main-content').innerHTML = html;
+        const mainContent = document.getElementById('main-content');
+        mainContent.innerHTML = html;
         // Attach event listeners only if they haven't been attached yet
         if (!this.isListenersAttached) {
           this.setupEventListeners();
           this.isListenersAttached = true;
         }
+        // If history tab clicked, load and render history via handler
+        if (nav === 'history') {
+          const historyHandler = new HomePageHistory(this);
+          historyHandler.init();
+        }
+        // Highlight the active sidebar tab
+        const navKey = nav === 'home' ? 'dashboard' : nav;
+        this.highlightSidebarItem(navKey);
       })
       .catch(() => {
         document.getElementById('main-content').innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';
       });
+  }
+
+  /**
+   * Adds 'active' class to the sidebar-item matching navKey, removes from others
+   */
+  highlightSidebarItem(navKey) {
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-nav') === navKey);
+    });
   }
 }
 

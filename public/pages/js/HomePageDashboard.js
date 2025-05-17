@@ -1,3 +1,5 @@
+import HomePageHistory from './HomePageHistory.js';
+
 export default class HomePageDashboard {
   constructor(app) {
     this.app = app;
@@ -42,9 +44,10 @@ export default class HomePageDashboard {
   }
 
   async renderRecentMeetingsCards() {
-    const list = document.querySelector('.recent-meetings-list');
+    // Find the list inside our dashboard fragment container
+    const list = this.dashboardContainer.querySelector('.recent-meetings-list');
     if (!list) {
-      console.error('Dashboard: .recent-meetings-list not found');
+      console.error('Dashboard: .recent-meetings-list not found in dashboard fragment');
       return;
     }
     try {
@@ -60,11 +63,24 @@ export default class HomePageDashboard {
       Array.from(list.children).forEach(el => {
         if (!el.classList.contains('no-recent-meetings')) list.removeChild(el);
       });
-      // Add new cards
-      result.data.slice(0, 6).forEach(meeting => {
+      // Add up to 4 new cards
+      result.data.slice(0, 4).forEach(meeting => {
         const card = this.createMeetingCard(meeting);
         list.appendChild(card);
       });
+      // Add "Voir plus" link to full history (load fragment)
+      const moreLink = document.createElement('div');
+      moreLink.className = 'recent-meetings-more';
+      const link = document.createElement('a');
+      link.href = 'javascript:void(0)';
+      link.textContent = 'Voir plus';
+      link.addEventListener('click', () => {
+        // Initialize and display the full history fragment
+        const historyHandler = new HomePageHistory(this.app);
+        historyHandler.init();
+      });
+      moreLink.appendChild(link);
+      list.appendChild(moreLink);
     } catch (e) {
       console.error('Erreur Dashboard renderRecentMeetingsCards:', e);
     }

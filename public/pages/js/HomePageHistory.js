@@ -1,5 +1,5 @@
-import { callApi } from '../../utils.js';
-
+// Removed unused callApi import; using APIHandler for meeting data
+// export class HomePageHistory {
 export class HomePageHistory {
     constructor(app) {
         this.app = app;
@@ -12,13 +12,10 @@ export class HomePageHistory {
         try {
             console.log("Loading meeting history...");
             
-            // Use the API via callApi for better URL management
-            const result = await callApi('/api/meetings', {
-                method: 'GET',
-                params: { saveMethod: 'local' }
-            });
+            // Fetch meetings via APIHandler
+            const result = await this.app.apiHandler.getMeetings('local');
             
-            console.log("API result for history:", result);
+            console.log(`${result.data.length} meetings loaded in history`, result);
 
             if (result.success && Array.isArray(result.data)) {
                 this.meetings = result.data;
@@ -32,6 +29,8 @@ export class HomePageHistory {
         }
         // Bind search events
         this.bindEvents();
+        // After binding, render the history UI
+        this.render();
     }
 
     render() {
@@ -250,4 +249,7 @@ export class HomePageHistory {
             meetingsContainer.appendChild(card);
         });
     }
-} 
+}
+
+// Export default for Router compatibility
+export default HomePageHistory; 
