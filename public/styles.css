@@ -20,6 +20,9 @@
   --sidebar-bg: #ffffff;
   --primary-color: #2196F3;
   --primary-dark: #1976D2;
+  --primary-color-dark: #1976D2;
+  --secondary-color: #607D8B;
+  --secondary-color-dark: #455A64;
   --primary-light: #BBDEFB;
   --text-color: #333;
   --bg-color: #FFFFFF;
@@ -50,6 +53,9 @@
   --sidebar-bg: #2d2d2d;
   --primary-color: #2196F3;
   --primary-dark: #1976D2;
+  --primary-color-dark: #1976D2;
+  --secondary-color: #607D8B;
+  --secondary-color-dark: #455A64;
   --primary-light: #0D47A1;
   --text-color: #F5F5F5;
   --bg-color: #1E1E1E;
@@ -387,8 +393,13 @@ body {
 .settings-section {
   background-color: var(--bg-secondary);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 1.5rem;
   box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.settings-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
 }
 
 .setting-item {
@@ -404,6 +415,7 @@ body {
   border-radius: 4px;
   background-color: var(--bg-secondary);
   color: var(--text-primary);
+  min-width: 200px;
 }
 
 /* Modal styles */
@@ -1472,11 +1484,6 @@ body {
 /* Styles pour les animations et transitions */
 .fade-in {
   animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* Fix pour le video dans la zone screen-capture */

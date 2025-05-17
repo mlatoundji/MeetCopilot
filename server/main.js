@@ -1,4 +1,4 @@
-// backend/server.js
+// server/main.js
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 // CORS Configuration
 const corsOptions = {
-    origin: ['http://localhost:8000', 'http://localhost:3000', 'http://[::]:8000'],
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:8000', 'http://localhost:3000', 'http://[::]:8000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true
@@ -73,9 +73,14 @@ app.use('/api/transcribe', transcriptionRoutes);
 app.use('/transcribe', transcriptionRoutes);
 app.use('/api/meetings', meetingsRouter);
 
+// Function to sanitize URL for logging
+function sanitizeUrl(url) {
+  return url.replace(/[^\w\s-]/g, '');
+}
+
 // Error handling middleware
 app.use((req, res, next) => {
-    console.log(`404 - Not Found: ${req.method} ${req.originalUrl}`);
+    console.log(`404 - Not Found: ${req.method} ${sanitizeUrl(req.originalUrl)}`);
     res.status(404).json({ 
         error: 'Not Found',
         path: req.originalUrl,
@@ -91,18 +96,25 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Cleanup on server shutdown
-process.on('SIGINT', () => {
-    console.log('Cleaning up...');
-    cleanupLocalLLM();
+// Shared async function to handle cleanup with timeout
+async function handleCleanup(signal) {
+  console.log(`Received ${signal}, cleaning up...`);
+  try {
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Cleanup timed out')), 5000);
+    });
+    await Promise.race([cleanupLocalLLM(), timeoutPromise]);
+    console.log('Cleanup completed successfully');
+  } catch (error) {
+    console.error(`Error during cleanup: ${error.message}`);
+  } finally {
     process.exit(0);
-});
+  }
+}
 
-process.on('SIGTERM', () => {
-    console.log('Cleaning up...');
-    cleanupLocalLLM();
-    process.exit(0);
-});
+// Cleanup on server shutdown
+process.on('SIGINT', () => handleCleanup('SIGINT'));
+process.on('SIGTERM', () => handleCleanup('SIGTERM'));
 
 // Start Server
 app.listen(PORT, () => {
@@ -118,4 +130,3 @@ app.listen(PORT, () => {
     console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
     console.log(`- POST /api/meetings`);
 });
-

@@ -132,13 +132,13 @@ export class BackupHandler {
     // Optimize dialog data to reduce payload size
     optimizeDialogData(data) {
         // Keep only necessary fields and remove any redundant information
-        if (data.dialogs && data.dialogs.length > 0) {
+        if (Array.isArray(data.dialogs) && data.dialogs.length > 0) {
             data.dialogs = data.dialogs.map(dialog => {
-                // Keep only essential fields
+                // Keep only essential fields and preserve time field
                 return {
-                    text: dialog.text, 
+                    text: dialog.text,
                     speaker: dialog.speaker,
-                    timestamp: dialog.timestamp
+                    time: dialog.time
                 };
             });
         }
@@ -259,18 +259,6 @@ export class BackupHandler {
         const timestamp = new Date().toISOString();
         const formattedTranscription = `[${timestamp}] [${source}] ${transcription}\n`;
         this.meetingData.transcription += formattedTranscription;
-    }
-
-    /**
-     * Finalizes the meeting and calculates duration
-     */
-    finalizeMeeting() {
-        this.meetingData.metadata.endTime = new Date().toISOString();
-        
-        // Calculate duration in seconds
-        const startTime = new Date(this.meetingData.metadata.startTime).getTime();
-        const endTime = new Date(this.meetingData.metadata.endTime).getTime();
-        this.meetingData.metadata.duration = Math.round((endTime - startTime) / 1000);
     }
 
     /**

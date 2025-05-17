@@ -20,6 +20,8 @@ export class HomePage {
 
     this.homePageHistory = new HomePageHistory(this.app);
     this.homePageDashboard = new HomePageDashboard(this.app);
+    // Bound click handler for session control to avoid duplicates and preserve element attributes
+    this.handleSessionControlClick = this.handleSessionControl.bind(this);
   }
 
   async render() {
@@ -417,13 +419,11 @@ export class HomePage {
   async renderRecentMeetingsCards() {
     // Fetch recent meetings from API
     try {
-      console.log("Début du chargement des réunions récentes");
-      
-      // Utiliser l'API directement pour garantir l'obtention des données
-      const response = await fetch('http://localhost:3000/api/meetings?saveMethod=local');
-      const result = await response.json();
-      console.log("Résultat de l'API:", result);
-      
+      console.log("Start loading recent meetings");
+      // Fetch recent meetings using APIHandler for dynamic base URL
+      const result = await this.apiHandler.getMeetings('local');
+      console.log("API result:", result);
+
       if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
         // S'assurer que le message Empty reste visible
         const emptyLabel = document.querySelector('.no-recent-meetings');
@@ -508,12 +508,10 @@ export class HomePage {
   bindSessionStartButton() {
     const btn = document.getElementById('sessionControlBtn');
     if (btn) {
-      // Remove previous listener if any to avoid duplicates
-      btn.replaceWith(btn.cloneNode(true));
-      const newBtn = document.getElementById('sessionControlBtn');
-      if (newBtn) {
-        newBtn.addEventListener('click', () => this.handleSessionControl());
-      }
+      // Remove previous session control listener if present
+      btn.removeEventListener('click', this.handleSessionControlClick);
+      // Add click listener preserving all attributes and dataset values
+      btn.addEventListener('click', this.handleSessionControlClick);
     }
   }
 

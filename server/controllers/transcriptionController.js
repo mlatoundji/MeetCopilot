@@ -1,7 +1,6 @@
-import { Blob } from 'buffer';
-import fetch from 'node-fetch';
 import { getCachedTranscription, setCachedTranscription } from '../utils/cache.js';
 import crypto from 'crypto';
+import fs from 'fs';
 
 const POLLING_INTERVAL = 1000; // 1 second
 const MAX_RETRIES = 3;
@@ -24,6 +23,11 @@ const retryWithExponentialBackoff = async (fn, retries = MAX_RETRIES, delay = 10
 export const transcribeWhisper = async (req, res) => {
     try {
         console.log("Transcribe via Whisper...");
+        const openaiKey = process.env.OPENAI_API_KEY;
+        if (!openaiKey) {
+            console.error('OPENAI_API_KEY environment variable is not defined');
+            return res.status(500).json({ error: 'Server configuration error: OPENAI_API_KEY not set' });
+        }
         const audioHash = generateAudioHash(req.file.buffer);
         
         // Check cache first
@@ -36,10 +40,21 @@ export const transcribeWhisper = async (req, res) => {
         const mimeType = req.body.mimeType || 'audio/wav';
         const filename = req.body.filename || 'audio.wav';
         const model = req.body.model || 'whisper-1';
-        const language = req.body.langCode || 'fr';
+        const language = req.body.langCode || 'auto';
 
         const formData = new FormData();
-        formData.append('file', new Blob([req.file.buffer], { type: mimeType }), filename);
+        // Stream file data directly to avoid loading entire buffer into memory
+        let fileStream;
+        if (req.file.stream) {
+            // If environment provides a stream on the file
+            fileStream = req.file.stream();
+        } else if (req.file.path) {
+            // Use disk storage path to stream file
+            fileStream = fs.createReadStream(req.file.path);
+        } else {
+            throw new Error('Unable to create file stream for transcription');
+        }
+        formData.append('file', fileStream, { filename, contentType: mimeType });
         formData.append('model', model);
         formData.append('language', language);
 
@@ -47,7 +62,7 @@ export const transcribeWhisper = async (req, res) => {
             const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                    Authorization: `Bearer ${openaiKey}`,
                 },
                 body: formData,
             });
@@ -71,6 +86,11 @@ export const transcribeWhisper = async (req, res) => {
 export const transcribeAssemblyAI = async (req, res) => {
     try {
         console.log("Transcribe via AssemblyAI...");
+        const assemblyKey = process.env.ASSEMBLYAI_API_KEY;
+        if (!assemblyKey) {
+            console.error('ASSEMBLYAI_API_KEY environment variable is not defined');
+            return res.status(500).json({ error: 'Server configuration error: ASSEMBLYAI_API_KEY not set' });
+        }
         const audioHash = generateAudioHash(req.file.buffer);
         
         // Check cache first
@@ -80,14 +100,15 @@ export const transcribeAssemblyAI = async (req, res) => {
             return res.json({ transcription: cachedTranscription });
         }
 
-        const language = req.body.langCode ?? 'fr';
+        const language = req.body.langCode ?? 'auto';
 
         // Upload with retry
         const uploadResp = await retryWithExponentialBackoff(async () => {
             const resp = await fetch('https://api.assemblyai.com/v2/upload', {
                 method: 'POST',
                 headers: {
-                    Authorization: process.env.ASSEMBLYAI_API_KEY,
+                    Authorization: assemblyKey,
+                    'Content-Type': req.file.mimetype || 'application/octet-stream'
                 },
                 body: req.file.buffer,
             });
@@ -102,7 +123,7 @@ export const transcribeAssemblyAI = async (req, res) => {
             const resp = await fetch('https://api.assemblyai.com/v2/transcript', {
                 method: 'POST',
                 headers: {
-                    Authorization: process.env.ASSEMBLYAI_API_KEY,
+                    Authorization: assemblyKey,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -128,7 +149,7 @@ export const transcribeAssemblyAI = async (req, res) => {
             const statusResp = await retryWithExponentialBackoff(async () => {
                 const resp = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
                     headers: {
-                        Authorization: process.env.ASSEMBLYAI_API_KEY,
+                        Authorization: assemblyKey,
                     },
                 });
                 if (!resp.ok) throw new Error(`Status check failed! status: ${resp.status}`);

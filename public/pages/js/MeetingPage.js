@@ -165,6 +165,11 @@ export class MeetingPage {
     
     this.uiHandler.refreshMeetingElements();
     
+    // Populate placeholders in transcription and suggestions areas
+    const { transcriptionPlaceholder, suggestionsPlaceholder } = this.uiHandler.getTranslations();
+    this.uiHandler.updateTranscription(transcriptionPlaceholder);
+    this.uiHandler.updateSuggestions(suggestionsPlaceholder);
+    
     // Afficher la sidebar de réunion
     const meetingSidebar = document.querySelector('.meeting-sidebar');
     if (meetingSidebar) {
@@ -314,48 +319,61 @@ export class MeetingPage {
   }
 
   async startTranscription(source) {
+    let isTranscribing = false;
     const intervalId = setInterval(async () => {
+      if (isTranscribing) return;
       const buffer = source === this.SYSTEM_SOURCE ? this.audioCapture.systemBuffer : this.audioCapture.micBuffer;
       const contextLabel = source === this.SYSTEM_SOURCE ? 
         this.app.conversationContextHandler.systemLabel : 
         this.app.conversationContextHandler.micLabel;
 
       if (buffer.length > 0) {
-        // Calculate total length of all buffers
-        const totalLength = buffer.reduce((sum, chunk) => sum + chunk.length, 0);
-        
-        // Create a single Float32Array of the total length
-        const audioBuffer = new Float32Array(totalLength);
-        
-        // Copy each buffer chunk sequentially
-        let offset = 0;
-        for (const chunk of buffer) {
-          audioBuffer.set(chunk, offset);
-          offset += chunk.length;
-        }
-        
-        // Clear the original buffer
-        buffer.length = 0;
+        isTranscribing = true;
+        try {
+          // Calculate total length of all buffers
+          const totalLength = buffer.reduce((sum, chunk) => sum + chunk.length, 0);
 
-        const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
+          // Create a single Float32Array of the total length
+          const audioBuffer = new Float32Array(totalLength);
 
-        const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
-        if (transcription) {
-          console.log(`Transcription (${contextLabel}):`, transcription);
-          if (this.app.filterTranscription) {
-            const filteredText = this.app.filterTranscription(transcription, this.app.currentLanguage);
-            if(filteredText === "") return;
-            
-            this.app.conversationContextHandler.conversationContextDialogs.push({
-              speaker: contextLabel, 
-              text: filteredText, 
-              time: Date.now(), 
-              language: this.app.currentLanguage, 
-              source: source
-            });
-            await this.app.conversationContextHandler.updateConversationContext();
-            this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+          // Copy each buffer chunk sequentially
+          let offset = 0;
+          for (const chunk of buffer) {
+            audioBuffer.set(chunk, offset);
+            offset += chunk.length;
           }
+
+          // Clear the original buffer
+          buffer.length = 0;
+
+          // Determine correct sample rate from audio context
+          const sampleRate = (source === this.SYSTEM_SOURCE
+            ? this.audioCapture.systemAudioContext?.sampleRate
+            : this.audioCapture.micAudioContext?.sampleRate) || 44100;
+          const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
+
+          const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+          if (transcription) {
+            console.log(`Transcription (${contextLabel}):`, transcription);
+            if (this.app.filterTranscription) {
+              const filteredText = this.app.filterTranscription(transcription, this.app.currentLanguage);
+              if (filteredText === "") return;
+
+              this.app.conversationContextHandler.conversationContextDialogs.push({
+                speaker: contextLabel,
+                text: filteredText,
+                time: Date.now(),
+                language: this.app.currentLanguage,
+                source: source
+              });
+              await this.app.conversationContextHandler.updateConversationContext();
+              this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+            }
+          }
+        } catch (error) {
+          console.error('Error in transcription loop:', error.message || error);
+        } finally {
+          isTranscribing = false;
         }
       }
     }, this.audioCapture.timeslice);

@@ -50,6 +50,7 @@ export class LayoutManager {
     }
     
     this.setupEventListeners();
+    this.loadLayoutsFromLocalStorage();
     this.initialized = true;
     console.log('LayoutManager initialized');
   }
@@ -101,38 +102,29 @@ export class LayoutManager {
     // Cleanup existing listeners if any
     this.cleanupEventListeners();
     
-    this.contentAreas.forEach(area => {
-      const moveHandle = area.querySelector('.move-handle');
-      const resizeHandle = area.querySelector('.resize-handle');
-      const fullscreenToggle = area.querySelector('.fullscreen-toggle');
-      const opacityToggle = area.querySelector('.opacity-toggle');
-      const hideToggle = area.querySelector('.hide-toggle');
+    // Use event delegation for content area controls
+    document.addEventListener('mousedown', (e) => {
+      const moveHandle = e.target.closest('.move-handle');
+      const resizeHandle = e.target.closest('.resize-handle');
+      const fullscreenToggle = e.target.closest('.fullscreen-toggle');
+      const opacityToggle = e.target.closest('.opacity-toggle');
+      const hideToggle = e.target.closest('.hide-toggle');
       
-      // Déplacer
       if (moveHandle) {
-        moveHandle.addEventListener('mousedown', (e) => this.startDragging(e, area));
-        moveHandle.addEventListener('touchstart', (e) => this.startDragging(e, area), { passive: false });
-      }
-      
-      // Redimensionner
-      if (resizeHandle) {
-        resizeHandle.addEventListener('mousedown', (e) => this.startResizing(e, area));
-        resizeHandle.addEventListener('touchstart', (e) => this.startResizing(e, area), { passive: false });
-      }
-      
-      // Plein écran (uniquement pour la vidéo)
-      if (fullscreenToggle) {
-        fullscreenToggle.addEventListener('click', () => this.toggleFullscreen(area));
-      }
-      
-      // Opacité (pour suggestions et transcription)
-      if (opacityToggle) {
-        opacityToggle.addEventListener('click', () => this.toggleOpacity(area));
-      }
-      
-      // Masquer
-      if (hideToggle) {
-        hideToggle.addEventListener('click', () => this.toggleVisibility(area));
+        const area = moveHandle.closest('.content-area');
+        if (area) this.startDragging(e, area);
+      } else if (resizeHandle) {
+        const area = resizeHandle.closest('.content-area');
+        if (area) this.startResizing(e, area);
+      } else if (fullscreenToggle) {
+        const area = fullscreenToggle.closest('.content-area');
+        if (area) this.toggleFullscreen(area);
+      } else if (opacityToggle) {
+        const area = opacityToggle.closest('.content-area');
+        if (area) this.toggleOpacity(area);
+      } else if (hideToggle) {
+        const area = hideToggle.closest('.content-area');
+        if (area) this.toggleVisibility(area);
       }
     });
     
@@ -156,7 +148,7 @@ export class LayoutManager {
   cleanupEventListeners() {
     if (this.globalMoveHandler) {
       document.removeEventListener('mousemove', this.globalMoveHandler);
-      document.removeEventListener('touchmove', this.globalTouchHandler);
+      document.removeEventListener('touchmove', this.globalTouchHandler, { passive: false });
       document.removeEventListener('mouseup', this.globalUpHandler);
       document.removeEventListener('touchend', this.globalUpHandler);
       window.removeEventListener('beforeunload', this.globalUpHandler);
@@ -523,13 +515,21 @@ export class LayoutManager {
   updateElementSize(dx, dy) {
     const element = this.resizingElement;
     
-    // Calculer les nouvelles dimensions
+    // Calculate new dimensions based on resize delta
     const newWidth = this.elementStartWidth + dx;
     const newHeight = this.elementStartHeight + dy;
     
-    // Mettre à jour les dimensions avec des limites min/max
-    element.style.width = `${Math.max(200, newWidth)}px`;
-    element.style.height = `${Math.max(100, newHeight)}px`;
+    // Update grid-column-end and grid-row-end properties
+    const gridRect = this.meetingContentGrid.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    
+    // Calculate the number of columns and rows to span
+    const columnCount = Math.ceil(newWidth / (gridRect.width / this.getGridTrackCount(window.getComputedStyle(this.meetingContentGrid).getPropertyValue('grid-template-columns'))));
+    const rowCount = Math.ceil(newHeight / (gridRect.height / this.getGridTrackCount(window.getComputedStyle(this.meetingContentGrid).getPropertyValue('grid-template-rows'))));
+    
+    // Update the element's grid properties
+    element.style.gridColumnEnd = `span ${columnCount}`;
+    element.style.gridRowEnd = `span ${rowCount}`;
   }
   
   /**

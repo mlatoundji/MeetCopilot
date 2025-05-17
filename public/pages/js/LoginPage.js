@@ -36,14 +36,16 @@ export class LoginPage {
     const formSection = this.loginRoot.querySelector('.form-section');
 
     if (loginBtn && signupBtn) {
-      loginBtn.addEventListener('click', () => {
+      this.loginHandler = () => {
         slider.classList.remove('moveslider');
         formSection.classList.remove('form-section-move');
-      });
-      signupBtn.addEventListener('click', () => {
+      };
+      this.signupHandler = () => {
         slider.classList.add('moveslider');
         formSection.classList.add('form-section-move');
-      });
+      };
+      loginBtn.addEventListener('click', this.loginHandler);
+      signupBtn.addEventListener('click', this.signupHandler);
     }
 
     // Handle fake auth to navigate to home if login submit clicked
@@ -51,22 +53,43 @@ export class LoginPage {
     const registerSubmit = this.loginRoot.querySelector('#register-submit');
 
     if (loginSubmit) {
-      loginSubmit.addEventListener('click', (e) => {
+      this.loginSubmitHandler = (e) => {
         e.preventDefault();
         // TODO: implement real authentication. For now, navigate to home
         window.location.hash = 'home';
-      });
+      };
+      loginSubmit.addEventListener('click', this.loginSubmitHandler);
     }
     if (registerSubmit) {
-      registerSubmit.addEventListener('click', (e) => {
+      this.registerSubmitHandler = (e) => {
         e.preventDefault();
         // TODO: send registration request. Navigate to home for now
         window.location.hash = 'home';
-      });
+      };
+      registerSubmit.addEventListener('click', this.registerSubmitHandler);
     }
   }
 
   destroy() {
+    // Remove event listeners
+    const loginBtn = this.loginRoot.querySelector('.login-btn');
+    const signupBtn = this.loginRoot.querySelector('.signup-btn');
+    const loginSubmit = this.loginRoot.querySelector('#login-submit');
+    const registerSubmit = this.loginRoot.querySelector('#register-submit');
+
+    if (loginBtn && this.loginHandler) {
+      loginBtn.removeEventListener('click', this.loginHandler);
+    }
+    if (signupBtn && this.signupHandler) {
+      signupBtn.removeEventListener('click', this.signupHandler);
+    }
+    if (loginSubmit && this.loginSubmitHandler) {
+      loginSubmit.removeEventListener('click', this.loginSubmitHandler);
+    }
+    if (registerSubmit && this.registerSubmitHandler) {
+      registerSubmit.removeEventListener('click', this.registerSubmitHandler);
+    }
+
     // Retirer la page et restaurer l'application principale
     if (this.loginRoot.parentElement) {
       this.loginRoot.parentElement.removeChild(this.loginRoot);

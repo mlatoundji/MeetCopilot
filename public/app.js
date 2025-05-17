@@ -10,17 +10,6 @@ import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
 import { DataStore } from './modules/dataStore.js';
 
-// URLs for API endpoints
-const TRANSCRIBE_WHISPER_API_URL = "http://localhost:3000/transcribe/whisper";
-const TRANSCRIBE_ASSEMBLYAI_API_URL = "http://localhost:3000/transcribe/assemblyai";
-const SUGGESTIONS_MISTRAL_API_URL = "http://localhost:3000/suggestions/mistral";
-const SUGGESTIONS_LOCAL_API_URL = "http://localhost:3000/suggestions/local";
-const SUGGESTIONS_OPENAI_API_URL = "http://localhost:3000/suggestions/openai";
-const SUMMARY_MISTRAL_API_URL = "http://localhost:3000/summary/mistral";
-const SUMMARY_LOCAL_API_URL = "http://localhost:3000/summary/local";
-// L'URL sera définie dynamiquement après la création d'APIHandler
-let MEETINGS_API_URL = null;
-
 const SYSTEM_SOURCE = 'system';
 const MIC_SOURCE = 'mic';
 
@@ -30,7 +19,7 @@ class App {
     this.apiHandler = new APIHandler();
     
     // Déterminer l'URL des réunions sur la base de l'APIHandler
-    MEETINGS_API_URL = `${this.apiHandler.baseURL}/api/meetings`;
+    let MEETINGS_API_URL = `${this.apiHandler.baseURL}/api/meetings`;
     
     // Initialize handlers that depend on API
     this.audioCapture = new AudioCapture();
@@ -67,6 +56,7 @@ class App {
     
     // Initialiser le routeur après que tout soit chargé
     this.initializeRouter();
+    this.isListenersAttached = false;
   }
   
   initializeRouter() {
@@ -340,10 +330,6 @@ class App {
       // Apply initial translations
       this.applyTranslations(this.currentLanguage);
       
-      // Populate UI placeholder text
-      this.uiHandler.updateTranscription(this.uiHandler.selectedTranslations.transcriptionPlaceholder);
-      this.uiHandler.updateSuggestions(this.uiHandler.selectedTranslations.suggestionsPlaceholder);
-      
       // Configuration des écouteurs d'événements
       this.setupEventListeners();
     } catch (error) {
@@ -398,6 +384,16 @@ class App {
   stopSession() {
     this.sessionActive = false;
     
+    // Clear transcription polling intervals to stop background polling
+    if (this.audioCapture.systemTranscriptionInterval) {
+      clearInterval(this.audioCapture.systemTranscriptionInterval);
+      this.audioCapture.systemTranscriptionInterval = null;
+    }
+    if (this.audioCapture.micTranscriptionInterval) {
+      clearInterval(this.audioCapture.micTranscriptionInterval);
+      this.audioCapture.micTranscriptionInterval = null;
+    }
+    
     // Arrêter les captures audio
     if (this.audioCapture.isSystemRecording) {
       this.audioCapture.stopSystemCapture();
@@ -422,7 +418,6 @@ class App {
   async init() {
     console.log("App initializing");
     this.uiHandler.setupLanguageSwitcher();
-    this.router.initialize();
     // Attacher le listener du bouton menu/sidebar UNE SEULE FOIS après que le DOM soit prêt
     const collapseBtn = document.getElementById('collapseSidebar');
     const sidebar = document.getElementById('main-sidebar');
@@ -482,8 +477,11 @@ class App {
       .then(res => res.text())
       .then(html => {
         document.getElementById('main-content').innerHTML = html;
-        // Réinitialise les listeners JS spécifiques à la page
-        this.setupEventListeners();
+        // Attach event listeners only if they haven't been attached yet
+        if (!this.isListenersAttached) {
+          this.setupEventListeners();
+          this.isListenersAttached = true;
+        }
       })
       .catch(() => {
         document.getElementById('main-content').innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';

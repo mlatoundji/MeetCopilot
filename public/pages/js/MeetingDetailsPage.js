@@ -9,6 +9,20 @@ export class MeetingDetailsPage {
     }
 
     async init() {
+        // Cleanup any previous meeting details styles to prevent duplication
+        this.cleanupStyles();
+        // Show loading indicator
+        const container = document.querySelector('.main-content');
+        if (container) {
+            // Clear previous content
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-message';
+            loadingDiv.textContent = 'Loading meeting details...';
+            container.appendChild(loadingDiv);
+        }
         try {
             console.log(`Fetching meeting details for ID: ${this.meetingId}`);
             const apiUrl = `${this.meetingsApiUrl}/${this.meetingId}?saveMethod=local`;
@@ -77,11 +91,16 @@ export class MeetingDetailsPage {
         const timeline = document.createElement('div');
         timeline.className = 'meeting-timeline';
 
+        // Prepare arrays safely
+        const dialogsArr = Array.isArray(this.meetingData?.dialogs) ? this.meetingData.dialogs : [];
+        const summariesArr = Array.isArray(this.meetingData?.summaries) ? this.meetingData.summaries : [];
+        const suggestionsArr = Array.isArray(this.meetingData?.suggestions) ? this.meetingData.suggestions : [];
+
         // Create and sort events
         const events = [
-            ...(this.meetingData?.dialogs || []).map(d => ({ type: 'dialog', time: d.time, data: d })),
-            ...(this.meetingData?.summaries || []).map(s => ({ type: 'summary', time: s.time, data: s })),
-            ...(this.meetingData?.suggestions || []).map(su => ({ type: 'suggestion', time: su.time, data: su }))
+            ...dialogsArr.map(d => ({ type: 'dialog', time: d.time, data: d })),
+            ...summariesArr.map(s => ({ type: 'summary', time: s.time, data: s })),
+            ...suggestionsArr.map(su => ({ type: 'suggestion', time: su.time, data: su }))
         ].sort((a, b) => new Date(a.time) - new Date(b.time));
 
         // Create timeline events
@@ -138,8 +157,23 @@ export class MeetingDetailsPage {
     }
 
     showError(msg){
-        const container=document.querySelector('.main-content');
-        if(container) container.innerHTML=`<div class='error-message'><h2>Error</h2><p>${msg}</p></div>`;
+        const container = document.querySelector('.main-content');
+        if (container) {
+            // Clear existing content
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            // Create error message elements safely
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            const heading = document.createElement('h2');
+            heading.textContent = 'Error';
+            errorDiv.appendChild(heading);
+            const paragraph = document.createElement('p');
+            paragraph.textContent = msg;
+            errorDiv.appendChild(paragraph);
+            container.appendChild(errorDiv);
+        }
     }
 
     addStyles() {
@@ -185,5 +219,13 @@ export class MeetingDetailsPage {
             .timeline-event .time {position:absolute;top:8px;right:10px;font-size:0.75em;color:#888;}
         `;
         document.head.appendChild(style);
+    }
+
+    // Cleanup injected styles to avoid duplication
+    cleanupStyles() {
+        const styleEl = document.getElementById('meeting-details-styles');
+        if (styleEl) {
+            styleEl.remove();
+        }
     }
 } 

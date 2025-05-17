@@ -10,3 +10,5 @@ _*
 start-vercel-mcp.ps1
 StartMeetCopilot.ps1
 ProtoMeet/
+.vscode/
+StartMeetCopilot.ps1

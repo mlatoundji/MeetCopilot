@@ -15,7 +15,7 @@
       <button id="collapseSidebar" class="menu-toggle" title="Menu" style="margin-right:1rem;">
         <img src="icons/menu.png" alt="Menu" style="width:24px;height:24px;" />
       </button>
-      <a href="#home" class="logo-link" data-nav="home" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+      <a href="#home" class="logo-link" data-nav="home" style="display:flex;align-items:center;gap:8px;text-decoration:none;" aria-label="Go to home">
         <img src="icons/ai-mi-algorithm-svgrepo-com.png" alt="Logo" style="width:28px;height:28px;" />
         <span class="logo-text">Meet Copilot</span>
       </a>
@@ -35,29 +35,29 @@
         <nav class="sidebar-nav">
           <ul class="sidebar-menu">
             <li class="sidebar-item" data-nav="dashboard">
-              <span class="sidebar-bar" alt="Dashboard"">🏠</span>
+              <span class="sidebar-bar" aria-label="Dashboard">🏠</span>
               <span class="sidebar-label">Dashboard</span>
             </li>
             <li class="sidebar-item" data-nav="history">
-              <span class="sidebar-bar" alt="History"">🧾</span>
+              <span class="sidebar-bar" aria-label="History">🧾</span>
               <span class="sidebar-label">History</span>
             </li>
           </ul>
           <div class="sidebar-separator"></div>
           <ul class="sidebar-menu">
             <li class="sidebar-item" data-nav="settings">
-              <span class="sidebar-bar" alt="Settings"">⚙️</span>
+              <span class="sidebar-bar" aria-label="Settings">⚙️</span>
               <span class="sidebar-label">Settings</span>
             </li>
           </ul>
           <div class="sidebar-separator"></div>
           <ul class="sidebar-menu">
             <li class="sidebar-item" data-nav="account">
-              <span class="sidebar-bar" alt="Account"">🙍‍♂️</span>
+              <span class="sidebar-bar" aria-label="Account">🙍‍♂️</span>
               <span class="sidebar-label">Account</span>
             </li>
             <li class="sidebar-item" data-nav="help">
-              <span class="sidebar-bar" alt="Help"">❔</span>
+              <span class="sidebar-bar" aria-label="Help"">❔</span>
               <span class="sidebar-label">Help</span>
             </li>
           </ul>
@@ -67,8 +67,8 @@
     </div>
     <!-- MODAL + OVERLAY -->
     <div id="modalOverlay" class="modal-overlay"></div>
-    <div id="meetingModal" class="meeting-modal">
-      <h2>Add Meeting Infos</h2>
+    <div id="meetingModal" class="meeting-modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true" tabindex="-1">
+      <h2 id="modalTitle">Add Meeting Infos</h2>
       <div id="dynamicFields"></div>
       <div class="modal-buttons">
         <button id="saveMeetingInfosButton" class="button">Validate</button>

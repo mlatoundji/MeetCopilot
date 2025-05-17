@@ -255,33 +255,32 @@ export const generateLocalBatchSuggestions = async (contexts) => {
         console.log(`Processing batch of ${contexts.length} suggestions...`);
         const startTime = Date.now();
 
-        const session = new LlamaChatSession({
-            context,
-            systemPrompt: 'Generate 2 brief response suggestions based on the context:',
-        });
-
-        const responses = await Promise.all(
-            contexts.map(async (context) => {
-                try {
-                    // Limit context size
-                    const truncatedContext = context.slice(0, 100);
-                    const response = await session.prompt(truncatedContext, {
-                        maxTokens: LLMConfig.maxTokens,
-                        temperature: LLMConfig.temperature,
-                        topP: LLMConfig.generation.topP,
-                        repeatPenalty: LLMConfig.generation.repeatPenalty,
-                        topK: LLMConfig.generation.topK,
-                        presencePenalty: LLMConfig.generation.presencePenalty,
-                        frequencyPenalty: LLMConfig.generation.frequencyPenalty,
-                        streamResponse: false,
-                    });
-                    return { context, suggestions: response.trim() };
-                } catch (error) {
-                    console.error(`Error processing context: ${truncatedContext.slice(0, 100)}...`, error);
-                    return { context, error: error.message };
-                }
-            })
-        );
+        const responses = [];
+        for (const ctx of contexts) {
+            try {
+                // Limit context size
+                const truncatedContext = ctx.slice(0, 100);
+                // Instantiate a new session per context
+                const session = new LlamaChatSession({
+                    context,
+                    systemPrompt: 'Generate 2 brief response suggestions based on the context:',
+                });
+                const result = await session.prompt(truncatedContext, {
+                    maxTokens: LLMConfig.maxTokens,
+                    temperature: LLMConfig.temperature,
+                    topP: LLMConfig.generation.topP,
+                    repeatPenalty: LLMConfig.generation.repeatPenalty,
+                    topK: LLMConfig.generation.topK,
+                    presencePenalty: LLMConfig.generation.presencePenalty,
+                    frequencyPenalty: LLMConfig.generation.frequencyPenalty,
+                    streamResponse: false,
+                });
+                responses.push({ context: ctx, suggestions: result.trim() });
+            } catch (error) {
+                console.error(`Error processing context: ${ctx.slice(0, 100)}...`, error);
+                responses.push({ context: ctx, error: error.message });
+            }
+        }
 
         const endTime = Date.now();
         const totalTime = (endTime - startTime) / 1000;
