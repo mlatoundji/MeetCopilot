@@ -91,6 +91,11 @@ export class MeetingPage {
         this.applyLayoutPreset(button.dataset.preset);
       });
     });
+
+    const toggleFullSidebarBtn = document.getElementById('toggleSidebarFull');
+    if (toggleFullSidebarBtn) {
+      toggleFullSidebarBtn.addEventListener('click', () => this.toggleFullSidebar());
+    }
   }
 
   saveAndQuitMeeting() {
@@ -207,17 +212,60 @@ export class MeetingPage {
     this.layoutManager.initialize();
     this.layoutManager.loadLayoutsFromLocalStorage();
     
+    // Appliquer l'état de la sidebar depuis les préférences
+    const savedState = this.dataStore.getFromLocalStorage('sidebarState') || 'default';
+    this.layoutManager.applySidebarState(savedState);
+    // Mettre à jour la visibilité et le contenu du bloc de contexte
+    const contextHeaderElement = document.getElementById('conversationContextHeader');
+    if (contextHeaderElement && this.app && this.app.conversationContextHandler) {
+      const headerText = this.app.conversationContextHandler.conversationContextHeaderText;
+      contextHeaderElement.innerHTML = headerText.split('\n').map(line => line.trim()).join('<br>');
+      if (savedState === 'expanded') {
+        contextHeaderElement.classList.remove('hidden');
+      } else {
+        contextHeaderElement.classList.add('hidden');
+      }
+    }
+    
     console.log("MeetingPage initialized");
   }
 
   // Fonctions pour la mise en page responsive
   toggleSidebar() {
-    if (this.meetingSidebar) {
-      this.meetingSidebar.classList.toggle('collapsed');
-      if (this.meetingContentGrid) {
-        this.meetingContentGrid.style.marginLeft = 
-          this.meetingSidebar.classList.contains('collapsed') ? '60px' : '250px';
-      }
+    // Always retract one level
+    if (!this.layoutManager) return;
+    const current = this.layoutManager.sidebarState;
+    let newState = current;
+    if (current === 'expanded') newState = 'default';
+    else if (current === 'default') newState = 'semi';
+    else if (current === 'semi') newState = 'full';
+    // if already 'full', stay
+    this.layoutManager.applySidebarState(newState);
+    this.dataStore.saveToLocalStorage('sidebarState', newState);
+    // Hide context header unless fully expanded
+    const contextHeaderElement = document.getElementById('conversationContextHeader');
+    if (contextHeaderElement) {
+      if (newState === 'expanded') contextHeaderElement.classList.remove('hidden');
+      else contextHeaderElement.classList.add('hidden');
+    }
+  }
+
+  toggleFullSidebar() {
+    // Always extend one level
+    if (!this.layoutManager) return;
+    const current = this.layoutManager.sidebarState;
+    let newState = current;
+    if (current === 'full') newState = 'semi';
+    else if (current === 'semi') newState = 'default';
+    else if (current === 'default') newState = 'expanded';
+    // if already 'expanded', stay
+    this.layoutManager.applySidebarState(newState);
+    this.dataStore.saveToLocalStorage('sidebarState', newState);
+    // Show context header only if expanded
+    const contextHeaderElement = document.getElementById('conversationContextHeader');
+    if (contextHeaderElement) {
+      if (newState === 'expanded') contextHeaderElement.classList.remove('hidden');
+      else contextHeaderElement.classList.add('hidden');
     }
   }
 

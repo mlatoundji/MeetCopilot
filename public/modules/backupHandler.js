@@ -83,7 +83,7 @@ export class BackupHandler {
             const title = document.getElementById('saveTitleInput').value;
             if (!title) return { success: false, message: 'Title is required' };
 
-            this.meetingData.id = this.meetingData.id || Date.now();
+            this.meetingData.id = this.meetingData.id || Date.now().toString();
             this.meetingData.title = title;
 
             // Ensure data is properly formatted

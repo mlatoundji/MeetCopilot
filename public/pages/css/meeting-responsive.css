@@ -46,10 +46,6 @@
   color: var(--sidebar-text, #fff);
 }
 
-.meeting-sidebar.collapsed .toggle-sidebar-btn .toggle-icon {
-  transform: rotate(180deg);
-}
-
 .meeting-sidebar-nav {
   flex: 1;
   overflow-y: auto;
@@ -106,6 +102,7 @@
   padding: 10px;
   overflow: auto;
   background-color: var(--main-bg, #f5f5f5);
+  position: relative;
 }
 
 /* Positionnement par défaut des zones */
@@ -351,4 +348,101 @@
     padding: 6px 10px;
     font-size: 12px;
   }
+}
+
+/* Additional sidebar states and conversation context header */
+
+/* Sidebar full collapsed: invisible */
+.meeting-sidebar.full-collapsed {
+  width: 0 !important;
+  overflow: visible !important; /* allow toggle button to show */
+}
+.meeting-sidebar.full-collapsed .meeting-sidebar-nav,
+.meeting-sidebar.full-collapsed #conversationContextHeader {
+  display: none !important;
+}
+
+/* Toggle icons for full collapse */
+.toggle-sidebar-btn .toggle-icon-alt {
+  display: none;
+  font-size: 10px;
+  color: var(--sidebar-text, #fff);
+}
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon {
+  display: none;
+}
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block;
+}
+
+/* Sidebar expanded (half page) */
+.meeting-sidebar.expanded {
+  width: 50% !important;
+}
+
+/* Conversation Context Header in sidebar */
+.conversation-context-header {
+  padding: 12px 15px;
+  border-top: 1px solid var(--border-color, #444);
+  background-color: var(--sidebar-bg, #2a2a2a);
+  color: var(--sidebar-text, #fff);
+  font-size: 14px;
+  max-height: none !important;
+  flex: 1;
+  overflow-y: auto;
+  margin-left: 10px;
+}
+
+/* Utility class to hide elements */
+.hidden {
+  display: none !important;
+}
+
+/* Sidebar content container layout */
+.sidebar-content-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+/* Always show both toggle icons */
+.toggle-sidebar-btn .toggle-icon,
+.toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block !important;
+}
+
+/* Override collapsing rules to keep icons visible */
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon,
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block !important;
+}
+
+/* Full-extend toggle (within content grid) */
+.meeting-content-grid .toggle-sidebar-full-btn {
+  position: absolute;
+  left: -12px;
+  top: 20px;
+  width: 24px;
+  height: 24px;
+  background-color: var(--sidebar-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 11;
+}
+
+/* Toggle icons styling unchanged */
+.toggle-sidebar-full-btn .toggle-icon-full {
+  font-size: 10px;
+  color: var(--sidebar-text, #fff);
+}
+
+/* When fully collapsed, keep right arrow visible */
+.meeting-sidebar.full-collapsed + .meeting-content-grid .toggle-sidebar-full-btn {
+  display: flex !important;
 } 

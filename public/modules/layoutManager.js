@@ -25,6 +25,7 @@ export class LayoutManager {
     this.elementStartY = 0;
     this.elementStartWidth = 0;
     this.elementStartHeight = 0;
+    this.sidebarState = 'default'; // initialize sidebar state
   }
   
   /**
@@ -59,8 +60,8 @@ export class LayoutManager {
    * Configure les écouteurs d'événements
    */
   setupEventListeners() {
-    // Sidebar toggle
-    this.toggleSidebarBtn.addEventListener('click', () => this.toggleSidebar());
+    // Sidebar toggle is handled by MeetingPage, so comment out automatic listener
+    // this.toggleSidebarBtn.addEventListener('click', () => this.toggleSidebar());
     
     // Layout presets toggle
     if (this.toggleLayoutPresetsBtn && this.layoutPresetsPanel) {
@@ -156,20 +157,48 @@ export class LayoutManager {
   }
   
   /**
-   * Bascule la sidebar entre l'état étendu et rétracté
+   * Bascule entre les états de la sidebar : default, semi (icons only), full (hidden), expanded (half page)
    */
   toggleSidebar() {
-    this.meetingSidebar.classList.toggle('collapsed');
-    // Ajuster la grille de contenu en fonction de l'état de la sidebar
+    const states = ['default', 'semi', 'full', 'expanded'];
+    let idx = states.indexOf(this.sidebarState);
+    idx = (idx + 1) % states.length;
+    const newState = states[idx];
+    this.applySidebarState(newState);
+    // Save state in localStorage
+    try {
+      localStorage.setItem('meetcopilot_sidebarState', newState);
+    } catch (e) {
+      console.error('Failed to save sidebar state:', e);
+    }
+  }
+
+  /**
+   * Applique un état spécifique à la sidebar.
+   * @param {string} state - default, semi, full, expanded
+   */
+  applySidebarState(state) {
+    this.sidebarState = state;
+    // Remove all sidebar-related classes
+    this.meetingSidebar.classList.remove('collapsed', 'full-collapsed', 'expanded');
+    // Add class based on state
+    if (state === 'semi') {
+      this.meetingSidebar.classList.add('collapsed');
+    } else if (state === 'full') {
+      this.meetingSidebar.classList.add('full-collapsed');
+    } else if (state === 'expanded') {
+      this.meetingSidebar.classList.add('expanded');
+    }
+    // Ajuster la grille de contenu
     this.adjustContentGrid();
   }
-  
+
   /**
    * Ajuste la grille de contenu en fonction de l'état de la sidebar
    */
   adjustContentGrid() {
-    // Si la sidebar est rétractée, élargir la grille de contenu
-    if (this.meetingSidebar.classList.contains('collapsed')) {
+    if (!this.meetingContentGrid) return;
+    if (this.sidebarState === 'full') {
       this.meetingContentGrid.style.marginLeft = '0';
     } else {
       this.meetingContentGrid.style.marginLeft = '';

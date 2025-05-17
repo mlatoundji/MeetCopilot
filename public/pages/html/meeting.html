@@ -1,47 +1,54 @@
 <!-- Meeting controls sidebar -->
 <div class="meeting-page-container">
   <aside class="meeting-sidebar" id="meetingSidebar">
-    <button id="toggleSidebar" class="toggle-sidebar-btn" title="Réduire/Agrandir la sidebar">
+    <button id="toggleSidebar" class="toggle-sidebar-btn" title="Toggle sidebar">
       <span class="toggle-icon">◀</span>
     </button>
-    <nav class="meeting-sidebar-nav">
-      <ul class="meeting-sidebar-menu">
-        <li>
-          <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
-            <span class="meeting-icon">🎥</span>
-            <span class="meeting-label">Capture Système</span>
-          </button>
-        </li>
-        <li>
-          <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
-            <span class="meeting-icon">🎙️</span>
-            <span class="meeting-label">Capture Micro</span>
-          </button>
-        </li>
-        <li>
-          <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
-            <span class="meeting-icon">💡</span>
-            <span class="meeting-label">Suggestions</span>
-          </button>
-        </li>
-        <li>
-          <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
-            <span class="meeting-icon">💾</span>
-            <span class="meeting-label">Sauvegarder & Quitter</span>
-          </button>
-        </li>
-        <li>
-          <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
-            <span class="meeting-icon">🚪</span>
-            <span class="meeting-label">Quitter</span>
-          </button>
-        </li>
-      </ul>
-    </nav>
+    <div class="sidebar-content-container">
+      <nav class="meeting-sidebar-nav">
+        <ul class="meeting-sidebar-menu">
+          <li>
+            <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
+              <span class="meeting-icon">🎥</span>
+              <span class="meeting-label">Capture Système</span>
+            </button>
+          </li>
+          <li>
+            <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
+              <span class="meeting-icon">🎙️</span>
+              <span class="meeting-label">Capture Micro</span>
+            </button>
+          </li>
+          <li>
+            <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
+              <span class="meeting-icon">💡</span>
+              <span class="meeting-label">Suggestions</span>
+            </button>
+          </li>
+          <li>
+            <button id="saveAndQuitButton" class="meeting-control-btn" title="Save & Quit" aria-label="Save & Quit">
+              <span class="meeting-icon">💾</span>
+              <span class="meeting-label">Sauvegarder & Quitter</span>
+            </button>
+          </li>
+          <li>
+            <button id="quitButton" class="meeting-control-btn" title="Quit" aria-label="Quit">
+              <span class="meeting-icon">🚪</span>
+              <span class="meeting-label">Quitter</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <div id="conversationContextHeader" class="conversation-context-header hidden"></div>
+    </div>
   </aside>
 
   <!-- Main content grid: suggestions, screen capture and transcription -->
   <main class="meeting-content-grid" id="meetingContentGrid">
+    <!-- Full-extend toggle on content side -->
+    <button id="toggleSidebarFull" class="toggle-sidebar-full-btn" title="Toggle full sidebar">
+      <span class="toggle-icon-full">▶</span>
+    </button>
     <!-- Suggestions area with resize/move controls -->
     <section id="suggestionsArea" class="content-area suggestions-area" data-area="suggestions">
       <div class="area-header">
