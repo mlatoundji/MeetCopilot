@@ -23,6 +23,15 @@ export class AudioCapture {
       this.timeslice = 1000; // in ms
       // Processor node for system audio capture
       this.systemProcessor = null;
+      // Silence detection settings and callbacks
+      this.utteranceThreshold = 0.01;
+      this.utteranceSilenceDuration = 500;
+      this.utteranceLastSoundTime = { system: Date.now(), mic: Date.now() };
+      this.utteranceInProgress = { system: false, mic: false };
+      this.onUtteranceStart = null;
+      this.onUtteranceEnd = null;
+      // Buffer to store raw Float32 data for mic flushing
+      this.micRawBuffer = [];
     }
 
     // Helper method to manage buffer size
@@ -135,6 +144,29 @@ export class AudioCapture {
             if (this.systemBuffer.length > this.maxBufferSize) {
               this.systemBuffer.splice(0, this.systemBuffer.length - this.maxBufferSize);
             }
+            // Silence detection for utterance boundaries
+            const now = Date.now();
+            let sum = 0;
+            for (let i = 0; i < audioData.length; i++) sum += audioData[i] * audioData[i];
+            const rms = Math.sqrt(sum / audioData.length);
+            if (rms >= this.utteranceThreshold) {
+              this.utteranceLastSoundTime.system = now;
+              if (!this.utteranceInProgress.system) {
+                this.utteranceInProgress.system = true;
+                if (this.onUtteranceStart) this.onUtteranceStart('system');
+              }
+            } else if (this.utteranceInProgress.system && now - this.utteranceLastSoundTime.system > this.utteranceSilenceDuration) {
+              this.utteranceInProgress.system = false;
+              // Flush raw buffer and invoke callback
+              const bufferedAudio = this.systemBuffer.reduce((acc, val) => {
+                const tmp = new Float32Array(acc.length + val.length);
+                tmp.set(acc, 0);
+                tmp.set(val, acc.length);
+                return tmp;
+              }, new Float32Array());
+              this.systemBuffer = [];
+              if (this.onUtteranceEnd) this.onUtteranceEnd('system', bufferedAudio);
+            }
           };
           this.isSystemRecording = true;
           this.startBufferCleanup();
@@ -191,7 +223,36 @@ export class AudioCapture {
   
             this.micRecorder.onaudioprocess = (event) => {
               const audioData = event.inputBuffer.getChannelData(0);
+              // Store raw PCM for flushing
+              this.micRawBuffer.push(new Float32Array(audioData));
+              if (this.micRawBuffer.length > this.maxBufferSize) {
+                this.micRawBuffer.splice(0, this.micRawBuffer.length - this.maxBufferSize);
+              }
               this.manageBuffer(this.micBuffer, new Float32Array(audioData));
+              // Silence detection for utterance boundaries
+              const now = Date.now();
+              let sum = 0;
+              for (let i = 0; i < audioData.length; i++) sum += audioData[i] * audioData[i];
+              const rms = Math.sqrt(sum / audioData.length);
+              if (rms >= this.utteranceThreshold) {
+                this.utteranceLastSoundTime.mic = now;
+                if (!this.utteranceInProgress.mic) {
+                  this.utteranceInProgress.mic = true;
+                  if (this.onUtteranceStart) this.onUtteranceStart('mic');
+                }
+              } else if (this.utteranceInProgress.mic && now - this.utteranceLastSoundTime.mic > this.utteranceSilenceDuration) {
+                this.utteranceInProgress.mic = false;
+                // Flush raw buffer and invoke callback
+                const bufferedAudio = this.micRawBuffer.reduce((acc, val) => {
+                  const tmp = new Float32Array(acc.length + val.length);
+                  tmp.set(acc, 0);
+                  tmp.set(val, acc.length);
+                  return tmp;
+                }, new Float32Array());
+                this.micRawBuffer = [];
+                this.micBuffer = [];
+                if (this.onUtteranceEnd) this.onUtteranceEnd('mic', bufferedAudio);
+              }
             };
   
             this.isMicRecording = true;

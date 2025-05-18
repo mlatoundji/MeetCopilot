@@ -39,6 +39,7 @@ class App {
     // Current app state
     this.filterTranscription = filterTranscription;
     this.currentLanguage = 'fr';
+    this.useSilenceMode = true; // toggle between interval and silence-detection modes
 
     // API URLs
     this.MEETINGS_API_URL = MEETINGS_API_URL;
@@ -147,7 +148,30 @@ class App {
         }
         this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, true);
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
-        await this.startTranscription(SYSTEM_SOURCE);
+        if (this.useSilenceMode) {
+          console.log("Using silence mode");
+          // Register event-driven utterance callbacks
+          this.audioCapture.onUtteranceStart = (src) => {
+            console.log(`Utterance started for source: ${src}`);
+          };
+          this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+            console.log(`Utterance ended for source: ${src}`);
+            const contextLabel = src === SYSTEM_SOURCE ? this.conversationContextHandler.systemLabel : this.conversationContextHandler.micLabel;
+            const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
+            const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+            if (transcription) {
+              console.log(`Transcription (${contextLabel}):`, transcription);
+              const filteredText = this.filterTranscription(transcription, this.currentLanguage);
+              if (filteredText) {
+                this.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.currentLanguage, source: src });
+                await this.conversationContextHandler.updateConversationContext();
+                this.uiHandler.updateTranscription(this.conversationContextHandler.conversationContextText);
+              }
+            }
+          };
+        } else {
+          await this.startTranscription(SYSTEM_SOURCE);
+        }
         
         // Mettre à jour l'interface utilisateur via le router si nécessaire
         if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
@@ -163,6 +187,10 @@ class App {
       this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, false);
       this.uiHandler.closeVideoElement();
       
+      // Clear event-driven utterance callbacks
+      this.audioCapture.onUtteranceStart = null;
+      this.audioCapture.onUtteranceEnd = null;
+      
       // Mettre à jour l'interface utilisateur via le router si nécessaire
       if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
         this.router.currentPage.updateButtonStates();
@@ -175,7 +203,28 @@ class App {
     if (!this.audioCapture.isMicRecording) {
       await this.audioCapture.startMicCapture();
       this.uiHandler.toggleCaptureButton(MIC_SOURCE, true);
-      await this.startTranscription(MIC_SOURCE);
+      if (this.useSilenceMode) {
+        this.audioCapture.onUtteranceStart = (src) => {
+          console.log(`Utterance started for source: ${src}`);
+        };
+        this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+          console.log(`Utterance ended for source: ${src}`);
+          const contextLabel = src === SYSTEM_SOURCE ? this.conversationContextHandler.systemLabel : this.conversationContextHandler.micLabel;
+          const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, 44100);
+          const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+          if (transcription) {
+            console.log(`Transcription (${contextLabel}):`, transcription);
+            const filteredText = this.filterTranscription(transcription, this.currentLanguage);
+            if (filteredText) {
+              this.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.currentLanguage, source: src });
+              await this.conversationContextHandler.updateConversationContext();
+              this.uiHandler.updateTranscription(this.conversationContextHandler.conversationContextText);
+            }
+          }
+        };
+      } else {
+        await this.startTranscription(MIC_SOURCE);
+      }
       
       // Mettre à jour l'interface utilisateur via le router si nécessaire
       if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
@@ -184,6 +233,10 @@ class App {
     } else {
       this.audioCapture.stopMicCapture();
       this.uiHandler.toggleCaptureButton(MIC_SOURCE, false);
+      
+      // Clear event-driven utterance callbacks
+      this.audioCapture.onUtteranceStart = null;
+      this.audioCapture.onUtteranceEnd = null;
       
       // Mettre à jour l'interface utilisateur via le router si nécessaire
       if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
@@ -194,6 +247,7 @@ class App {
 
   // Function to start transcription for a specific source
   async startTranscription(source) {
+    console.log("Starting transcription for source:", source);
     const intervalId = setInterval(async () => {
       const buffer = source === SYSTEM_SOURCE ? this.audioCapture.systemBuffer : this.audioCapture.micBuffer;
       const contextLabel = source === SYSTEM_SOURCE ? this.conversationContextHandler.systemLabel : this.conversationContextHandler.micLabel;
@@ -394,6 +448,10 @@ class App {
       clearInterval(this.audioCapture.micTranscriptionInterval);
       this.audioCapture.micTranscriptionInterval = null;
     }
+    
+    // Clear event-driven utterance callbacks
+    this.audioCapture.onUtteranceStart = null;
+    this.audioCapture.onUtteranceEnd = null;
     
     // Arrêter les captures audio
     if (this.audioCapture.isSystemRecording) {

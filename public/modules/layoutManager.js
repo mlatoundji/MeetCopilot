@@ -411,19 +411,23 @@ export class LayoutManager {
    * @param {HTMLElement} element - Élément à déplacer
    */
   startDragging(e, element) {
+    // Free-form drag: switch to absolute positioning
     e.preventDefault();
     this.draggingElement = element;
     element.classList.add('dragging');
-    
+    // Ensure container is positioned relative
+    this.meetingContentGrid.style.position = 'relative';
+    // Set element to absolute
+    element.style.position = 'absolute';
+    // Store pointer start
     const pointerEvent = e.touches ? e.touches[0] : e;
     this.pointerStartX = pointerEvent.clientX;
     this.pointerStartY = pointerEvent.clientY;
-    
-    // Capturer la position initiale
-    const rect = element.getBoundingClientRect();
-    this.elementStartX = rect.left;
-    this.elementStartY = rect.top;
-    
+    // Store element start relative to container
+    const containerRect = this.meetingContentGrid.getBoundingClientRect();
+    const elemRect = element.getBoundingClientRect();
+    this.elementStartX = elemRect.left - containerRect.left;
+    this.elementStartY = elemRect.top - containerRect.top;
     console.log('Started dragging', element.id);
   }
   
@@ -433,19 +437,19 @@ export class LayoutManager {
    * @param {HTMLElement} element - Élément à redimensionner
    */
   startResizing(e, element) {
+    // Free-form resize: switch to absolute positioning
     e.preventDefault();
     this.resizingElement = element;
     element.classList.add('resizing');
-    
+    // Ensure element is absolute
+    element.style.position = 'absolute';
+    // Store pointer start
     const pointerEvent = e.touches ? e.touches[0] : e;
     this.pointerStartX = pointerEvent.clientX;
     this.pointerStartY = pointerEvent.clientY;
-    
-    // Capturer les dimensions initiales
-    const rect = element.getBoundingClientRect();
-    this.elementStartWidth = rect.width;
-    this.elementStartHeight = rect.height;
-    
+    // Store element dimensions
+    this.elementStartWidth = element.offsetWidth;
+    this.elementStartHeight = element.offsetHeight;
     console.log('Started resizing', element.id);
   }
   
@@ -462,11 +466,11 @@ export class LayoutManager {
     
     if (this.draggingElement) {
       e.preventDefault();
-      // Logique de déplacement
+      // Free-form move
       this.updateElementPosition(dx, dy);
     } else if (this.resizingElement) {
       e.preventDefault();
-      // Logique de redimensionnement
+      // Free-form resize
       this.updateElementSize(dx, dy);
     }
   }
@@ -498,42 +502,11 @@ export class LayoutManager {
    * @param {number} dy - Différence en Y
    */
   updateElementPosition(dx, dy) {
-    // Calculer les nouvelles cellules de la grille en fonction de la position
-    const gridRect = this.meetingContentGrid.getBoundingClientRect();
-    const element = this.draggingElement;
-    const elementRect = element.getBoundingClientRect();
-    
-    // Calculer la position centrale de l'élément
-    const centerX = this.elementStartX + dx + elementRect.width / 2;
-    const centerY = this.elementStartY + dy + elementRect.height / 2;
-    
-    // Déterminer dans quelle cellule de la grille se trouve le centre
-    const relativeX = centerX - gridRect.left;
-    const relativeY = centerY - gridRect.top;
-    
-    // Obtenir le nombre total de colonnes et de lignes
-    const computedStyle = window.getComputedStyle(this.meetingContentGrid);
-    const gridTemplateColumns = computedStyle.getPropertyValue('grid-template-columns');
-    const gridTemplateRows = computedStyle.getPropertyValue('grid-template-rows');
-    
-    const columnCount = this.getGridTrackCount(gridTemplateColumns);
-    const rowCount = this.getGridTrackCount(gridTemplateRows);
-    
-    // Calculer la taille d'une cellule
-    const cellWidth = gridRect.width / columnCount;
-    const cellHeight = gridRect.height / rowCount;
-    
-    // Déterminer la colonne et la ligne
-    const column = Math.floor(relativeX / cellWidth) + 1;
-    const row = Math.floor(relativeY / cellHeight) + 1;
-    
-    // Limiter aux limites de la grille
-    const newColumn = Math.max(1, Math.min(column, columnCount));
-    const newRow = Math.max(1, Math.min(row, rowCount));
-    
-    // Mettre à jour la position de l'élément dans la grille
-    element.style.gridColumn = `${newColumn}`;
-    element.style.gridRow = `${newRow}`;
+    // Free-form absolute positioning inside container
+    const left = this.elementStartX + dx;
+    const top = this.elementStartY + dy;
+    this.draggingElement.style.left = `${left}px`;
+    this.draggingElement.style.top = `${top}px`;
   }
   
   /**
@@ -542,23 +515,11 @@ export class LayoutManager {
    * @param {number} dy - Différence en Y
    */
   updateElementSize(dx, dy) {
-    const element = this.resizingElement;
-    
-    // Calculate new dimensions based on resize delta
-    const newWidth = this.elementStartWidth + dx;
-    const newHeight = this.elementStartHeight + dy;
-    
-    // Update grid-column-end and grid-row-end properties
-    const gridRect = this.meetingContentGrid.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-    
-    // Calculate the number of columns and rows to span
-    const columnCount = Math.ceil(newWidth / (gridRect.width / this.getGridTrackCount(window.getComputedStyle(this.meetingContentGrid).getPropertyValue('grid-template-columns'))));
-    const rowCount = Math.ceil(newHeight / (gridRect.height / this.getGridTrackCount(window.getComputedStyle(this.meetingContentGrid).getPropertyValue('grid-template-rows'))));
-    
-    // Update the element's grid properties
-    element.style.gridColumnEnd = `span ${columnCount}`;
-    element.style.gridRowEnd = `span ${rowCount}`;
+    // Free-form sizing
+    const width = Math.max(this.elementStartWidth + dx, 50);
+    const height = Math.max(this.elementStartHeight + dy, 50);
+    this.resizingElement.style.width = `${width}px`;
+    this.resizingElement.style.height = `${height}px`;
   }
   
   /**
