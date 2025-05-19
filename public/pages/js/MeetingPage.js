@@ -375,6 +375,7 @@ export class MeetingPage {
   }
 
   async startTranscription(source) {
+    console.log("Starting transcription for source in MeetingPage", source);
     let isTranscribing = false;
     const intervalId = setInterval(async () => {
       if (isTranscribing) return;

@@ -7,9 +7,11 @@ import { callApi } from '../utils.js';
 export class ConversationContextHandler {
     constructor(summaryApiUrlOrApiHandler) {
         if (typeof summaryApiUrlOrApiHandler === 'string') {
+            console.log("Using summary API URL", summaryApiUrlOrApiHandler);
             this.summaryApiUrl = summaryApiUrlOrApiHandler;
             this.apiHandler = null;
         } else {
+            console.log("Using API handler", summaryApiUrlOrApiHandler);
             this.apiHandler = summaryApiUrlOrApiHandler;
             this.summaryApiUrl = null;
         }
@@ -67,6 +69,10 @@ export class ConversationContextHandler {
 
         this.translateContext(this.defaultLang);
   
+        const generateId = () => (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2)));
+        this.conversationId = generateId();
+        this.unsentMessages = [];
+        console.log("Conversation ID", this.conversationId);
     }
 
     translateContext(lang) {
@@ -135,7 +141,7 @@ export class ConversationContextHandler {
 
     
         let lastSummariesCount = this.conversationContextSummaries.length;
-        const res = await this.maybeGenerateSummary();
+        // const res = await this.maybeGenerateSummary();
     
         if(this.conversationContextSummaries.length > 0 && res != null){
             this.conversationContextSummariesText =  this.conversationContextSummariesHeaderText;
@@ -158,6 +164,17 @@ export class ConversationContextHandler {
         ${this.conversationContextSummariesText} 
         ${this.conversationContextDialogsText}
         `;
+
+        if(this.unsentMessages.length > 0 && this.apiHandler){
+            try {
+                console.log("Sending unsent messages", this.unsentMessages);
+                const delta = this.unsentMessages.splice(0, this.unsentMessages.length);
+                await this.apiHandler.sendConversationMessages(this.conversationId, delta);
+            } catch(err){
+                console.error('Failed to push conversation delta', err);
+                this.unsentMessages.unshift(...delta);
+            }
+        }
     }
 
     async generateSummary(context) {

@@ -3,6 +3,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { buildPrompt } from '../services/promptBuilder.js';
 import { chatCompletion } from '../services/mistralService.js';
 import dotenv from 'dotenv';
+import { summariseConversationChunk } from '../services/summarizerService.js';
+import { estimateTokens } from '../utils/tokenEstimator.js';
 
 dotenv.config();
 
@@ -10,7 +12,12 @@ const supabase = createSupabaseClient(process.env.SUPABASE_URL, process.env.SUPA
 
 const CONV_KEY_PREFIX = 'conv:';
 
+const SUMMARY_TRIGGER_EVERY = 8; // messages
+const WINDOW_MAX_TURNS = 10; // keep last N turns verbatim
+const SUMMARY_TOKEN_THRESHOLD = 3500; // if prompt tokens exceed, force summary
+
 const fetchConversation = async (cid) => {
+  console.log("Fetching conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
   let memory = await redis.get(redisKey);
   if (memory) return JSON.parse(memory);
@@ -19,9 +26,11 @@ const fetchConversation = async (cid) => {
   const { data, error } = await supabase.from('conversations').select('*').eq('id', cid).single();
   if (error) throw error;
   if (data) {
+    console.log("Conversation found", cid);
     await redis.set(redisKey, JSON.stringify(data.memory_json), { EX: 3600 });
     return data.memory_json;
   }
+  console.log("No conversation found", cid);
   // no conversation found
   return {
     messages: [],
@@ -30,6 +39,7 @@ const fetchConversation = async (cid) => {
 };
 
 const persistConversation = async (cid, memory) => {
+  console.log("Persisting conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
   await redis.set(redisKey, JSON.stringify(memory), { EX: 3600 });
   const upsert = {
@@ -54,7 +64,26 @@ export const addMessages = async (req, res) => {
 
     memory.messages = (memory.messages || []).concat(msg);
 
-    // TODO: implement summarization & windowing here
+    // === Auto-summary & sliding window ===
+    const updatedTokenCount = estimateTokens(memory.messages);
+    const needSummaryByCount = memory.messages.length >= WINDOW_MAX_TURNS + SUMMARY_TRIGGER_EVERY;
+    const needSummaryByTokens = updatedTokenCount > SUMMARY_TOKEN_THRESHOLD;
+    if (needSummaryByCount || needSummaryByTokens) {
+      // summarise everything except last WINDOW_MAX_TURNS
+      const chunkToSummarise = memory.messages.slice(0, -WINDOW_MAX_TURNS);
+      if (chunkToSummarise.length) {
+        try {
+          console.log("Summarising chunk", chunkToSummarise);
+          const summaryText = await summariseConversationChunk(chunkToSummarise);
+          // Merge with existing summary (concatenate)
+          memory.summary = (memory.summary ? memory.summary + "\n" : '') + summaryText;
+        } catch (err) {
+          console.warn('Summarisation failed, proceeding without', err.message);
+        }
+        // Keep only last WINDOW_MAX_TURNS turns
+        memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
+      }
+    }
 
     await persistConversation(cid, memory);
 
@@ -65,6 +94,8 @@ export const addMessages = async (req, res) => {
     // Append assistant message
     memory.messages.push(assistantMessage);
     await persistConversation(cid, memory);
+    console.log("Persisted conversation", cid);
+    console.log("Assistant message", assistantMessage);
 
     res.json({ assistant: assistantMessage, cid });
   } catch (err) {

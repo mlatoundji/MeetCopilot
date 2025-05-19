@@ -164,6 +164,12 @@ class App {
               const filteredText = this.filterTranscription(transcription, this.currentLanguage);
               if (filteredText) {
                 this.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.currentLanguage, source: src });
+                // Enqueue for backend
+                console.log("Unsent messages", this.conversationContextHandler.unsentMessages);
+                if(this.conversationContextHandler.unsentMessages){
+                  console.log("Enqueueing unsent messages", this.conversationContextHandler.unsentMessages);
+                  this.conversationContextHandler.unsentMessages.push({ role: contextLabel === this.conversationContextHandler.micLabel ? 'user' : 'assistant', content: filteredText });
+                }
                 await this.conversationContextHandler.updateConversationContext();
                 this.uiHandler.updateTranscription(this.conversationContextHandler.conversationContextText);
               }
@@ -217,6 +223,10 @@ class App {
             const filteredText = this.filterTranscription(transcription, this.currentLanguage);
             if (filteredText) {
               this.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.currentLanguage, source: src });
+              // Enqueue for backend
+              if(this.conversationContextHandler.unsentMessages){
+                this.conversationContextHandler.unsentMessages.push({ role: contextLabel === this.conversationContextHandler.micLabel ? 'user' : 'assistant', content: filteredText });
+              }
               await this.conversationContextHandler.updateConversationContext();
               this.uiHandler.updateTranscription(this.conversationContextHandler.conversationContextText);
             }
@@ -275,6 +285,10 @@ class App {
             language: this.currentLanguage, 
             source: source
           });
+          // Enqueue for backend
+          if(this.conversationContextHandler.unsentMessages){
+            this.conversationContextHandler.unsentMessages.push({ role: contextLabel === this.conversationContextHandler.micLabel ? 'user' : 'assistant', content: filteredText });
+          }
           await this.conversationContextHandler.updateConversationContext();
           this.uiHandler.updateTranscription(this.conversationContextHandler.conversationContextText);
         }

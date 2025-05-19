@@ -178,4 +178,17 @@ export class APIHandler {
       method: 'GET'
     });
   }
+
+  /**
+   * Envoie un delta de conversation (nouveaux messages)
+   * @param {string} cid - conversation id
+   * @param {Array<{role:string,content:string}>} messages - nouveaux messages
+   */
+  async sendConversationMessages(cid, messages) {
+    const url = `${this.baseURL}${this.apiPrefix}/conversation/${encodeURIComponent(cid)}/messages`;
+    return this.callApi(url, {
+      method: 'POST',
+      body: JSON.stringify({ msg: messages })
+    });
+  }
 } 
