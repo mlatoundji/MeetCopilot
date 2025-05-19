@@ -21,7 +21,8 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "node-llama-cpp": "^2.8.16",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "redis": "^5.0.1"
   },
   "devDependencies": {
     "chai": "^5.2.0",
