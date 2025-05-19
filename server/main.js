@@ -9,6 +9,8 @@ import { initializeLocalLLM, cleanupLocalLLM } from './services/localLLMService.
 import path from 'path';
 import meetingsRouter from './routes/meetingsRoutes.js';
 import { fileURLToPath } from 'url';
+import { metricsMiddleware } from './middleware/metricsMiddleware.js';
+import conversationRouter from './routes/conversationRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +31,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Add metrics instrumentation
+app.use(metricsMiddleware);
 
 // Additional CORS headers for extra compatibility
 app.use((req, res, next) => {
@@ -72,6 +77,7 @@ app.use('/summary', summaryRoutes);
 app.use('/api/transcribe', transcriptionRoutes);
 app.use('/transcribe', transcriptionRoutes);
 app.use('/api/meetings', meetingsRouter);
+app.use('/api/conversation', conversationRouter);
 
 // Function to sanitize URL for logging
 function sanitizeUrl(url) {
@@ -129,4 +135,5 @@ app.listen(PORT, () => {
     console.log(`- POST /api/transcribe/whisper or /transcribe/whisper`);
     console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
     console.log(`- POST /api/meetings`);
+    console.log(`- POST /api/conversation`);
 });
