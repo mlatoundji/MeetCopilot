@@ -139,7 +139,7 @@ class App {
   async handleSystemCapture() {
     if (!this.audioCapture.isSystemRecording) {
       try {
-        this.conversationContextHandler.resetConversationContext();
+        // this.conversationContextHandler.resetConversationContext();
         this.conversationContextHandler.lastSummaryTime = Date.now();
         const started = await this.audioCapture.startSystemCapture();
         if (!started) {

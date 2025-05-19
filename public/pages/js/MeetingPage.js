@@ -123,6 +123,10 @@ export class MeetingPage {
   }
 
   quitMeeting() {
+    console.log("Quitting meeting");
+
+
+    this.app.conversationContextHandler.resetConversationContext();
     // Arrêter les enregistrements audio
     if (this.audioCapture.isSystemRecording) {
       this.toggleSystemCapture();
@@ -291,6 +295,7 @@ export class MeetingPage {
   }
 
   async startSystemCapture() {
+    console.log("Starting system capture");
     try {
       if (!this.audioCapture.isSystemRecording) {
         // Réinitialiser le contexte de conversation
@@ -324,6 +329,7 @@ export class MeetingPage {
   }
 
   stopSystemCapture() {
+    console.log("Stopping system capture");
     if (this.audioCapture.isSystemRecording) {
       // Clear the transcription interval
       if (this.audioCapture.systemTranscriptionInterval) {
@@ -339,6 +345,7 @@ export class MeetingPage {
   }
 
   async startMicCapture() {
+    console.log("Starting mic capture");
     try {
       if (!this.audioCapture.isMicRecording) {
         await this.audioCapture.startMicCapture();
@@ -353,6 +360,7 @@ export class MeetingPage {
   }
 
   stopMicCapture() {
+    console.log("Stopping mic capture");
     if (this.audioCapture.isMicRecording) {
       // Clear the transcription interval
       if (this.audioCapture.micTranscriptionInterval) {
