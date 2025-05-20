@@ -29,6 +29,11 @@ export class MeetingPage {
     this.systemCapture = null;
     this.micCapture = null;
     this.selectedTranslations = this.uiHandler.getTranslations();
+    // Silence-mode auto-flush timeout: duration in ms (0 to disable)
+    this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 60000;
+    this.enableSilenceTimeout = this.silenceTimeoutDuration > 0;
+    this.systemSilenceTimeoutId = null;
+    this.micSilenceTimeoutId = null;
   }
 
   async loadFragment() {
@@ -320,44 +325,26 @@ export class MeetingPage {
         
         // Transcription : silence-mode ou polling
         if (this.app.useSilenceMode) {
-          console.log("Using silence mode");
-          this.audioCapture.onUtteranceStart = (src) => {
-            console.log(`Utterance started for source: ${src}`);
-          };
-          this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
-            console.log(`Utterance ended for source: ${src}`);
-            const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
-            const sampleRate = src === this.SYSTEM_SOURCE
-              ? this.audioCapture.systemAudioContext?.sampleRate
-              : this.audioCapture.micAudioContext?.sampleRate || 44100;
-            const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
-            const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
-            if (transcription) {
-              console.log(`Transcription (${contextLabel}):`, transcription);
-              const filteredText = this.app.filterTranscription
-                ? this.app.filterTranscription(transcription, this.app.currentLanguage)
-                : transcription;
-              if (filteredText) {
-                // Mise à jour du contexte
-                this.app.conversationContextHandler.conversationContextDialogs.push({
-                  speaker: contextLabel,
-                  text: filteredText,
-                  time: Date.now(),
-                  language: this.app.currentLanguage,
-                  source: src
-                });
-                // Enqueue pour le backend
-                if (this.app.conversationContextHandler.unsentMessages) {
-                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'speaker';
-                  this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
-                }
-                await this.app.conversationContextHandler.updateConversationContext();
-                this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+          // use consolidated silence-mode handlers
+          this.setupSilenceModeHandlers();
+          // schedule initial auto-flush if enabled
+          if (this.enableSilenceTimeout) {
+            this.systemSilenceTimeoutId = setTimeout(() => {
+              if (this.audioCapture.isSystemRecording && this.audioCapture.utteranceInProgress.system && this.audioCapture.systemBuffer.length > 0) {
+                const bufferedAudio = this.audioCapture.systemBuffer.reduce((acc, val) => {
+                  const tmp = new Float32Array(acc.length + val.length);
+                  tmp.set(acc, 0);
+                  tmp.set(val, acc.length);
+                  return tmp;
+                }, new Float32Array());
+                this.audioCapture.systemBuffer = [];
+                this.audioCapture.utteranceInProgress.system = false;
+                this.triggerTranscription(this.SYSTEM_SOURCE, bufferedAudio);
               }
-            }
-          };
+            }, this.silenceTimeoutDuration);
+          }
         } else {
-          await this.startTranscription(this.SYSTEM_SOURCE);
+          await this.startTranscriptionWithInterval(this.SYSTEM_SOURCE);
         }
         
         // Mettre à jour l'état des boutons
@@ -378,7 +365,23 @@ export class MeetingPage {
         clearInterval(this.audioCapture.systemTranscriptionInterval);
         this.audioCapture.systemTranscriptionInterval = null;
       }
-      
+      // Flush last audio chunks before stopping
+      if (this.audioCapture.systemBuffer.length > 0) {
+        const bufferedAudio = this.audioCapture.systemBuffer.reduce((acc, val) => {
+          const tmp = new Float32Array(acc.length + val.length);
+          tmp.set(acc, 0);
+          tmp.set(val, acc.length);
+          return tmp;
+        }, new Float32Array());
+        this.audioCapture.systemBuffer = [];
+        this.audioCapture.utteranceInProgress.system = false;
+        this.triggerTranscription(this.SYSTEM_SOURCE, bufferedAudio);
+      }
+      // clear scheduled auto-flush
+      if (this.systemSilenceTimeoutId) {
+        clearTimeout(this.systemSilenceTimeoutId);
+        this.systemSilenceTimeoutId = null;
+      }
       this.audioCapture.stopSystemCapture();
       this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, false);
       this.uiHandler.closeVideoElement();
@@ -390,43 +393,45 @@ export class MeetingPage {
   }
 
   async startMicCapture() {
+
+    
+        // if (this.app && this.app.conversationContextHandler) {
+        //   //this.app.conversationContextHandler.resetConversationContext();
+        //   this.app.conversationContextHandler.lastSummaryTime = Date.now();
+        // }
+
+        
     console.log("Starting mic capture");
     try {
       if (!this.audioCapture.isMicRecording) {
-        await this.audioCapture.startMicCapture();
+        const started = await this.audioCapture.startMicCapture();
+        if (!started) {
+          // Si la capture n'a pas démarré (annulation), on ne fait rien
+          return;
+        }
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
         // Transcription : silence-mode ou polling
         if (this.app.useSilenceMode) {
-          console.log("Using silence mode");
-          this.audioCapture.onUtteranceStart = (src) => {
-            console.log(`Utterance started for source: ${src}`);
-          };
-          this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
-            console.log(`Utterance ended for source: ${src}`);
-            const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
-            const sampleRate = src === this.SYSTEM_SOURCE
-              ? this.audioCapture.systemAudioContext?.sampleRate
-              : this.audioCapture.micAudioContext?.sampleRate || 44100;
-            const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
-            const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
-            if (transcription) {
-              console.log(`Transcription (${contextLabel}):`, transcription);
-              const filteredText = this.app.filterTranscription
-                ? this.app.filterTranscription(transcription, this.app.currentLanguage)
-                : transcription;
-              if (filteredText) {
-                this.app.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.app.currentLanguage, source: src });
-                if (this.app.conversationContextHandler.unsentMessages) {
-                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'speaker';
-                  this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
-                }
-                await this.app.conversationContextHandler.updateConversationContext();
-                this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+          // use consolidated silence-mode handlers
+          this.setupSilenceModeHandlers();
+          // schedule initial auto-flush if enabled
+          if (this.enableSilenceTimeout) {
+            this.micSilenceTimeoutId = setTimeout(() => {
+              if (this.audioCapture.isMicRecording && this.audioCapture.utteranceInProgress.mic && this.audioCapture.micRawBuffer.length > 0) {
+                const bufferedAudio = this.audioCapture.micRawBuffer.reduce((acc, val) => {
+                  const tmp = new Float32Array(acc.length + val.length);
+                  tmp.set(acc, 0);
+                  tmp.set(val, acc.length);
+                  return tmp;
+                }, new Float32Array());
+                this.audioCapture.micRawBuffer = [];
+                this.audioCapture.utteranceInProgress.mic = false;
+                this.triggerTranscription(this.MIC_SOURCE, bufferedAudio);
               }
-            }
-          };
+            }, this.silenceTimeoutDuration);
+          }
         } else {
-          await this.startTranscription(this.MIC_SOURCE);
+          await this.startTranscriptionWithInterval(this.MIC_SOURCE);
         }
         this.updateButtonStates();
       }
@@ -444,7 +449,23 @@ export class MeetingPage {
         clearInterval(this.audioCapture.micTranscriptionInterval);
         this.audioCapture.micTranscriptionInterval = null;
       }
-      
+      // Flush last audio chunks before stopping
+      if (this.audioCapture.micRawBuffer.length > 0) {
+        const bufferedAudio = this.audioCapture.micRawBuffer.reduce((acc, val) => {
+          const tmp = new Float32Array(acc.length + val.length);
+          tmp.set(acc, 0);
+          tmp.set(val, acc.length);
+          return tmp;
+        }, new Float32Array());
+        this.audioCapture.micRawBuffer = [];
+        this.audioCapture.utteranceInProgress.mic = false;
+        this.triggerTranscription(this.MIC_SOURCE, bufferedAudio);
+      }
+      // clear scheduled auto-flush
+      if (this.micSilenceTimeoutId) {
+        clearTimeout(this.micSilenceTimeoutId);
+        this.micSilenceTimeoutId = null;
+      }
       this.audioCapture.stopMicCapture();
       this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, false);
       // Clear silence-detection handlers
@@ -454,7 +475,7 @@ export class MeetingPage {
     }
   }
 
-  async startTranscription(source) {
+  async startTranscriptionWithInterval(source) {
     console.log("Starting transcription for source in MeetingPage", source);
     let isTranscribing = false;
     const intervalId = setInterval(async () => {
@@ -558,5 +579,93 @@ export class MeetingPage {
       console.error("Error generating suggestion:", error);
       this.uiHandler.updateSuggestions("Erreur lors de la génération des suggestions.");
     }
+  }
+
+  // Helper to trigger transcription for any audio segment
+  async triggerTranscription(src, audioBuffer) {
+    const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
+    const sampleRate = src === this.SYSTEM_SOURCE
+      ? this.audioCapture.systemAudioContext?.sampleRate
+      : this.audioCapture.micAudioContext?.sampleRate || 44100;
+    const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
+    const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+    if (transcription) {
+      console.log(`Transcription (${contextLabel}):`, transcription);
+      const filteredText = this.app.filterTranscription
+        ? this.app.filterTranscription(transcription, this.app.currentLanguage)
+        : transcription;
+      if (filteredText) {
+        // Update conversation context
+        if (this.app.conversationContextHandler) {
+          this.app.conversationContextHandler.conversationContextDialogs.push({
+            speaker: contextLabel,
+            text: filteredText,
+            time: Date.now(),
+            language: this.app.currentLanguage,
+            source: src
+          });
+          if (this.app.conversationContextHandler.unsentMessages) {
+            const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'speaker';
+            this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
+          }
+          await this.app.conversationContextHandler.updateConversationContext();
+        }
+        this.uiHandler.updateTranscription(
+          this.app?.conversationContextHandler?.conversationContextText || filteredText
+        );
+      }
+    }
+  }
+
+  // Helper: assign silence-mode utterance handlers and manage auto-flush timeouts
+  setupSilenceModeHandlers() {
+    console.log("Using silence mode");
+    this.audioCapture.onUtteranceStart = (src) => {
+      console.log(`Utterance started for source: ${src}`);
+      if (src === this.SYSTEM_SOURCE && this.systemSilenceTimeoutId) {
+        clearTimeout(this.systemSilenceTimeoutId);
+        this.systemSilenceTimeoutId = null;
+      } else if (src === this.MIC_SOURCE && this.micSilenceTimeoutId) {
+        clearTimeout(this.micSilenceTimeoutId);
+        this.micSilenceTimeoutId = null;
+      }
+    };
+    this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+      console.log(`Utterance ended for source: ${src}`);
+      if (src === this.SYSTEM_SOURCE && this.systemSilenceTimeoutId) {
+        clearTimeout(this.systemSilenceTimeoutId);
+        this.systemSilenceTimeoutId = null;
+      } else if (src === this.MIC_SOURCE && this.micSilenceTimeoutId) {
+        clearTimeout(this.micSilenceTimeoutId);
+        this.micSilenceTimeoutId = null;
+      }
+      await this.triggerTranscription(src, audioBuffer);
+      // Schedule next auto-flush if still recording
+      if (this.enableSilenceTimeout) {
+        const id = setTimeout(() => {
+          const buffer = src === this.SYSTEM_SOURCE
+            ? this.audioCapture.systemBuffer
+            : this.audioCapture.micRawBuffer;
+          if (buffer.length > 0) {
+            const bufferedAudio = buffer.reduce((acc, val) => {
+              const tmp = new Float32Array(acc.length + val.length);
+              tmp.set(acc, 0);
+              tmp.set(val, acc.length);
+              return tmp;
+            }, new Float32Array());
+            if (src === this.SYSTEM_SOURCE) {
+              this.audioCapture.systemBuffer = [];
+              this.audioCapture.utteranceInProgress.system = false;
+            } else {
+              this.audioCapture.micRawBuffer = [];
+              this.audioCapture.utteranceInProgress.mic = false;
+            }
+            this.triggerTranscription(src, bufferedAudio);
+          }
+        }, this.silenceTimeoutDuration);
+        if (src === this.SYSTEM_SOURCE) this.systemSilenceTimeoutId = id;
+        else this.micSilenceTimeoutId = id;
+      }
+    };
   }
 } 
