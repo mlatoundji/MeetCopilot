@@ -348,7 +348,7 @@ export class MeetingPage {
                 });
                 // Enqueue pour le backend
                 if (this.app.conversationContextHandler.unsentMessages) {
-                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'assistant';
+                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'speaker';
                   this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
                 }
                 await this.app.conversationContextHandler.updateConversationContext();
@@ -417,7 +417,7 @@ export class MeetingPage {
               if (filteredText) {
                 this.app.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.app.currentLanguage, source: src });
                 if (this.app.conversationContextHandler.unsentMessages) {
-                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'assistant';
+                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'speaker';
                   this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
                 }
                 await this.app.conversationContextHandler.updateConversationContext();

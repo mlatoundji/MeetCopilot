@@ -106,24 +106,24 @@ export const addMessages = async (req, res) => {
     await persistConversation(cid, memory, userId);
 
     // If the incoming delta didn't originate from user, skip assistant generation
-    const lastIncoming = msg[msg.length - 1];
-    if (lastIncoming.role !== 'user') {
+    // const lastIncoming = msg[msg.length - 1];
+    // if (lastIncoming.role !== 'user') {
       return res.json({ assistant: null, cid });
-    }
+    // }
 
     // optionally build prompt and get assistant reply
-    console.log("Building prompt");
-    const prompt = buildPrompt(memory);
-    console.log("Prompt built", prompt);
-    const assistantMessage = await chatCompletion(prompt);
-    console.log("Assistant message", assistantMessage);
+    // console.log("Building prompt");
+    // const prompt = buildPrompt(memory);
+    // console.log("Prompt built", prompt);
+    // const assistantMessage = await chatCompletion(prompt);
+    // console.log("Assistant message", assistantMessage);
 
-    // Append assistant message
-    memory.messages.push(assistantMessage);
-    await persistConversation(cid, memory, userId);
-    console.log("Persisted conversation", cid);
+    // // Append assistant message
+    // memory.messages.push(assistantMessage);
+    // await persistConversation(cid, memory, userId);
+    // console.log("Persisted conversation", cid);
 
-    res.json({ assistant: assistantMessage, cid });
+    // res.json({ assistant: assistantMessage, cid });
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });
