@@ -1,4 +1,6 @@
-export class LoginPage {
+import { APIHandler } from '../../modules/apiHandler.js';
+
+export default class AuthPage {
   constructor(app) {
     this.app = app;
     this.container = document.querySelector('.container');
@@ -7,21 +9,22 @@ export class LoginPage {
     this.loginRoot.style.width = '100%';
     this.loginRoot.style.minHeight = '100vh';
     this.loginRoot.style.overflowY = 'auto';
+    this.apiHandler = new APIHandler();
   }
 
   async render() {
-    // Masquer l'interface principale de l'application
+    // Hide main application UI
     if (this.container) this.container.style.display = 'none';
     this.app.ui.hideSidebar();
     const transcription = document.querySelector('.transcription');
     if (transcription) transcription.style.display = 'none';
 
-    // Charger le fragment HTML de la page login/register
-    const res = await fetch('pages/html/login.html');
+    // Load the combined auth (login/register) HTML
+    const res = await fetch('pages/html/auth.html');
     const html = await res.text();
     this.loginRoot.innerHTML = html;
 
-    // Ajouter au DOM si pas présent
+    // Append to DOM if not already present
     if (!document.getElementById('login-root')) {
       document.body.appendChild(this.loginRoot);
     }
@@ -48,23 +51,64 @@ export class LoginPage {
       signupBtn.addEventListener('click', this.signupHandler);
     }
 
-    // Handle fake auth to navigate to home if login submit clicked
+    // Login submission
     const loginSubmit = this.loginRoot.querySelector('#login-submit');
-    const registerSubmit = this.loginRoot.querySelector('#register-submit');
-
     if (loginSubmit) {
-      this.loginSubmitHandler = (e) => {
+      this.loginSubmitHandler = async (e) => {
         e.preventDefault();
-        // TODO: implement real authentication. For now, navigate to home
-        window.location.hash = 'home';
+        const email = this.loginRoot.querySelector('#login-email').value;
+        const password = this.loginRoot.querySelector('#login-password').value;
+        const btn = loginSubmit;
+        btn.disabled = true;
+        try {
+          const resp = await this.apiHandler.callApi(
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/login`,
+            { method: 'POST', body: JSON.stringify({ email, password }) }
+          );
+          const token = resp.access_token;
+          if (!token) throw new Error(resp.error || 'Authentication failed');
+          localStorage.setItem('jwt', token);
+          window.location.hash = 'home';
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          btn.disabled = false;
+        }
       };
       loginSubmit.addEventListener('click', this.loginSubmitHandler);
     }
+
+    // Registration submission
+    const registerSubmit = this.loginRoot.querySelector('#register-submit');
     if (registerSubmit) {
-      this.registerSubmitHandler = (e) => {
+      this.registerSubmitHandler = async (e) => {
         e.preventDefault();
-        // TODO: send registration request. Navigate to home for now
-        window.location.hash = 'home';
+        const form = this.loginRoot.querySelector('#register-form');
+        const name = form.querySelector('input[type="text"]').value;
+        const email = form.querySelector('input[type="email"]').value;
+        const passwords = form.querySelectorAll('input[type="password"]');
+        const password = passwords[0].value;
+        const confirmPassword = passwords[1].value;
+        if (password !== confirmPassword) {
+          alert('Les mots de passe ne correspondent pas.');
+          return;
+        }
+        const btn = registerSubmit;
+        btn.disabled = true;
+        try {
+          const resp = await this.apiHandler.callApi(
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/register`,
+            { method: 'POST', body: JSON.stringify({ email, password }) }
+          );
+          const token = resp.access_token;
+          if (!token) throw new Error(resp.error || 'Registration failed');
+          localStorage.setItem('jwt', token);
+          window.location.hash = 'home';
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          btn.disabled = false;
+        }
       };
       registerSubmit.addEventListener('click', this.registerSubmitHandler);
     }
@@ -90,7 +134,7 @@ export class LoginPage {
       registerSubmit.removeEventListener('click', this.registerSubmitHandler);
     }
 
-    // Retirer la page et restaurer l'application principale
+    // Remove root and restore main UI
     if (this.loginRoot.parentElement) {
       this.loginRoot.parentElement.removeChild(this.loginRoot);
     }

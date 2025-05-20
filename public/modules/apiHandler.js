@@ -44,6 +44,7 @@ export class APIHandler {
    * @returns {Promise<Object>} - La réponse JSON de l'API
    */
   async callApi(url, options) {
+    console.log("Calling API", url, options);
     try {
       // Préparer les headers en fonction du type de requête
       let headers = { ...this.headers };
@@ -63,6 +64,16 @@ export class APIHandler {
         }
       };
 
+      // Attach JWT from localStorage if available
+      try {
+        const token = localStorage.getItem('jwt');
+        if (token) {
+          mergedOptions.headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (_e) {
+        // localStorage not available or no token
+      }
+
       const response = await fetch(url, mergedOptions);
       
       // Si la réponse n'est pas au format JSON, retourner la réponse brute
@@ -75,8 +86,9 @@ export class APIHandler {
       }
 
       const data = await response.json();
-      
+      console.log("API call succeeded", data);
       if (!response.ok) {
+        console.log("API call failed", data);
         throw new Error(data.error || `HTTP error ${response.status}`);
       }
       

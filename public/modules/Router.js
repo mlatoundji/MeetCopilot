@@ -1,7 +1,7 @@
 import { HomePage } from '../pages/js/HomePage.js';
 import { MeetingPage } from '../pages/js/MeetingPage.js';
 import { LandingPage } from '../pages/js/LandingPage.js';
-import { LoginPage } from '../pages/js/LoginPage.js';
+import AuthPage from '../pages/js/AuthPage.js';
 import { MeetingDetailsPage } from '../pages/js/MeetingDetailsPage.js';
 
 export class Router {
@@ -12,6 +12,12 @@ export class Router {
     
     // Define routes with HTML and JS paths
     this.routes = {
+      // Landing page as default
+      'landing': {
+        htmlPath: 'pages/html/landing.html',
+        jsPath: 'pages/js/LandingPage.js',
+        hasSidebar: false
+      },
       'home': {
         htmlPath: 'pages/html/home.html',
         jsPath: 'pages/js/HomePage.js',
@@ -23,13 +29,13 @@ export class Router {
         hasSidebar: false
       },
       'login': {
-        htmlPath: 'pages/html/login.html',
-        jsPath: 'pages/js/LoginPage.js',
+        htmlPath: 'pages/html/auth.html',
+        jsPath: 'pages/js/AuthPage.js',
         hasSidebar: false
       },
       'register': {
-        htmlPath: 'pages/html/register.html',
-        jsPath: 'pages/js/RegisterPage.js',
+        htmlPath: 'pages/html/auth.html',
+        jsPath: 'pages/js/AuthPage.js',
         hasSidebar: false
       },
     };
@@ -62,6 +68,10 @@ export class Router {
     // Handle hash changes for dynamic routing
     window.addEventListener('hashchange', (event) => {
       const hash = window.location.hash.substring(1);
+      if (hash === '') {
+        this.navigate('landing', false);
+        return;
+      }
       // Meeting details route: /meeting/:id
       if (hash.startsWith('/meeting/')) {
         const meetingId = hash.replace('/meeting/', '');

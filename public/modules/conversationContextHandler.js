@@ -139,9 +139,8 @@ export class ConversationContextHandler {
 
     async updateConversationContext() {
 
-    
         let lastSummariesCount = this.conversationContextSummaries.length;
-        // const res = await this.maybeGenerateSummary();
+        const res = await this.maybeGenerateSummary();
     
         if(this.conversationContextSummaries.length > 0 && res != null){
             this.conversationContextSummariesText =  this.conversationContextSummariesHeaderText;
@@ -166,13 +165,15 @@ export class ConversationContextHandler {
         `;
 
         if(this.unsentMessages.length > 0 && this.apiHandler){
+            let delta;
             try {
-                console.log("Sending unsent messages", this.unsentMessages);
-                const delta = this.unsentMessages.splice(0, this.unsentMessages.length);
+                delta = this.unsentMessages.splice(0, this.unsentMessages.length);
+                console.log("Sending unsent messages", delta);
                 await this.apiHandler.sendConversationMessages(this.conversationId, delta);
             } catch(err){
                 console.error('Failed to push conversation delta', err);
-                this.unsentMessages.unshift(...delta);
+                // Requeue messages on failure
+                if (delta) this.unsentMessages.unshift(...delta);
             }
         }
     }

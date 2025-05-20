@@ -5,10 +5,15 @@ import { chatCompletion } from '../services/mistralService.js';
 import dotenv from 'dotenv';
 import { summariseConversationChunk } from '../services/summarizerService.js';
 import { estimateTokens } from '../utils/tokenEstimator.js';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
-const supabase = createSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// Use service role key to bypass row-level security for backend operations
+const supabase = createSupabaseClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
+);
 
 const CONV_KEY_PREFIX = 'conv:';
 
@@ -22,28 +27,32 @@ const fetchConversation = async (cid) => {
   let memory = await redis.get(redisKey);
   if (memory) return JSON.parse(memory);
 
-  // fallback to supabase
-  const { data, error } = await supabase.from('conversations').select('*').eq('id', cid).single();
-  if (error) throw error;
+  // Try to fetch existing conversation; maybeSingle returns null if not found
+  const { data, error } = await supabase.from('conversations').select('*').eq('id', cid).maybeSingle();
+  if (error) {
+    console.error('Error fetching conversation from Supabase', error.message);
+    throw error;
+  }
   if (data) {
     console.log("Conversation found", cid);
     await redis.set(redisKey, JSON.stringify(data.memory_json), { EX: 3600 });
     return data.memory_json;
   }
   console.log("No conversation found", cid);
-  // no conversation found
+  // No conversation found; start fresh
   return {
     messages: [],
     summary: '',
   };
 };
 
-const persistConversation = async (cid, memory) => {
+const persistConversation = async (cid, memory, userId) => {
   console.log("Persisting conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
   await redis.set(redisKey, JSON.stringify(memory), { EX: 3600 });
   const upsert = {
     id: cid,
+    user_id: userId,
     memory_json: memory,
     last_updated: new Date().toISOString(),
   };
@@ -58,6 +67,15 @@ export const addMessages = async (req, res) => {
 
     if (!cid || !Array.isArray(msg) || msg.length === 0) {
       return res.status(400).json({ error: 'cid and msg[] required' });
+    }
+
+    // Extract user ID from JWT in Authorization header
+    const authHeader = req.headers.authorization || '';
+    let userId = null;
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.sub) userId = decoded.sub;
     }
 
     let memory = await fetchConversation(cid);
@@ -85,7 +103,13 @@ export const addMessages = async (req, res) => {
       }
     }
 
-    await persistConversation(cid, memory);
+    await persistConversation(cid, memory, userId);
+
+    // If the incoming delta didn't originate from user, skip assistant generation
+    const lastIncoming = msg[msg.length - 1];
+    if (lastIncoming.role !== 'user') {
+      return res.json({ assistant: null, cid });
+    }
 
     // optionally build prompt and get assistant reply
     const prompt = buildPrompt(memory);
@@ -93,7 +117,7 @@ export const addMessages = async (req, res) => {
 
     // Append assistant message
     memory.messages.push(assistantMessage);
-    await persistConversation(cid, memory);
+    await persistConversation(cid, memory, userId);
     console.log("Persisted conversation", cid);
     console.log("Assistant message", assistantMessage);
 

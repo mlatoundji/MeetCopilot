@@ -21,6 +21,9 @@ export class MeetingPage {
     // Constantes pour les sources audio
     this.SYSTEM_SOURCE = 'system';
     this.MIC_SOURCE = 'mic';
+    // Labels pour context
+    this.systemLabel = this.app.conversationContextHandler.systemLabel;
+    this.micLabel = this.app.conversationContextHandler.micLabel;
 
     this.isRecording = false;
     this.systemCapture = null;
@@ -300,7 +303,7 @@ export class MeetingPage {
       if (!this.audioCapture.isSystemRecording) {
         // Réinitialiser le contexte de conversation
         if (this.app && this.app.conversationContextHandler) {
-          this.app.conversationContextHandler.resetConversationContext();
+          //this.app.conversationContextHandler.resetConversationContext();
           this.app.conversationContextHandler.lastSummaryTime = Date.now();
         }
         
@@ -315,8 +318,47 @@ export class MeetingPage {
         this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, true);
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
         
-        // Démarrer la transcription
-        await this.startTranscription(this.SYSTEM_SOURCE);
+        // Transcription : silence-mode ou polling
+        if (this.app.useSilenceMode) {
+          console.log("Using silence mode");
+          this.audioCapture.onUtteranceStart = (src) => {
+            console.log(`Utterance started for source: ${src}`);
+          };
+          this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+            console.log(`Utterance ended for source: ${src}`);
+            const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
+            const sampleRate = src === this.SYSTEM_SOURCE
+              ? this.audioCapture.systemAudioContext?.sampleRate
+              : this.audioCapture.micAudioContext?.sampleRate || 44100;
+            const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
+            const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+            if (transcription) {
+              console.log(`Transcription (${contextLabel}):`, transcription);
+              const filteredText = this.app.filterTranscription
+                ? this.app.filterTranscription(transcription, this.app.currentLanguage)
+                : transcription;
+              if (filteredText) {
+                // Mise à jour du contexte
+                this.app.conversationContextHandler.conversationContextDialogs.push({
+                  speaker: contextLabel,
+                  text: filteredText,
+                  time: Date.now(),
+                  language: this.app.currentLanguage,
+                  source: src
+                });
+                // Enqueue pour le backend
+                if (this.app.conversationContextHandler.unsentMessages) {
+                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'assistant';
+                  this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
+                }
+                await this.app.conversationContextHandler.updateConversationContext();
+                this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+              }
+            }
+          };
+        } else {
+          await this.startTranscription(this.SYSTEM_SOURCE);
+        }
         
         // Mettre à jour l'état des boutons
         this.updateButtonStates();
@@ -340,6 +382,9 @@ export class MeetingPage {
       this.audioCapture.stopSystemCapture();
       this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, false);
       this.uiHandler.closeVideoElement();
+      // Clear silence-detection handlers
+      this.audioCapture.onUtteranceStart = null;
+      this.audioCapture.onUtteranceEnd = null;
       this.updateButtonStates();
     }
   }
@@ -350,7 +395,39 @@ export class MeetingPage {
       if (!this.audioCapture.isMicRecording) {
         await this.audioCapture.startMicCapture();
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
-        await this.startTranscription(this.MIC_SOURCE);
+        // Transcription : silence-mode ou polling
+        if (this.app.useSilenceMode) {
+          console.log("Using silence mode");
+          this.audioCapture.onUtteranceStart = (src) => {
+            console.log(`Utterance started for source: ${src}`);
+          };
+          this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+            console.log(`Utterance ended for source: ${src}`);
+            const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
+            const sampleRate = src === this.SYSTEM_SOURCE
+              ? this.audioCapture.systemAudioContext?.sampleRate
+              : this.audioCapture.micAudioContext?.sampleRate || 44100;
+            const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
+            const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
+            if (transcription) {
+              console.log(`Transcription (${contextLabel}):`, transcription);
+              const filteredText = this.app.filterTranscription
+                ? this.app.filterTranscription(transcription, this.app.currentLanguage)
+                : transcription;
+              if (filteredText) {
+                this.app.conversationContextHandler.conversationContextDialogs.push({ speaker: contextLabel, text: filteredText, time: Date.now(), language: this.app.currentLanguage, source: src });
+                if (this.app.conversationContextHandler.unsentMessages) {
+                  const role = contextLabel === this.app.conversationContextHandler.micLabel ? 'user' : 'assistant';
+                  this.app.conversationContextHandler.unsentMessages.push({ role, content: filteredText });
+                }
+                await this.app.conversationContextHandler.updateConversationContext();
+                this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+              }
+            }
+          };
+        } else {
+          await this.startTranscription(this.MIC_SOURCE);
+        }
         this.updateButtonStates();
       }
     } catch (error) {
@@ -370,6 +447,9 @@ export class MeetingPage {
       
       this.audioCapture.stopMicCapture();
       this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, false);
+      // Clear silence-detection handlers
+      this.audioCapture.onUtteranceStart = null;
+      this.audioCapture.onUtteranceEnd = null;
       this.updateButtonStates();
     }
   }

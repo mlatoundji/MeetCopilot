@@ -2,7 +2,6 @@ import express from 'express';
 import { generateSummaryViaMistral, generateBatchSummaries } from '../controllers/summaryController.js';
 import { getCacheStats, clearAllCaches } from '../utils/cache.js';
 import { generateLocalSuggestions, generateLocalBatchSuggestions } from '../services/localLLMService.js';
-import { authenticateUser } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -43,7 +42,7 @@ router.get('/cache/stats', (req, res) => {
 });
 
 // Protected cache clearing endpoint
-router.post('/cache/clear', authenticateUser, (req, res) => {
+router.post('/cache/clear', (req, res) => {
     clearAllCaches();
     res.json({ message: 'All caches cleared successfully' });
 });

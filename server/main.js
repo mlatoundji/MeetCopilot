@@ -11,6 +11,8 @@ import meetingsRouter from './routes/meetingsRoutes.js';
 import { fileURLToPath } from 'url';
 import { metricsMiddleware } from './middleware/metricsMiddleware.js';
 import conversationRouter from './routes/conversationRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import registerRoutes from './routes/registerRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -78,6 +80,8 @@ app.use('/api/transcribe', transcriptionRoutes);
 app.use('/transcribe', transcriptionRoutes);
 app.use('/api/meetings', meetingsRouter);
 app.use('/api/conversation', conversationRouter);
+app.use('/api/login', authRoutes);
+app.use('/api/register', registerRoutes);
 
 // Function to sanitize URL for logging
 function sanitizeUrl(url) {
@@ -136,4 +140,6 @@ app.listen(PORT, () => {
     console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
     console.log(`- POST /api/meetings`);
     console.log(`- POST /api/conversation`);
+    console.log(`- POST /api/login`);
+    console.log(`- POST /api/register`);
 });
