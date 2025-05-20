@@ -12,17 +12,36 @@ export default class AuthPage {
     this.apiHandler = new APIHandler();
   }
 
+  // Initialize the auth page by rendering its content
+  async init() {
+    await this.render();
+  }
+
   async render() {
-    // Hide main application UI
-    if (this.container) this.container.style.display = 'none';
-    this.app.ui.hideSidebar();
+    // Hide the main application layout (header/sidebar) and apply auth styles
+    const appLayout = document.querySelector('.app-layout-vertical');
+    if (appLayout) appLayout.style.display = 'none';
+    document.body.classList.remove('no-global-ui'); // ensure CSS from auth.html applies
     const transcription = document.querySelector('.transcription');
     if (transcription) transcription.style.display = 'none';
 
     // Load the combined auth (login/register) HTML
     const res = await fetch('pages/html/auth.html');
-    const html = await res.text();
-    this.loginRoot.innerHTML = html;
+    const htmlText = await res.text();
+    // Parse the fetched HTML to extract styles and the auth container
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+    // Append <link> and <style> from auth.html to document head
+    doc.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
+      document.head.appendChild(node.cloneNode(true));
+    });
+    // Extract only the main container from auth.html
+    const containerLogin = doc.querySelector('.container-login');
+    if (containerLogin) {
+      this.loginRoot.innerHTML = containerLogin.outerHTML;
+    } else {
+      this.loginRoot.innerHTML = htmlText;
+    }
 
     // Append to DOM if not already present
     if (!document.getElementById('login-root')) {
@@ -68,6 +87,7 @@ export default class AuthPage {
           const token = resp.access_token;
           if (!token) throw new Error(resp.error || 'Authentication failed');
           localStorage.setItem('jwt', token);
+          this.destroy();
           window.location.hash = 'home';
         } catch (err) {
           alert(err.message);
@@ -98,12 +118,19 @@ export default class AuthPage {
         try {
           const resp = await this.apiHandler.callApi(
             `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/register`,
-            { method: 'POST', body: JSON.stringify({ email, password }) }
+            { method: 'POST', body: JSON.stringify({ name, email, password }) }
           );
-          const token = resp.access_token;
-          if (!token) throw new Error(resp.error || 'Registration failed');
-          localStorage.setItem('jwt', token);
-          window.location.hash = 'home';
+          if (resp.access_token) {
+            localStorage.setItem('jwt', resp.access_token);
+            this.destroy();
+            window.location.hash = 'home';
+          } else if (resp.user) {
+            alert('Inscription réussie ! Veuillez confirmer votre email avant de vous connecter.');
+            slider.classList.remove('moveslider');
+            formSection.classList.remove('form-section-move');
+          } else {
+            throw new Error(resp.error || 'Registration failed');
+          }
         } catch (err) {
           alert(err.message);
         } finally {
@@ -134,11 +161,13 @@ export default class AuthPage {
       registerSubmit.removeEventListener('click', this.registerSubmitHandler);
     }
 
-    // Remove root and restore main UI
+    // Remove auth UI and restore main layout
     if (this.loginRoot.parentElement) {
       this.loginRoot.parentElement.removeChild(this.loginRoot);
     }
-    if (this.container) this.container.style.display = 'grid';
+    const appLayout = document.querySelector('.app-layout-vertical');
+    if (appLayout) appLayout.style.display = 'flex';
+    document.body.classList.remove('no-global-ui');
     this.app.ui.showSidebar();
     const transcription = document.querySelector('.transcription');
     if (transcription) transcription.style.display = '';

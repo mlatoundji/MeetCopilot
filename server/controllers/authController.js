@@ -27,12 +27,20 @@ export const login = async (req, res) => {
 // Add user registration
 export const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name
+        }
+      }
+    });
     if (error) {
       return res.status(400).json({ error: error.message });
     }

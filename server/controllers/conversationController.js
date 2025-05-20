@@ -28,7 +28,7 @@ const fetchConversation = async (cid) => {
   if (memory) return JSON.parse(memory);
 
   // Try to fetch existing conversation; maybeSingle returns null if not found
-  const { data, error } = await supabase.from('conversations').select('*').eq('id', cid).maybeSingle();
+  const { data, error } = await supabase.from('conversations').select('*').eq('cid', cid).maybeSingle();
   if (error) {
     console.error('Error fetching conversation from Supabase', error.message);
     throw error;
@@ -51,12 +51,12 @@ const persistConversation = async (cid, memory, userId) => {
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
   await redis.set(redisKey, JSON.stringify(memory), { EX: 3600 });
   const upsert = {
-    id: cid,
+    cid: cid,
     user_id: userId,
     memory_json: memory,
-    last_updated: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
-  const { error } = await supabase.from('conversations').upsert(upsert, { onConflict: 'id' });
+  const { error } = await supabase.from('conversations').upsert(upsert, { onConflict: 'cid' });
   if (error) console.error('Supabase upsert conv fail', error.message);
 };
 
@@ -112,14 +112,16 @@ export const addMessages = async (req, res) => {
     }
 
     // optionally build prompt and get assistant reply
+    console.log("Building prompt");
     const prompt = buildPrompt(memory);
+    console.log("Prompt built", prompt);
     const assistantMessage = await chatCompletion(prompt);
+    console.log("Assistant message", assistantMessage);
 
     // Append assistant message
     memory.messages.push(assistantMessage);
     await persistConversation(cid, memory, userId);
     console.log("Persisted conversation", cid);
-    console.log("Assistant message", assistantMessage);
 
     res.json({ assistant: assistantMessage, cid });
   } catch (err) {
