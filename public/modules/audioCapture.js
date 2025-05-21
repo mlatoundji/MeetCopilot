@@ -244,11 +244,11 @@ export class AudioCapture {
                 this.utteranceInProgress.mic = false;
                 // Flush raw buffer and invoke callback
                 const bufferedAudio = this.micRawBuffer.reduce((acc, val) => {
-                  const tmp = new Float32Array(acc.length + val.length);
-                  tmp.set(acc, 0);
-                  tmp.set(val, acc.length);
-                  return tmp;
-                }, new Float32Array());
+                    const tmp = new Float32Array(acc.length + val.length);
+                    tmp.set(acc, 0);
+                    tmp.set(val, acc.length);
+                    return tmp;
+                  }, new Float32Array());
                 this.micRawBuffer = [];
                 this.micBuffer = [];
                 if (this.onUtteranceEnd) this.onUtteranceEnd('mic', bufferedAudio);
@@ -257,13 +257,17 @@ export class AudioCapture {
   
             this.isMicRecording = true;
             this.startBufferCleanup();
+            return true;
           }
+          return false;
         } catch (error) {
           console.error('Error in startMicCapture:', error);
           this.isMicRecording = false;
           alert('Microphone permission denied. Please allow access to your microphone to continue.');
+          return false;
         }
       }
+      return false;
     }
   
     stopMicCapture() {

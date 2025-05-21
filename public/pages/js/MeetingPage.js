@@ -30,7 +30,7 @@ export class MeetingPage {
     this.micCapture = null;
     this.selectedTranslations = this.uiHandler.getTranslations();
     // Silence-mode auto-flush timeout: duration in ms (0 to disable)
-    this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 60000;
+    this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 10000;
     this.enableSilenceTimeout = this.silenceTimeoutDuration > 0;
     this.systemSilenceTimeoutId = null;
     this.micSilenceTimeoutId = null;
@@ -325,8 +325,8 @@ export class MeetingPage {
         
         // Transcription : silence-mode ou polling
         if (this.app.useSilenceMode) {
-          // use consolidated silence-mode handlers
-          this.setupSilenceModeHandlers();
+          // use consolidated silence-mode handlers for system source
+          this.setupSilenceModeHandlers(this.SYSTEM_SOURCE);
           // schedule initial auto-flush if enabled
           if (this.enableSilenceTimeout) {
             this.systemSilenceTimeoutId = setTimeout(() => {
@@ -412,8 +412,9 @@ export class MeetingPage {
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
         // Transcription : silence-mode ou polling
         if (this.app.useSilenceMode) {
-          // use consolidated silence-mode handlers
-          this.setupSilenceModeHandlers();
+          console.log("Using Silence Mode : Mic")
+          // use consolidated silence-mode handlers for mic source
+          this.setupSilenceModeHandlers(this.MIC_SOURCE);
           // schedule initial auto-flush if enabled
           if (this.enableSilenceTimeout) {
             this.micSilenceTimeoutId = setTimeout(() => {
@@ -618,7 +619,7 @@ export class MeetingPage {
   }
 
   // Helper: assign silence-mode utterance handlers and manage auto-flush timeouts
-  setupSilenceModeHandlers() {
+  setupSilenceModeHandlers(src) {
     console.log("Using silence mode");
     this.audioCapture.onUtteranceStart = (src) => {
       console.log(`Utterance started for source: ${src}`);

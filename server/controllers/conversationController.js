@@ -24,8 +24,13 @@ const SUMMARY_TOKEN_THRESHOLD = 3500; // if prompt tokens exceed, force summary
 const fetchConversation = async (cid) => {
   console.log("Fetching conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
-  let memory = await redis.get(redisKey);
-  if (memory) return JSON.parse(memory);
+  let memoryRaw;
+  try {
+    memoryRaw = await redis.get(redisKey);
+  } catch (err) {
+    console.warn('Redis get failed', err.message);
+  }
+  if (memoryRaw) return JSON.parse(memoryRaw);
 
   // Try to fetch existing conversation; maybeSingle returns null if not found
   const { data, error } = await supabase.from('conversations').select('*').eq('cid', cid).maybeSingle();
@@ -35,7 +40,11 @@ const fetchConversation = async (cid) => {
   }
   if (data) {
     console.log("Conversation found", cid);
-    await redis.set(redisKey, JSON.stringify(data.memory_json), { EX: 3600 });
+    try {
+      await redis.set(redisKey, JSON.stringify(data.memory_json), { EX: 3600 });
+    } catch (err) {
+      console.warn('Redis set failed', err.message);
+    }
     return data.memory_json;
   }
   console.log("No conversation found", cid);
@@ -49,7 +58,11 @@ const fetchConversation = async (cid) => {
 const persistConversation = async (cid, memory, userId) => {
   console.log("Persisting conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
-  await redis.set(redisKey, JSON.stringify(memory), { EX: 3600 });
+  try {
+    await redis.set(redisKey, JSON.stringify(memory), { EX: 3600 });
+  } catch (err) {
+    console.warn('Redis set failed', err.message);
+  }
   const upsert = {
     cid: cid,
     user_id: userId,
