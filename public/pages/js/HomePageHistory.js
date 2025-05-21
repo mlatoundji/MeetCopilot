@@ -241,14 +241,23 @@ export class HomePageHistory {
         const meetingsContainer = document.querySelector('.meetings-list');
         if (!meetingsContainer) return;
 
-        // Clear existing content
         meetingsContainer.innerHTML = '';
-
-        // Render filtered meetings
         this.filteredMeetings.forEach(meeting => {
             const card = this.createMeetingCard(meeting);
             meetingsContainer.appendChild(card);
         });
+    }
+
+    /**
+     * Moved from App: search meetings by query (logs for now).
+     */
+    async searchMeetings(query) {
+        try {
+            console.log('Searching for meetings with query:', query);
+            // Implement search logic if needed
+        } catch (error) {
+            console.error('Error searching meetings:', error);
+        }
     }
 }
 

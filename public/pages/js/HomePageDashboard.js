@@ -120,9 +120,9 @@ export default class HomePageDashboard {
     return `${h}:${m}:${s}`;
   }
 
-  handleSessionControl() {
-    if (this.app && typeof this.app.handleSessionControl === 'function') {
-      this.app.handleSessionControl();
+  async handleSessionControl() {
+    if (this.app) {
+      await this.app.uiHandler.populateMeetingModal();
     }
   }
 } 

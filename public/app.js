@@ -29,164 +29,20 @@ class App {
     this.backupHandler = new BackupHandler(this);
     this.ui = new UI();
     
+    this.sessionActive = false; 
+    
+    // Current app state
+    this.useSilenceMode = true; // toggle between interval and silence-detection modes
+    
+    this.currentLanguage = 'fr';
+    this.initializeLanguage();
+
     // Set up router
     this.router = new Router(this);
     this.router.initialize();
-
-    // Current app state
-    this.currentLanguage = 'fr';
-    this.useSilenceMode = true; // toggle between interval and silence-detection modes
-
     
-    this.sessionActive = false;
-    this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
-    this.currentMeetingTab = document.querySelector('[data-tab="current-meeting"]');
-
-    this.meetingInfos = {};
-
-    this.saveMeetingInfosButton = document.getElementById('saveMeetingInfosButton');
-    this.closeMeetingInfosButton = document.getElementById('closeMeetingInfosButton');
-    this.langSelect = document.getElementById('langSelect');
-    
-    this.loadInitialData();
-    
-    // Initialiser le routeur après que tout soit chargé
-    this.initializeRouter();
-    this.isListenersAttached = false;
-  }
-  
-  initializeRouter() {
-    // Initialize the existing router instance
-    if (this.router) {
-      this.router.initialize();
-    }
   }
 
-  setupEventListeners() {
-
-    // Utilisation de la délégation d'événements pour le bouton de démarrage de session
-    document.addEventListener('click', async (e) => {
-      if (e.target && e.target.id === 'startSessionButton') {
-        await this.handleStartSession();
-      }
-    });
-
-    
-
-    if (this.saveMeetingInfosButton) {
-      this.saveMeetingInfosButton.addEventListener('click', () => {
-        this.handleSaveMeetingInfos();
-      });
-    }
-    if (this.closeMeetingInfosButton) {
-      this.closeMeetingInfosButton.addEventListener('click', () => {
-        this.handleCloseMeetingInfos();
-      });
-    }
-
-    if (this.langSelect) {
-      this.langSelect.addEventListener('change', (e) => {
-        this.handleLanguageChange(e.target.value);
-      });
-    }
-
-    // Search functionality
-    const searchInput = document.querySelector('.search-input');
-    const searchButton = document.querySelector('.search-button');
-    if (searchInput && searchButton) {
-      searchButton.addEventListener('click', () => {
-        this.searchMeetings(searchInput.value);
-      });
-      searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          this.searchMeetings(searchInput.value);
-        }
-      });
-    }
-
-    // Initialize key event listeners
-    this.uiHandler.initializeKeydownEventListeners();
-
-    // Sidebar nav links
-    document.addEventListener('click', (e) => {
-      const button = e.target.closest('.sidebar-link');
-      if (button) {
-        const hash = button.getAttribute('data-hash');
-        if (hash) {
-          window.location.hash = hash;
-        }
-      }
-    });
-
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const nav = item.getAttribute('data-nav');
-        this.loadFragment(nav);
-      });
-    });
-  }
-
-  async handleSessionControl() {
-    await this.uiHandler.populateMeetingModal();
-  }
-
-  // Functions to handle meeting info modals
-  handleCloseMeetingInfos() {
-    console.log("close meeting")
-    this.uiHandler.closeMeetingModal();
-  }
-  
-  async handleSaveMeetingInfos() {
-    const values = this.uiHandler.meetingsInfosLabels.map(key => {
-      const input = document.getElementById(`input-${key}`);
-      return input.value.trim();
-    });
-    
-    // Construct meetingInfos as a single object with key-value pairs
-    this.meetingInfos = this.uiHandler.meetingsInfosLabels.reduce((acc, key, index) => {
-      acc[key] = values[index];
-      return acc;
-    }, {});
-    
-    let details = Object.entries(this.meetingInfos)
-      .map(([key, value]) => `* ${key} : ${value}`)
-      .join("\n");
-    
-    this.conversationContextHandler.updateMeetingInfosText(details);
-    this.conversationContextHandler.updateConversationContextHeadersText();
-    console.log("Meetings details :\n", this.conversationContextHandler.conversationContextMeetingInfosText);
-    
-    // Fermer la modale
-    this.uiHandler.closeMeetingModal();
-    
-    // Démarrer la session
-    await this.startSession();
-  }
-
-  async handleStartSession() {
-    if (this.uiHandler.mode === 'assiste') {
-      // Basculer vers l'onglet réunion si en mode assisté
-      const tabs = this.uiHandler.dynamicFields.querySelectorAll('.modal-tab');
-      tabs.forEach(t => t.classList.remove('active'));
-      this.uiHandler.dynamicFields.querySelector('[data-tab-modal="meeting"]').classList.add('active');
-      
-      this.uiHandler.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
-          content.classList.remove('active');
-      });
-      document.getElementById('meeting-tab').classList.add('active');
-      
-      // Afficher le bouton de sauvegarde
-      if (this.saveMeetingInfosButton) {
-          this.saveMeetingInfosButton.style.display = 'block';
-      }
-  } else {
-    // Fermer la modale
-    this.uiHandler.closeMeetingModal();
-    
-    // Démarrer la session
-    await this.startSession();
-  }
-}
 
   // Function to handle language change
   handleLanguageChange(newLang) {
@@ -205,49 +61,19 @@ class App {
     }
   }
 
-  async loadInitialData() {
+  async initializeLanguage() {
     try {
       // Initialize UI with language selection
       this.uiHandler.initialize((newLang) => {
         this.handleLanguageChange(newLang);
       });
       
-      // Apply initial translations
-      this.applyTranslations(this.currentLanguage);
-      
-      // Configuration des écouteurs d'événements
-      this.setupEventListeners();
     } catch (error) {
-      console.error('Error loading initial data:', error);
+      console.error('Error initializing language:', error);
       // Show error notification if available
       if (this.ui.showNotification) {
-        this.ui.showNotification('Error loading initial data', 'error');
+        this.ui.showNotification('Error initializing language', 'error');
       }
-    }
-  }
-
-  async searchMeetings(query) {
-    try {
-      // This would be implemented to search meetings in a real database
-      console.log('Searching for meetings with query:', query);
-      // For now, we'll just log the query
-    } catch (error) {
-      console.error('Error searching meetings:', error);
-      if (this.ui.showNotification) {
-        this.ui.showNotification('Error searching meetings', 'error');
-      }
-    }
-  }
-
-  async startSession() {
-    console.log("startSession App");
-    this.sessionActive = true;
-
-    this.backupHandler.initializeMeeting(this.meetingInfos);
-    this.router.navigate('meeting');
-    if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
-      this.router.currentPage.render();
-      this.router.currentPage.updateButtonStates();
     }
   }
 
@@ -276,9 +102,6 @@ class App {
           homePage.render();
         }
         tabKey = 'dashboard';
-      } else if (pageName === 'history') {
-        // For router-based history (if ever)
-        tabKey = 'history';
       } else {
         tabKey = null;
       }
@@ -290,38 +113,6 @@ class App {
     await this.router.navigate(initialPage);
     
     console.log("App initialized");
-  }
-
-  loadFragment(nav) {
-    if (nav === 'home' || nav === 'dashboard') {
-      if (this.router) {
-        this.router.navigate('home');
-      }
-      this.highlightSidebarItem('dashboard');
-      return;
-    }
-    fetch(`pages/html/${nav}.html`)
-      .then(res => res.text())
-      .then(html => {
-        const mainContent = document.getElementById('main-content');
-        mainContent.innerHTML = html;
-        // Attach event listeners only if they haven't been attached yet
-        if (!this.isListenersAttached) {
-          this.setupEventListeners();
-          this.isListenersAttached = true;
-        }
-        // If history tab clicked, load and render history via handler
-        if (nav === 'history') {
-          const historyHandler = new HomePageHistory(this);
-          historyHandler.init();
-        }
-        // Highlight the active sidebar tab
-        const navKey = nav === 'home' ? 'dashboard' : nav;
-        this.highlightSidebarItem(navKey);
-      })
-      .catch(() => {
-        document.getElementById('main-content').innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';
-      });
   }
 
   /**
