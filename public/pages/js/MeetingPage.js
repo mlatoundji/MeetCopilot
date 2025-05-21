@@ -584,9 +584,9 @@ export class MeetingPage {
   // Helper to trigger transcription for any audio segment
   async triggerTranscription(src, audioBuffer) {
     const contextLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
-    const sampleRate = src === this.SYSTEM_SOURCE
+    const sampleRate = (src === this.SYSTEM_SOURCE
       ? this.audioCapture.systemAudioContext?.sampleRate
-      : this.audioCapture.micAudioContext?.sampleRate || 44100;
+      : this.audioCapture.micAudioContext?.sampleRate) || 44100;
     const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
     const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
     if (transcription) {

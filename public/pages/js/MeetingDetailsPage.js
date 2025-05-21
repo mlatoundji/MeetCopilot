@@ -177,7 +177,7 @@ export class MeetingDetailsPage {
     }
 
     addStyles() {
-        const isDarkTheme = this.app.ui.theme === 'dark';
+        const isDarkTheme = this.app?.ui?.theme === 'dark';
         if (document.getElementById('meeting-details-styles')) return;
         const style = document.createElement('style');
         style.id = 'meeting-details-styles';

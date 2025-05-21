@@ -27,6 +27,11 @@ export default class AuthPage {
 
     // Load the combined auth (login/register) HTML
     const res = await fetch('pages/html/auth.html');
+    if (!res.ok) {
+      console.error(`Error loading auth HTML: ${res.status} ${res.statusText}`);
+      this.loginRoot.innerHTML = `<div class="error">Erreur de chargement du module d'authentification (status: ${res.status})</div>`;
+      return;
+    }
     const htmlText = await res.text();
     // Parse the fetched HTML to extract styles and the auth container
     const parser = new DOMParser();
