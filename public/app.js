@@ -4,7 +4,6 @@ import { UIHandler } from './modules/uiHandler.js';
 import { SuggestionsHandler } from './modules/suggestionsHandler.js';
 import { ConversationContextHandler } from './modules/conversationContextHandler.js';
 import { Router } from './modules/Router.js';
-import { filterTranscription } from './utils.js';
 import { UI } from './modules/ui.js';
 import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
@@ -19,8 +18,6 @@ class App {
     // Initialize API Handler first
     this.apiHandler = new APIHandler();
     
-    // Déterminer l'URL des réunions sur la base de l'APIHandler
-    let MEETINGS_API_URL = `${this.apiHandler.baseURL}/api/meetings`;
     
     // Initialize handlers that depend on API
     this.audioCapture = new AudioCapture();
@@ -29,7 +26,7 @@ class App {
     this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
     this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);
     this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
-    this.backupHandler = new BackupHandler(this, this.apiHandler);
+    this.backupHandler = new BackupHandler(this);
     this.ui = new UI();
     
     // Set up router
@@ -37,12 +34,9 @@ class App {
     this.router.initialize();
 
     // Current app state
-    this.filterTranscription = filterTranscription;
     this.currentLanguage = 'fr';
     this.useSilenceMode = true; // toggle between interval and silence-detection modes
 
-    // API URLs
-    this.MEETINGS_API_URL = MEETINGS_API_URL;
     
     this.sessionActive = false;
     this.dashboardTab = document.querySelector('[data-tab="dashboard"]');
@@ -138,6 +132,7 @@ class App {
 
   // Functions to handle meeting info modals
   handleCloseMeetingInfos() {
+    console.log("close meeting")
     this.uiHandler.closeMeetingModal();
   }
   
@@ -245,93 +240,22 @@ class App {
   }
 
   async startSession() {
+    console.log("startSession App");
     this.sessionActive = true;
 
     this.backupHandler.initializeMeeting(this.meetingInfos);
-
-    
-    // Naviguer vers la page de réunion
     this.router.navigate('meeting');
-    
-    // Démarrer les captures audio
-    // if (!this.audioCapture.isSystemRecording) {
-    //   await this.handleSystemCapture();
-    // }
-    // if (!this.audioCapture.isMicRecording) {
-    //   await this.handleMicCapture();
-    // }
-    
-
-
-    // Mettre à jour l'interface utilisateur via le router si nécessaire
     if (this.router && this.router.currentPage && this.router.currentPage.updateButtonStates) {
       this.router.currentPage.render();
       this.router.currentPage.updateButtonStates();
-    }
-
-  }
-
-  stopSession() {
-    this.sessionActive = false;
-    
-    // Clear transcription polling intervals to stop background polling
-    if (this.audioCapture.systemTranscriptionInterval) {
-      clearInterval(this.audioCapture.systemTranscriptionInterval);
-      this.audioCapture.systemTranscriptionInterval = null;
-    }
-    if (this.audioCapture.micTranscriptionInterval) {
-      clearInterval(this.audioCapture.micTranscriptionInterval);
-      this.audioCapture.micTranscriptionInterval = null;
-    }
-    
-    // Clear event-driven utterance callbacks
-    this.audioCapture.onUtteranceStart = null;
-    this.audioCapture.onUtteranceEnd = null;
-    
-    // Arrêter les captures audio
-    if (this.audioCapture.isSystemRecording) {
-      this.audioCapture.stopSystemCapture();
-      this.uiHandler.toggleCaptureButton(SYSTEM_SOURCE, false);
-      this.uiHandler.closeVideoElement();
-    }
-    
-    if (this.audioCapture.isMicRecording) {
-      this.audioCapture.stopMicCapture();
-      this.uiHandler.toggleCaptureButton(MIC_SOURCE, false);
-    }
-    
-    // Naviguer vers la page d'accueil
-    this.router.navigate('home');
-    
-    // Mettre à jour l'interface utilisateur
-    if (this.router.currentPage) {
-      this.router.currentPage.render();
     }
   }
 
   async init() {
     console.log("App initializing");
     this.uiHandler.setupLanguageSwitcher();
-    // Attacher le listener du bouton menu/sidebar UNE SEULE FOIS après que le DOM soit prêt
-    const collapseBtn = document.getElementById('collapseSidebar');
-    const sidebar = document.getElementById('main-sidebar');
-    if (collapseBtn && sidebar) {
-      collapseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (window.innerWidth <= 600) {
-          sidebar.classList.toggle('open');
-        } else {
-          sidebar.classList.toggle('collapsed');
-        }
-      });
-      document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 600 && sidebar.classList.contains('open')) {
-          if (!sidebar.contains(e.target) && e.target !== collapseBtn) {
-            sidebar.classList.remove('open');
-          }
-        }
-      });
-    }
+    // Delegate sidebar behavior to UI
+    this.ui.setupSidebar();
     
     // Ajout du listener pour initialiser les pages après leur chargement
     window.addEventListener('pageLoaded', (event) => {

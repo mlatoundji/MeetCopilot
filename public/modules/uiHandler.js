@@ -47,7 +47,7 @@ export class UIHandler {
                 micButtonStart: "Démarrer la capture micro",
                 micButtonStop: "Arrêter la capture micro",
                 suggestionButton: "Générer des suggestions",
-                startSessionButton: "Démarrer une session",
+                sessionControlButton: "Démarrer une session",
                 sessionButtonStop: "Arrêter la session",
                 saveMeetingInfosButton: "Enregistrer les infos",
                 closeMeetingInfosButton: "Fermer",
@@ -75,7 +75,7 @@ export class UIHandler {
                 micButtonStart: "Start Mic Capture",
                 micButtonStop: "Stop Mic Capture",
                 suggestionButton: "Generate Suggestions",
-                startSessionButton: "Start Session",
+                sessionControlButton: "Start a session",
                 sessionButtonStop: "Stop Session",
                 saveMeetingInfosButton: "Save Meeting Info",
                 closeMeetingInfosButton: "Close",
@@ -106,7 +106,7 @@ export class UIHandler {
     translateUI(lang) {
         const uiElements = {
             suggestionButton: this.suggestionButton,
-            startSessionButton: this.sessionControlButton,
+            sessionControlButton: this.sessionControlButton,
             saveMeetingInfosButton: this.saveMeetingInfosButton,
             closeMeetingInfosButton: this.closeMeetingInfosButton,
         };
@@ -162,7 +162,7 @@ export class UIHandler {
         if (this.sessionControlButton) {
             this.sessionControlButton.innerHTML = `
                 <span class="button-icon">🚀</span>
-                ${this.selectedTranslations.startSessionButton}
+                ${this.selectedTranslations.sessionControlButton}
             `;
         }
         

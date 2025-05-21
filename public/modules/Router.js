@@ -7,6 +7,8 @@ import { MeetingDetailsPage } from '../pages/js/MeetingDetailsPage.js';
 export class Router {
   constructor(app) {
     this.app = app;
+    this.apiHandler = this.app?.apiHandler;
+    this.meetings_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
     this.currentPage = null;
     this.pageModules = {}; // Cache for loaded page modules
     
@@ -105,7 +107,7 @@ export class Router {
       // Créer une nouvelle instance de MeetingDetailsPage
       const meetingDetailsPage = new MeetingDetailsPage(
         meetingId, 
-        this.app.MEETINGS_API_URL,
+        this.meetings_api_url,
         this.app
       );
       

@@ -1,15 +1,14 @@
 import { callApi } from '../utils.js';
 
 export class BackupHandler {
-    constructor(meetingsApiUrlOrAppWithApiHandler, app = null) {
-        if (typeof meetingsApiUrlOrAppWithApiHandler === 'string') {
-            this.meetingsApiUrl = meetingsApiUrlOrAppWithApiHandler;
-            this.apiHandler = app?.apiHandler || null;
-            this.app = app;
+    constructor(app, meetingsApiUrlOrApiHandler = null) {
+        this.app = app;
+        if (typeof meetingsApiUrlOrApiHandler === 'string') {
+            this.apiHandler = this.app?.apiHandler || null;
+            this.meetingsApiUrl = meetingsApiUrlOrApiHandler;
         } else {
-            this.app = meetingsApiUrlOrAppWithApiHandler;
-            this.apiHandler = this.app?.apiHandler;
-            this.meetingsApiUrl = this.app?.MEETINGS_API_URL || `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
+            this.apiHandler = meetingsApiUrlOrApiHandler || this.app?.apiHandler;
+            this.meetingsApiUrl = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
         }
         
         this.meetingData = {

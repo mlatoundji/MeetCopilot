@@ -3,7 +3,8 @@
 export class HomePageHistory {
     constructor(app) {
         this.app = app;
-        this.meetingsApiUrl = app.MEETINGS_API_URL;
+        this.apiHandler = this.app?.apiHandler;
+        this.meetingsApiUrl = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
         this.meetings = [];
         this.filteredMeetings = [];
     }

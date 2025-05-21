@@ -3,7 +3,8 @@ import HomePageHistory from './HomePageHistory.js';
 export default class HomePageDashboard {
   constructor(app) {
     this.app = app;
-    this.MEETINGS_API_URL = app.MEETINGS_API_URL;
+    this.apiHandler = this.app?.apiHandler;
+    this.meetings_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
     this.dashboardContainer = null;
   }
 
@@ -51,7 +52,7 @@ export default class HomePageDashboard {
       return;
     }
     try {
-      const res = await fetch(`${this.MEETINGS_API_URL}?saveMethod=local`);
+      const res = await fetch(`${this.meetings_api_url}?saveMethod=local`);
       const result = await res.json();
       const emptyLabel = list.querySelector('.no-recent-meetings');
       if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {

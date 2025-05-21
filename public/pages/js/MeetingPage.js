@@ -6,6 +6,7 @@ import { SuggestionsHandler } from '../../modules/suggestionsHandler.js';
 import { DataStore } from '../../modules/dataStore.js';
 import { AudioCapture } from '../../modules/audioCapture.js';
 import { LayoutManager } from '../../modules/layoutManager.js';
+import { filterTranscription } from '../../utils.js';
 
 export class MeetingPage {
   constructor(app) {
@@ -514,20 +515,18 @@ export class MeetingPage {
           const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
           if (transcription) {
             console.log(`Transcription (${contextLabel}):`, transcription);
-            if (this.app.filterTranscription) {
-              const filteredText = this.app.filterTranscription(transcription, this.app.currentLanguage);
-              if (filteredText === "") return;
+            const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
+            if (filteredText === "") return;
 
-              this.app.conversationContextHandler.conversationContextDialogs.push({
-                speaker: contextLabel,
-                text: filteredText,
-                time: Date.now(),
-                language: this.app.currentLanguage,
-                source: source
-              });
-              await this.app.conversationContextHandler.updateConversationContext();
-              this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
-            }
+            this.app.conversationContextHandler.conversationContextDialogs.push({
+              speaker: contextLabel,
+              text: filteredText,
+              time: Date.now(),
+              language: this.app.currentLanguage,
+              source: source
+            });
+            await this.app.conversationContextHandler.updateConversationContext();
+            this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
           }
         } catch (error) {
           console.error('Error in transcription loop:', error.message || error);
@@ -592,9 +591,7 @@ export class MeetingPage {
     const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
     if (transcription) {
       console.log(`Transcription (${contextLabel}):`, transcription);
-      const filteredText = this.app.filterTranscription
-        ? this.app.filterTranscription(transcription, this.app.currentLanguage)
-        : transcription;
+      const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
       if (filteredText) {
         // Update conversation context
         if (this.app.conversationContextHandler) {

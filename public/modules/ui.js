@@ -2,10 +2,7 @@ export class UI {
   constructor() {
     this.theme = localStorage.getItem('theme') || 'light';
     this.setupTheme();
-    this.setupTabs();
     this.setupSidebar();
-    this.setupTranscription();
-    this.setupResponsive();
     this.setupMeetingSidebar();
   }
 
@@ -50,39 +47,29 @@ export class UI {
     }
   }
 
-  setupTabs() {
-    const tabs = document.querySelectorAll('.tab');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        // Remove active class from all tabs and panes
-        tabs.forEach(t => t.classList.remove('active'));
-        tabPanes.forEach(p => p.classList.remove('active'));
-
-        // Add active class to clicked tab and corresponding pane
-        tab.classList.add('active');
-        const tabId = tab.getAttribute('data-tab');
-        document.getElementById(tabId).classList.add('active');
-      });
-    });
-  }
-
   setupSidebar() {
     const collapseButton = document.getElementById('collapseSidebar');
     const sidebar = document.querySelector('.sidebar');
     const sidebarItems = document.querySelectorAll('.sidebar-item');
-
-    // Collapse/expand logic
+    
+    // Collapse/expand logic with mobile open and outside-click closing
     if (collapseButton && sidebar) {
-      collapseButton.onclick = () => {
-        const meetingSidebar = document.querySelector('.meeting-sidebar');
-        if (meetingSidebar && meetingSidebar.style.display !== 'none') {
-          meetingSidebar.classList.toggle('collapsed');
-        } else if (sidebar) {
+      const onCollapseClick = (e) => {
+        e.stopPropagation();
+        if (window.innerWidth <= 600) {
+          sidebar.classList.toggle('open');
+        } else {
           sidebar.classList.toggle('collapsed');
         }
       };
+      collapseButton.addEventListener('click', onCollapseClick);
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 600 && sidebar.classList.contains('open')) {
+          if (!sidebar.contains(e.target) && e.target !== collapseButton) {
+            sidebar.classList.remove('open');
+          }
+        }
+      });
     }
 
     // Active state and navigation
@@ -108,75 +95,6 @@ export class UI {
         }
       });
     });
-  }
-
-  setupTranscription() {
-    const moveButton = document.getElementById('moveTranscription');
-    const transcription = document.querySelector('.transcription');
-    const mainContent = document.querySelector('.main-content');
-
-    if (moveButton && transcription && mainContent) {
-      let isMoved = false;
-      moveButton.addEventListener('click', () => {
-        isMoved = !isMoved;
-        if (isMoved) {
-          mainContent.appendChild(transcription);
-          transcription.style.position = 'absolute';
-          transcription.style.top = '50%';
-          transcription.style.left = '50%';
-          transcription.style.transform = 'translate(-50%, -50%)';
-          transcription.style.width = '80%';
-          transcription.style.height = '80%';
-          transcription.style.zIndex = '1000';
-        } else {
-          document.querySelector('.container').appendChild(transcription);
-          transcription.style.position = '';
-          transcription.style.top = '';
-          transcription.style.left = '';
-          transcription.style.transform = '';
-          transcription.style.width = '';
-          transcription.style.height = '';
-          transcription.style.zIndex = '';
-        }
-      });
-    }
-  }
-
-  setupResponsive() {
-    const handleResize = () => {
-      const container = document.querySelector('.container');
-      const sidebar = document.querySelector('.sidebar');
-      const transcription = document.querySelector('.transcription');
-
-      if (window.innerWidth <= 900) {
-        if (transcription) {
-          transcription.style.display = 'none';
-        }
-        if (sidebar) {
-          sidebar.classList.add('collapsed');
-        }
-      } else {
-        if (transcription) {
-          transcription.style.display = '';
-        }
-        if (sidebar) {
-          sidebar.classList.remove('collapsed');
-        }
-      }
-
-      if (window.innerWidth <= 600) {
-        if (sidebar) {
-          sidebar.style.display = 'none';
-        }
-      } else {
-        if (sidebar) {
-          sidebar.style.display = '';
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
   }
 
   // Utility method to show notifications
