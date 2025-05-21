@@ -75,10 +75,12 @@ export default class HomePageDashboard {
       const link = document.createElement('a');
       link.href = 'javascript:void(0)';
       link.textContent = 'Voir plus';
-      link.addEventListener('click', () => {
-        // Initialize and display the full history fragment
-        const historyHandler = new HomePageHistory(this.app);
-        historyHandler.init();
+      link.addEventListener('click', async () => {
+        // Navigate to full history fragment via HomePage
+        const homePage = this.app.router.getCurrentPage();
+        if (homePage && typeof homePage.loadFragment === 'function') {
+          await homePage.loadFragment('history');
+        }
       });
       moreLink.appendChild(link);
       list.appendChild(moreLink);

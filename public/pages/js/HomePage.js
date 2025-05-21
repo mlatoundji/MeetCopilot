@@ -129,6 +129,10 @@ async startSession() {
         const historyHandler = new HomePageHistory(this.app);
         await historyHandler.init();
       }
+      // Highlight the History tab in the sidebar
+      if (this.app && typeof this.app.highlightSidebarItem === 'function') {
+        this.app.highlightSidebarItem(nav);
+      }
     } catch (error) {
       const main = document.querySelector('.main-content');
       if (main) main.innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';
