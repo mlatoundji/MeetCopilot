@@ -86,7 +86,7 @@ export default class AuthPage {
         btn.disabled = true;
         try {
           const resp = await this.apiHandler.callApi(
-            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/login`,
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/auth/login`,
             { method: 'POST', body: JSON.stringify({ email, password }) }
           );
           const token = resp.access_token;
@@ -122,7 +122,7 @@ export default class AuthPage {
         btn.disabled = true;
         try {
           const resp = await this.apiHandler.callApi(
-            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/register`,
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/auth/register`,
             { method: 'POST', body: JSON.stringify({ name, email, password }) }
           );
           if (resp.access_token) {

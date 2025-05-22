@@ -1,12 +1,11 @@
 import redis from '../utils/redisClient.js';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { buildPrompt } from '../services/promptBuilder.js';
-import { chatCompletion } from '../services/mistralService.js';
 import dotenv from 'dotenv';
-import { summariseConversationChunk } from '../services/summarizerService.js';
 import { estimateTokens } from '../utils/tokenEstimator.js';
 import jwt from 'jsonwebtoken';
-
+import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
+import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
+import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
 dotenv.config();
 
 // Use service role key to bypass row-level security for backend operations
@@ -17,9 +16,16 @@ const supabase = createSupabaseClient(
 
 const CONV_KEY_PREFIX = 'conv:';
 
+const USE_AUTO_SUMMARIZATION = true;
+
 const SUMMARY_TRIGGER_EVERY = 8; // messages
 const WINDOW_MAX_TURNS = 10; // keep last N turns verbatim
 const SUMMARY_TOKEN_THRESHOLD = 3500; // if prompt tokens exceed, force summary
+
+const USE_AUTO_SUGGESTION = true
+
+const ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES = 10; // messages
+const ASSISTANT_SUGGESTION_TRIGGER_EVERY_TOKENS = 1000; // tokens
 
 const fetchConversation = async (cid) => {
   console.log("Fetching conversation", cid);
@@ -96,6 +102,7 @@ export const addMessages = async (req, res) => {
     memory.messages = (memory.messages || []).concat(msg);
 
     // === Auto-summary & sliding window ===
+    if (USE_AUTO_SUMMARIZATION) {
     const updatedTokenCount = estimateTokens(memory.messages);
     const needSummaryByCount = memory.messages.length >= WINDOW_MAX_TURNS + SUMMARY_TRIGGER_EVERY;
     const needSummaryByTokens = updatedTokenCount > SUMMARY_TOKEN_THRESHOLD;
@@ -105,9 +112,10 @@ export const addMessages = async (req, res) => {
       if (chunkToSummarise.length) {
         try {
           console.log("Summarising chunk", chunkToSummarise);
-          const summaryText = await summariseConversationChunk(chunkToSummarise);
+          const prompt = buildAssistantSummaryPrompt(chunkToSummarise);
+          const summary = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
           // Merge with existing summary (concatenate)
-          memory.summary = (memory.summary ? memory.summary + "\n" : '') + summaryText;
+          memory.summary = (memory.summary ? memory.summary + "\n" : '') + summary;
         } catch (err) {
           console.warn('Summarisation failed, proceeding without', err.message);
         }
@@ -115,28 +123,37 @@ export const addMessages = async (req, res) => {
         memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
       }
     }
+  }
 
     await persistConversation(cid, memory, userId);
 
-    // If the incoming delta didn't originate from user, skip assistant generation
-    // const lastIncoming = msg[msg.length - 1];
-    // if (lastIncoming.role !== 'user') {
+
+
+    let lastMessage = memory.messages[memory.messages.length - 1];
+    if (lastMessage.speaker === 'User') {
       return res.json({ assistant: null, cid });
-    // }
-
+      
+    }
     // optionally build prompt and get assistant reply
-    // console.log("Building prompt");
-    // const prompt = buildPrompt(memory);
-    // console.log("Prompt built", prompt);
-    // const assistantMessage = await chatCompletion(prompt);
-    // console.log("Assistant message", assistantMessage);
+    if (USE_AUTO_SUGGESTION) {
+      if (memory.messages.length % ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES === 0) {
+      const updatedTokenCount = estimateTokens(memory.messages);
+      console.log("Updated token count", updatedTokenCount);
+      const needAssistantSuggestionByTokens = updatedTokenCount > ASSISTANT_SUGGESTION_TRIGGER_EVERY_TOKENS;
+      if (needAssistantSuggestionByTokens) {
+        const prompt = buildAssistantSuggestionPrompt(memory);
+        const assistantMessage = await mistralChatCompletion(prompt);
+        // Append assistant message
+        memory.messages.push(assistantMessage);
+        await persistConversation(cid, memory, userId);
+        console.log("Persisted conversation", cid);
+        return res.json({ assistant: assistantMessage, cid });
+      }
+      return res.json({ assistant: null, cid });
+    }
+  }
 
-    // // Append assistant message
-    // memory.messages.push(assistantMessage);
-    // await persistConversation(cid, memory, userId);
-    // console.log("Persisted conversation", cid);
 
-    // res.json({ assistant: assistantMessage, cid });
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });

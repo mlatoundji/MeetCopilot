@@ -12,7 +12,6 @@ import { fileURLToPath } from 'url';
 import { metricsMiddleware } from './middleware/metricsMiddleware.js';
 import conversationRouter from './routes/conversationRoutes.js';
 import authRoutes from './routes/authRoutes.js';
-import registerRoutes from './routes/registerRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -72,16 +71,13 @@ app.get('/', (req, res) => {
 });
 
 // API Routes with and without /api prefix for backward compatibility
-app.use('/api/suggestions', suggestionRoutes);
-app.use('/suggestions', suggestionRoutes);
-app.use('/api/summary', summaryRoutes);
-app.use('/summary', summaryRoutes);
-app.use('/api/transcribe', transcriptionRoutes);
-app.use('/transcribe', transcriptionRoutes);
-app.use('/api/meetings', meetingsRouter);
-app.use('/api/conversation', conversationRouter);
-app.use('/api/login', authRoutes);
-app.use('/api/register', registerRoutes);
+const apiPrefix = '/api';
+app.use(apiPrefix + '/suggestions', suggestionRoutes);
+app.use(apiPrefix + '/summary', summaryRoutes);
+app.use(apiPrefix + '/transcribe', transcriptionRoutes);
+app.use(apiPrefix + '/meetings', meetingsRouter);
+app.use(apiPrefix + '/conversation', conversationRouter);
+app.use(apiPrefix + '/auth', authRoutes);
 
 // Function to sanitize URL for logging
 function sanitizeUrl(url) {
@@ -126,20 +122,24 @@ async function handleCleanup(signal) {
 process.on('SIGINT', () => handleCleanup('SIGINT'));
 process.on('SIGTERM', () => handleCleanup('SIGTERM'));
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log('Available routes:');
-    console.log(`- GET  /`);
-    console.log(`- POST /api/summary or /summary`);
-    console.log(`- POST /api/summary/batch or /summary/batch`);
-    console.log(`- GET  /api/cache/stats`);
-    console.log(`- POST /api/cache/clear`);
-    console.log(`- POST /api/transcribe/assemblyai or /transcribe/assemblyai`);
-    console.log(`- POST /api/transcribe/whisper or /transcribe/whisper`);
-    console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
-    console.log(`- POST /api/meetings`);
-    console.log(`- POST /api/conversation`);
-    console.log(`- POST /api/login`);
-    console.log(`- POST /api/register`);
-});
+// Start Server only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log('Available routes:');
+      console.log(`- GET  /`);
+      console.log(`- POST /api/summary or /summary`);
+      console.log(`- POST /api/summary/batch or /summary/batch`);
+      console.log(`- GET  /api/cache/stats`);
+      console.log(`- POST /api/cache/clear`);
+      console.log(`- POST /api/transcribe/assemblyai or /transcribe/assemblyai`);
+      console.log(`- POST /api/transcribe/whisper or /transcribe/whisper`);
+      console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
+      console.log(`- POST /api/meetings`);
+      console.log(`- POST /api/conversation`);
+      console.log(`- POST /api/auth/login`);
+      console.log(`- POST /api/auth/register`);
+  });
+}
+
+export default app;

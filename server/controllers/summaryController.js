@@ -1,15 +1,10 @@
 import fetch from 'node-fetch';
 import { getCachedSummary, setCachedSummary } from '../utils/cache.js';
 import crypto from 'crypto';
+import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
+import { chatCompletion as openAIChatCompletion } from '../services/openaiService.js';
+import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
 
-const SYSTEM_PROMPT = `
-Tu es un assistant IA chargé de résumer un segment de conversation. 
-Le résumé doit être concis (100-200 mots max) et mettre en avant les points clés et éventuellement la dernière question posée par l'interlocuteur [System]. 
-Tes réponses doivent être claires et précises et se concentrer sur les informations les plus importantes.
-Voici le format de la réponse attendue :
-- Points clés : ...
-- Dernière question : ...
-`;
 
 // Constants for validation
 const MAX_CONTEXT_LENGTH = 50000; // Maximum context length in characters
@@ -49,30 +44,23 @@ export const generateSummary = async (req, res) => {
             return res.status(400).json({ error: validation.error });
         }
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: context },
-                ],
-                max_tokens: 300,
-                temperature: 0.7,
-            }),
-        });
+        // Generate hash for caching
+        const contextHash = generateContextHash(context);
 
-        const data = await response.json();
-        if (!response.ok) {
-            console.log("Summary error: ", data);
-            return res.status(response.status).json({ error: data });
+        // Check cache first
+        const cachedSummary = getCachedSummary(contextHash);
+        if (cachedSummary) {
+            console.log("Returning cached summary");
+            return res.json({ summary: cachedSummary });
         }
-        console.log("Summary generated: ", data.choices[0].message.content);
-        res.json({ summary: data.choices[0].message.content });
+
+        const prompt = buildAssistantSummaryPrompt(context);
+        const summary = await openAIChatCompletion(prompt);
+
+        // Cache the summary
+        setCachedSummary(contextHash, summary);
+        res.json({ summary });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -99,32 +87,8 @@ export const generateSummaryViaMistral = async (req, res) => {
             return res.json({ summary: cachedSummary });
         }
 
-        const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'mistral-large-latest',
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: context },
-                ],
-                max_tokens: 300,
-                temperature: 0.7,
-            }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-            console.log("Summary error: ", data);
-            return res.status(response.status).json({ error: data });
-        }
-
-        const summary = data.choices[0].message.content;
-        console.log("Summary generated: ", summary);
+        const prompt = buildAssistantSummaryPrompt(context);
+        const summary = await mistralChatCompletion(prompt);
 
         // Cache the summary
         setCachedSummary(contextHash, summary);
@@ -166,30 +130,9 @@ export const generateBatchSummaries = async (req, res) => {
                     return { context, summary: cachedSummary };
                 }
 
-                const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        model: 'mistral-large-latest',
-                        messages: [
-                            { role: 'system', content: SYSTEM_PROMPT },
-                            { role: 'user', content: context },
-                        ],
-                        max_tokens: 300,
-                        temperature: 0.7,
-                    }),
-                });
+                const prompt = buildAssistantSummaryPrompt(context);
+                const summary = await openAIChatCompletion(prompt);
 
-                const data = await response.json();
-                if (!response.ok) {
-                    return { context, error: data };
-                }
-
-                const summary = data.choices[0].message.content;
                 setCachedSummary(contextHash, summary);
                 return { context, summary };
             })

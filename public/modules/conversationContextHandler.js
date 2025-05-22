@@ -29,8 +29,13 @@ export class ConversationContextHandler {
         this.summaryIntervalMinutes = 5;
         this.summaryInterval = this.summaryIntervalMinutes * 60 * 1000;
 
-        this.systemLabel = "System";
-        this.micLabel = "Mic";
+        this.assistantSuggestions = [];
+
+        this.SYSTEM_SOURCE = 'system';
+        this.MIC_SOURCE = 'mic';
+
+        this.systemLabel = "Guest";
+        this.micLabel = "User";
         this.conversationContextMeetingInfosText = "";
 
         this.conversationContextDialogsIndexStart = 0;
@@ -140,7 +145,7 @@ export class ConversationContextHandler {
     async updateConversationContext() {
 
         let lastSummariesCount = this.conversationContextSummaries.length;
-        const res = await this.maybeGenerateSummary();
+        // const res = await this.maybeGenerateSummary();
     
         if(this.conversationContextSummaries.length > 0 && res != null){
             this.conversationContextSummariesText =  this.conversationContextSummariesHeaderText;
@@ -169,7 +174,17 @@ export class ConversationContextHandler {
             try {
                 delta = this.unsentMessages.splice(0, this.unsentMessages.length);
                 console.log("Sending unsent messages", delta);
-                await this.apiHandler.sendConversationMessages(this.conversationId, delta);
+                const res = await this.apiHandler.sendConversationMessages(this.conversationId, delta);
+                if(res && res.assistant && res.assistant.content){
+                    // Display assistant reply in UI (as suggestion area)
+                    const assistantText = res.assistant.content;
+                    this.assistantSuggestions.push({ speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
+                    // no further recursive push to unsentMessages
+                    // update UI transcription
+                    if(typeof this.updateUIAfterAssistant === 'function'){
+                        this.updateUIAfterAssistant(assistantText);
+                    }
+                }
             } catch(err){
                 console.error('Failed to push conversation delta', err);
                 // Requeue messages on failure

@@ -2,14 +2,40 @@ import fetch from 'node-fetch';
 import { getCachedSuggestions, setCachedSuggestions } from '../utils/cache.js';
 import { generateLocalSuggestions } from '../services/localLLMService.js';
 import crypto from 'crypto';
-//import { generateSuggestionsViaMistral as generateMistralSuggestions } from './mistralController.js';
+import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
+import { chatCompletion as openAIChatCompletion } from '../services/openaiService.js';
+import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
+
 
 const TIMEOUT = 30000; // Increased to 30 seconds
 const MAX_RETRIES = 3;
 const CONCURRENT_REQUESTS = 2;
 
+const MAX_CONTEXT_LENGTH = 50000; // Maximum context length in characters
+const MIN_CONTEXT_LENGTH = 10;    // Minimum context length in characters
+
 const generateContextHash = (context) => {
     return crypto.createHash('md5').update(context).digest('hex');
+};
+
+const validateContext = (context) => {
+    if (typeof context !== 'string') {
+        return { valid: false, error: 'Context must be a string' };
+    }
+    
+    if (!context.trim()) {
+        return { valid: false, error: 'Context cannot be empty' };
+    }
+    
+    if (context.length > MAX_CONTEXT_LENGTH) {
+        return { valid: false, error: `Context exceeds maximum length of ${MAX_CONTEXT_LENGTH} characters` };
+    }
+    
+    if (context.length < MIN_CONTEXT_LENGTH) {
+        return { valid: false, error: `Context must be at least ${MIN_CONTEXT_LENGTH} characters long` };
+    }
+    
+    return { valid: true };
 };
 
 const retryWithExponentialBackoff = async (fn, retries = MAX_RETRIES, delay = 1000) => {
@@ -28,60 +54,21 @@ const retryWithExponentialBackoff = async (fn, retries = MAX_RETRIES, delay = 10
     throw lastError;
 };
 
-const makeAPIRequest = async (apiEndpoint, apiKey, systemPrompt, context) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
-    try {
-        console.log(`Making API request to ${apiEndpoint}`);
-        const response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                model: apiEndpoint.includes('mistral') ? 'mistral-large-latest' : 'gpt-4',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: context },
-                ],
-                max_tokens: 500,
-                temperature: 0.7,
-            }),
-            signal: controller.signal,
-            timeout: TIMEOUT
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+export const generateSuggestionsViaMistralFromConversation = async (req, res) => {
+        console.log("Generate Suggestions via Mistral AI from Conversation...");
+        try {
+            const { cid } = req.params;
+            const memory = await fetchConversation(cid);
+            const prompt = buildAssistantSuggestionPrompt(memory);
+            const suggestions = await retryWithExponentialBackoff(async () => {
+                return await mistralChatCompletion(prompt);
+            });
+            res.json({ suggestions });
+        } catch (err) {
+            console.error('conversation error', err);
+            res.status(500).json({ error: err.message });
         }
-
-        const data = await response.json();
-        if (!data.choices?.[0]?.message?.content) {
-            throw new Error('Invalid response format from API');
-        }
-
-        return data.choices[0].message.content;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error('Request timed out after ' + (TIMEOUT / 1000) + ' seconds');
-        }
-        throw error;
-    }
 };
-
-const systemPrompt = `
-    Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
-    suggestions de réponses d'utilisateurs dans une conversation.
-    Fournissez 2 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
-    Basez vos suggestions sur le contexte ci-dessous :
-`;
 
 export const generateSuggestionsViaMistral = async (req, res) => {
     try {
@@ -90,6 +77,11 @@ export const generateSuggestionsViaMistral = async (req, res) => {
 
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
+        }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
 
         // Generate hash for caching
@@ -102,14 +94,11 @@ export const generateSuggestionsViaMistral = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making request to Mistral API...");
         const suggestions = await retryWithExponentialBackoff(async () => {
-            return await makeAPIRequest(
-                'https://api.mistral.ai/v1/chat/completions',
-                process.env.MISTRAL_API_KEY,
-                systemPrompt,
-                context
-            );
+            return await mistralChatCompletion(prompt);
         });
 
         // Cache the suggestions
@@ -134,6 +123,11 @@ export const generateSuggestionsViaOpenAI = async (req, res) => {
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
         }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
         
         const contextHash = generateContextHash(context);
         const cachedSuggestions = getCachedSuggestions(contextHash);
@@ -142,14 +136,11 @@ export const generateSuggestionsViaOpenAI = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making request to OpenAI API...");
         const suggestions = await retryWithExponentialBackoff(async () => {
-            return await makeAPIRequest(
-                'https://api.openai.com/v1/chat/completions',
-                process.env.OPENAI_API_KEY,
-                systemPrompt,
-                context
-            );
+            return await openAIChatCompletion(prompt);
         });
 
         setCachedSuggestions(contextHash, suggestions);
@@ -172,6 +163,11 @@ export const generateParallelSuggestions = async (req, res) => {
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
         }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
         
         const contextHash = generateContextHash(context);
         const cachedSuggestions = getCachedSuggestions(contextHash);
@@ -180,24 +176,16 @@ export const generateParallelSuggestions = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making parallel requests to both APIs...");
         const [mistralSuggestions, openAISuggestions] = await Promise.all([
             retryWithExponentialBackoff(async () => {
-                return await makeAPIRequest(
-                    'https://api.mistral.ai/v1/chat/completions',
-                    process.env.MISTRAL_API_KEY,
-                    systemPrompt,
-                    context
-                );
+                return await mistralChatCompletion(prompt);
             }).catch(error => ({ error: error.message })),
             
             retryWithExponentialBackoff(async () => {
-                return await makeAPIRequest(
-                    'https://api.openai.com/v1/chat/completions',
-                    process.env.OPENAI_API_KEY,
-                    systemPrompt,
-                    context
-                );
+                return await openAIChatCompletion(prompt);
             }).catch(error => ({ error: error.message }))
         ]);
 
@@ -230,6 +218,11 @@ export const generateSuggestionsViaLocal = async (req, res) => {
                 error: 'Context is required',
                 details: 'Please provide a context in the request body'
             });
+        }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
 
         console.log('Generate Suggestions via Local Mistral...');
@@ -271,6 +264,11 @@ export const generateSuggestionsWithFallback = async (req, res) => {
             return res.status(400).json({ error: 'Context is required' });
         }
 
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         // Generate hash for caching
         const contextHash = generateContextHash(context);
         
@@ -294,15 +292,12 @@ export const generateSuggestionsWithFallback = async (req, res) => {
             console.warn("Local LLM failed, falling back to Mistral:", localError.message);
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         // Fallback to Mistral if local LLM fails
         console.log("Falling back to Mistral API...");
         const mistralSuggestions = await retryWithExponentialBackoff(async () => {
-            return await makeAPIRequest(
-                'https://api.mistral.ai/v1/chat/completions',
-                process.env.MISTRAL_API_KEY,
-                systemPrompt,
-                context
-            );
+            return await mistralChatCompletion(prompt);
         });
 
         // Cache the suggestions

@@ -26,6 +26,13 @@ class App {
     this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
     this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);
     this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
+    // Bind assistant reply UI update
+    this.conversationContextHandler.updateUIAfterAssistant = (assistantText) => {
+      // For now, show assistant reply in suggestions panel
+      if(this.uiHandler){
+        this.uiHandler.updateSuggestions(assistantText);
+      }
+    };
     this.backupHandler = new BackupHandler(this);
     this.ui = new UI();
     
