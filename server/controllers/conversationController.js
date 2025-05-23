@@ -6,6 +6,8 @@ import jwt from 'jsonwebtoken';
 import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
 import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
 import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
+import fetch from 'node-fetch';
+
 dotenv.config();
 
 // Use service role key to bypass row-level security for backend operations
@@ -26,6 +28,8 @@ const USE_AUTO_SUGGESTION = true
 
 const ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES = 10; // messages
 const ASSISTANT_SUGGESTION_TRIGGER_EVERY_TOKENS = 1000; // tokens
+
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
 const fetchConversation = async (cid) => {
   console.log("Fetching conversation", cid);
@@ -157,5 +161,53 @@ export const addMessages = async (req, res) => {
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Stream conversation as server-sent events (SSE)
+export const streamConversation = async (req, res) => {
+  const { cid } = req.params;
+  // Set SSE headers
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive'
+  });
+  res.flushHeaders();
+  try {
+    // Rehydrate memory and build prompt
+    const memory = await fetchConversation(cid);
+    const messages = buildAssistantSuggestionPrompt(memory);
+    // Call Mistral with streaming
+    const response = await fetch(MISTRAL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ model: 'mistral-medium', messages, stream: true })
+    });
+    if (!response.ok) {
+      res.write(`data: ERROR ${response.status}\n\n`);
+      return res.end();
+    }
+    // Pipe chunks to client
+    const reader = response.body;
+    reader.on('data', chunk => {
+      const text = chunk.toString();
+      res.write(`data: ${text}\n\n`);
+    });
+    reader.on('end', () => {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+    reader.on('error', err => {
+      console.error('Stream error', err);
+      res.end();
+    });
+  } catch (err) {
+    console.error('Streaming failed', err);
+    res.end();
   }
 }; 

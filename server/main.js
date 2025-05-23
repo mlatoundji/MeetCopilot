@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import { metricsMiddleware } from './middleware/metricsMiddleware.js';
 import conversationRouter from './routes/conversationRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import compression from 'compression';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 let __dirname;
@@ -41,6 +42,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Add metrics instrumentation
 app.use(metricsMiddleware);
+
+// Add compression middleware for transport optimization
+app.use(compression({
+  brotli: { enabled: true, zlib: {} },
+  threshold: 512
+}));
 
 // Additional CORS headers for extra compatibility
 app.use((req, res, next) => {
