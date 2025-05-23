@@ -1,13 +1,7 @@
 {
   "scripts": {
     "start": "node ./server/main.js",
-    "test": "mocha tests/server/**/*.test.js --timeout 10000"
-  },
-  "jest": {
-    "testMatch": [
-      "**/tests/**/*.js?(x)",
-      "**/?(*.)+(spec|test).js?(x)"
-    ]
+    "test": "cross-env NODE_ENV=test jest --runInBand"
   },
   "name": "meetcopilot",
   "version": "1.0.0",
@@ -25,10 +19,15 @@
     "redis": "^5.0.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
+    "babel-jest": "^29.7.0",
     "chai": "^5.2.0",
     "chai-http": "^5.1.1",
+    "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "mocha": "^11.1.0",
-    "sinon": "^20.0.0"
+    "sinon": "^20.0.0",
+    "supertest": "^6.3.4"
   }
 }

@@ -13,7 +13,13 @@ import { metricsMiddleware } from './middleware/metricsMiddleware.js';
 import conversationRouter from './routes/conversationRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Determine __dirname differently in test environment to avoid import.meta.url errors
+let __dirname;
+if (process.env.NODE_ENV === 'test') {
+  __dirname = path.resolve();
+} else {
+  __dirname = path.dirname(fileURLToPath(import.meta.url));
+}
 
 // Configuration
 dotenv.config();
