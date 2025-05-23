@@ -4,10 +4,11 @@ uploads/
 dist/
 data/
 *meetingcopilot-*.json
-_*
+_*/
 .cursor/
 .cursorignore
 StartMeetCopilot.ps1
 ProtoMeet/
 .vscode/
 start-vercel-mcp.ps1
+!server/__tests__
