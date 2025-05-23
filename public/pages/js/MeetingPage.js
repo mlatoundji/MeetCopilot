@@ -53,7 +53,7 @@ export class MeetingPage {
     this.transcriptionBox = document.querySelector('.transcription-box');
     this.screenCaptureSection = document.getElementById('screen-capture-section');
     this.suggestionsContainer = document.querySelector('.suggestions-container');
-    this.transcriptionSection = document.querySelector('.transcription');
+    this.transcriptionSection = document.getElementById('transcriptionArea');
     this.container = document.querySelector('.container');
     this.saveAndQuitButton = document.getElementById('saveAndQuitButton');
     this.quitButton = document.getElementById('quitButton');
@@ -174,6 +174,7 @@ export class MeetingPage {
 
   async render() {
     await this.loadFragment();
+    this.initializeElements();
 
     // Hide global header and main sidebar on meeting page
     const header = document.querySelector('.header-horizontal');
@@ -195,14 +196,12 @@ export class MeetingPage {
       meetingSidebar.classList.remove('collapsed');
     }
 
-    // S'assurer que les éléments responsive sont correctement initialisés
-    this.initializeElements();
-    this.bindEvents();
+    // Responsive elements initialization and event binding now handled in initialize()
 
     // S'assurer que l'affichage de la transcription est activé
     if (this.transcriptionSection) {
       this.transcriptionSection.style.display = 'flex';
-      if (this.container) this.container.classList.remove('no-transcription');
+      if (this.container) this.container.classList.add('no-transcription');
     }
 
     this.updateButtonStates();
@@ -643,7 +642,8 @@ export class MeetingPage {
           if (this.app.conversationContextHandler.unsentMessages) {
             this.app.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
           }
-          await this.app.conversationContextHandler.updateConversationContext();
+          const updated = await this.app.conversationContextHandler.updateConversationContext();
+          console.log("updated", updated);
         }
         this.uiHandler.updateTranscription(
           this.app?.conversationContextHandler?.conversationContextText || filteredText
@@ -703,5 +703,15 @@ export class MeetingPage {
         else this.micSilenceTimeoutId = id;
       }
     };
+  }
+
+  // Add init alias for Router to call render and then initialize
+  async init() {
+    // Render the meeting page UI
+    await this.render();
+    // Call additional initialize logic if present
+    if (typeof this.initialize === 'function') {
+      await this.initialize();
+    }
   }
 } 

@@ -28,6 +28,7 @@ export class HomePage {
   }
 
   async render() {
+    console.log('[HomePage] render()');
     // Show global header and main sidebar on home page
     const header = document.querySelector('.header-horizontal');
     if (header) header.style.display = '';
@@ -44,8 +45,16 @@ export class HomePage {
     });
   }
 
-    // Functions to handle meeting info modals
-    handleCloseMeetingInfos() {
+  /**
+   * Initialize the home page when navigated to.
+   */
+  async init() {
+    console.log('[HomePage] init() called');
+    await this.render();
+  }
+
+  // Functions to handle meeting info modals
+  handleCloseMeetingInfos() {
     console.log("close meeting")
     this.app.uiHandler.closeMeetingModal();
   }

@@ -96,18 +96,8 @@ class App {
       console.log(`Page loaded: ${pageName}`);
       
       let tabKey;
-      if (pageName === 'meeting') {
-        // Initialiser la page de réunion
-        const meetingPage = this.router.getCurrentPage();
-        if (meetingPage && typeof meetingPage.initialize === 'function') {
-          meetingPage.initialize();
-        }
-        tabKey = null; // no sidebar tab for meeting
-      } else if (pageName === 'home') {
-        const homePage = this.router.getCurrentPage();
-        if (homePage && typeof homePage.render === 'function') {
-          homePage.render();
-        }
+     if (pageName === 'home') {
+        // Highlight Home dashboard
         tabKey = 'dashboard';
       } else {
         tabKey = null;

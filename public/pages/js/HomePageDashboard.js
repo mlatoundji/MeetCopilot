@@ -9,12 +9,14 @@ export default class HomePageDashboard {
   }
 
   async init() {
+    console.log('[HomePageDashboard] init() called');
     await this.loadFragment();
     this.bindEvents();
     await this.render();
   }
 
   async loadFragment() {
+    console.log('[HomePageDashboard] loadFragment() called');
     const main = document.querySelector('.main-content');
     if (!main) {
       console.error('Dashboard: .main-content not found');
