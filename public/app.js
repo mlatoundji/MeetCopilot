@@ -8,10 +8,6 @@ import { UI } from './modules/ui.js';
 import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
 import { DataStore } from './modules/dataStore.js';
-import { HomePageHistory } from './pages/js/HomePageHistory.js';
-
-const SYSTEM_SOURCE = 'system';
-const MIC_SOURCE = 'mic';
 
 class App {
   constructor() {

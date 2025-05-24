@@ -5,14 +5,11 @@ import { callApi } from '../utils.js';
  */
 
 export class SuggestionsHandler {
-  constructor(suggestionsApiUrlOrApiHandler) {
-    if (typeof suggestionsApiUrlOrApiHandler === 'string') {
-      this.suggestionsApiUrl = suggestionsApiUrlOrApiHandler;
-      this.apiHandler = null;
-    } else {
-      this.apiHandler = suggestionsApiUrlOrApiHandler;
-      this.suggestionsApiUrl = null;
-    }
+  constructor(apiHandler) {
+    this.apiHandler = apiHandler;
+    this.suggestionsApiUrl = this.apiHandler.getEndpoint('suggestions', 'mistral') || "http://localhost:3000/api/suggestions/mistral";
+    this.eventSource = null;
+    this.suggestionsMessage = '';
   }
 
   /**
@@ -32,10 +29,23 @@ export class SuggestionsHandler {
           body: JSON.stringify({ context }),
         });
       }
-      return response.suggestions || 'No suggestions found';
+      this.suggestionsMessage = response.suggestions || 'No suggestions found';
+      return this.suggestionsMessage;
     } catch (error) {
       console.error('Error generating suggestions:', error);
       return 'Error generating suggestions';
     }
   }
+
+  async startSuggestionsStreaming(cid) {
+    try {
+      const eventSource = await this.apiHandler.startSuggestionsStreaming(cid);
+      this.eventSource = eventSource;
+      return this.eventSource;
+    } catch (error) {
+      console.error('Error starting suggestions streaming:', error);
+      return null;
+    }
+  }
+  
 }

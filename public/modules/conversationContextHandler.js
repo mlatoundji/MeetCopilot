@@ -144,31 +144,16 @@ export class ConversationContextHandler {
 
     async updateConversationContext() {
 
-        let lastSummariesCount = this.conversationContextSummaries.length;
-        // const res = await this.maybeGenerateSummary();
-    
-        // if(this.conversationContextSummaries.length > 0 && res != null){
-        //     this.conversationContextSummariesText =  this.conversationContextSummariesHeaderText;
-        //     this.conversationContextSummariesText += this.conversationContextSummaries.map((key, index) => `Résumé #${index+1} (Tranche ${0+this.summaryIntervalMinutes*index}-${this.summaryIntervalMinutes+this.summaryIntervalMinutes*index}min) : ${key.text}`).slice(-3).join("\n");
-        // }
-    
-        // if(this.conversationContextSummaries.length > 0 && lastSummariesCount < this.conversationContextSummaries.length && res != null){
-        //     let malus = this.conversationContextDialogs.length > 0 ? 1 : 0;
-        //     this.conversationContextDialogsIndexStart = this.conversationContextDialogs.length - malus;
-        //     console.log("this.conversationContextDialogsIndexStart", this.conversationContextDialogsIndexStart);
-        // }
-    
-        // this.conversationContextDialogsText = this.conversationContextDialogs.length > 0 ? this.conversationContextDialogsHeaderText : "";
+        this.conversationContextDialogsText = "";
         this.conversationContextDialogsText += this.conversationContextDialogs.map((key, index) => `[${key.speaker}] ${key.text}`).slice(this.conversationContextDialogsIndexStart, this.conversationContextDialogs.length).join("\n");
         
-        console.log("Words count : ", this.conversationContextText.split(" ").length);
-
+        
         this.conversationContextText = `
         ${this.conversationContextHeaderText ? this.conversationContextHeaderText : ""}
-        ${this.conversationContextSummariesText ? this.conversationContextSummariesText : ""} 
         ${this.conversationContextDialogsText ? this.conversationContextDialogsText : ""}
         `;
-
+        console.log("Words count : ", this.conversationContextText.split(" ").length);
+        
         if(this.unsentMessages.length > 0 && this.apiHandler){
             let delta;
             try {

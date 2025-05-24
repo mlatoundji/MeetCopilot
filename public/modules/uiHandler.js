@@ -199,7 +199,7 @@ export class UIHandler {
             console.warn("UIHandler: Transcription element '#transcription' not found");
             return;
         }
-        this.transcriptionDiv.innerText = transcription;
+        this.transcriptionDiv.innerText = transcription || "No transcription available.";
     }
   
     /**

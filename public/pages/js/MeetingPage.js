@@ -73,7 +73,7 @@ export class MeetingPage {
       this.micCaptureButton.addEventListener('click', () => this.toggleMicCapture());
     }
     if (this.suggestionButton) {
-      this.suggestionButton.addEventListener('click', () => this.generateSuggestion());
+      this.suggestionButton.addEventListener('click', () => this.startSuggestionsStreaming());
     }
     if (this.saveAndQuitButton) {
       this.saveAndQuitButton.addEventListener('click', () => this.saveAndQuitMeeting());
@@ -618,6 +618,27 @@ export class MeetingPage {
     }
   }
 
+  async startSuggestionsStreaming() {
+    if (this.app && this.app.conversationContextHandler) {
+      const eventSource = await this.suggestionsHandler.startSuggestionsStreaming(this.app.conversationContextHandler.conversationId);
+      eventSource.onmessage = (e) => {
+        const data = e.data;
+        if (data === '[DONE]') {
+          this.suggestionsHandler.suggestionsMessage = '';
+          console.log("Streaming done");
+          eventSource.close();
+        } else {
+          const jsonData = JSON.parse(data);
+          this.suggestionsHandler.suggestionsMessage += jsonData.choices?.[0]?.delta?.content || '';
+          this.uiHandler.updateSuggestions(this.suggestionsHandler.suggestionsMessage);
+        }
+      }
+      eventSource.onerror = (e) => {
+        console.error("Error starting suggestions streaming:", e);
+      }
+    }
+  }
+
   // Helper to trigger transcription for any audio segment
   async triggerTranscription(src, audioBuffer) {
     const speakerLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
@@ -643,7 +664,6 @@ export class MeetingPage {
             this.app.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
           }
           const updated = await this.app.conversationContextHandler.updateConversationContext();
-          console.log("updated", updated);
         }
         this.uiHandler.updateTranscription(
           this.app?.conversationContextHandler?.conversationContextText || filteredText

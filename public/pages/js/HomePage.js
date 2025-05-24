@@ -112,15 +112,15 @@ export class HomePage {
 }
 
 async startSession() {
-  console.log("startSession App");
-  this.sessionActive = true;
+  console.log("startSession HomePage");
+    this.sessionActive = true;
 
-  this.app.backupHandler.initializeMeeting(this.meetingInfos);
-  this.app.router.navigate('meeting');
-  if (this.app.router && this.app.router.currentPage && this.app.router.currentPage.updateButtonStates) {
+    this.app.backupHandler.initializeMeeting(this.meetingInfos);
+    this.app.router.navigate('meeting');
+    if (this.app.router && this.app.router.currentPage && this.app.router.currentPage.updateButtonStates) {
     this.app.router.currentPage.render();
-    this.app.router.currentPage.updateButtonStates();
-  }
+    this.app.router.currentPage.updateButtonStates();}
+  
 }
 
   async loadFragment(nav) {

@@ -203,4 +203,31 @@ export class APIHandler {
       body: JSON.stringify({ msg: messages })
     });
   }
+
+  /**
+   * Génère des suggestions basées sur le contexte
+   * @param {string} cid - conversation id
+   * @returns {Promise<Object>} - Les suggestions générées
+   */
+  async startSuggestionsStreaming(cid) {
+    const url = `${this.baseURL}${this.apiPrefix}/conversation/${encodeURIComponent(cid)}/stream`;
+    const eventSource = new EventSource(url);
+    eventSource.onmessage = (e) => {
+      const data = e.data;
+      if (data === '[DONE]') {
+        console.log("Streaming done");
+        eventSource.close();
+      } else if (data.startsWith('ERROR')) {
+        console.error('Stream error:', data);
+        eventSource.close();
+      } else {
+        console.log("Streaming data:", data);
+      }
+    };
+    eventSource.onerror = (e) => {
+      console.error("Streaming error:", e);
+    };
+    return eventSource;
+  }
+  
 } 

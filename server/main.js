@@ -43,8 +43,19 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Add metrics instrumentation
 app.use(metricsMiddleware);
 
+// Only compress non-SSE responses to keep EventSource working
+const shouldCompress = (req, res) => {
+  // Do not compress server-sent events
+  if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+    return false;
+  }
+  // Fallback to default filter function
+  return compression.filter(req, res);
+};
+
 // Add compression middleware for transport optimization
 app.use(compression({
+  filter: shouldCompress,
   brotli: { enabled: true, zlib: {} },
   threshold: 512
 }));

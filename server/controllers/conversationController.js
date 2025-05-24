@@ -135,6 +135,7 @@ export const addMessages = async (req, res) => {
 
     let lastMessage = memory.messages[memory.messages.length - 1];
     if (lastMessage.speaker === 'User') {
+      console.log("User message, no assistant reply");
       return res.json({ assistant: null, cid });
       
     }
@@ -151,11 +152,13 @@ export const addMessages = async (req, res) => {
         memory.messages.push(assistantMessage);
         await persistConversation(cid, memory, userId);
         console.log("Persisted conversation", cid);
+        console.log("Assistant reply", assistantMessage);
         return res.json({ assistant: assistantMessage, cid });
       }
-      return res.json({ assistant: null, cid });
     }
   }
+  console.log("No assistant reply");
+  return res.json({ assistant: null, cid });
 
 
   } catch (err) {
@@ -175,9 +178,10 @@ export const streamConversation = async (req, res) => {
   });
   res.flushHeaders();
   try {
-    // Rehydrate memory and build prompt
+    // Fetch prior conversation + build prompt
     const memory = await fetchConversation(cid);
     const messages = buildAssistantSuggestionPrompt(memory);
+
     // Call Mistral with streaming
     const response = await fetch(MISTRAL_API_URL, {
       method: 'POST',
@@ -192,17 +196,17 @@ export const streamConversation = async (req, res) => {
       res.write(`data: ERROR ${response.status}\n\n`);
       return res.end();
     }
-    // Pipe chunks to client
-    const reader = response.body;
-    reader.on('data', chunk => {
-      const text = chunk.toString();
-      res.write(`data: ${text}\n\n`);
+
+    // Pipe Mistral's SSE directly to client
+    const stream = response.body;
+    stream.on('data', chunk => {
+      // Forward raw chunk (already in SSE format)
+      res.write(chunk);
     });
-    reader.on('end', () => {
-      res.write('data: [DONE]\n\n');
+    stream.on('end', () => {
       res.end();
     });
-    reader.on('error', err => {
+    stream.on('error', err => {
       console.error('Stream error', err);
       res.end();
     });
