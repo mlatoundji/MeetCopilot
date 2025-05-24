@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { estimateTokens } from '../utils/tokenEstimator.js';
 import jwt from 'jsonwebtoken';
 import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
-import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
+import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
 import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
 import fetch from 'node-fetch';
 
@@ -183,24 +183,17 @@ export const streamConversation = async (req, res) => {
     const messages = buildAssistantSuggestionPrompt(memory);
 
     // Call Mistral with streaming
-    const response = await fetch(MISTRAL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ model: 'mistral-medium', messages, stream: true })
-    });
-    if (!response.ok) {
-      res.write(`data: ERROR ${response.status}\n\n`);
+    let stream;
+    try {
+      stream = await mistralStreamChatCompletion(messages);
+    } catch (streamErr) {
+      console.error('Mistral streaming error', streamErr);
+      res.write(`data: ERROR ${streamErr.message}\n\n`);
       return res.end();
     }
 
     // Pipe Mistral's SSE directly to client
-    const stream = response.body;
     stream.on('data', chunk => {
-      // Forward raw chunk (already in SSE format)
       res.write(chunk);
     });
     stream.on('end', () => {

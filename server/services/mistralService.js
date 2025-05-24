@@ -40,3 +40,45 @@ export const chatCompletion = async (messages, { model = 'mistral-medium', max_t
   throw error;
 }
 }; 
+
+export const streamChatCompletion = async (messages, { model = 'mistral-medium', max_tokens = 256, temperature = 0.7, timeout = 30000 } = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(MISTRAL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify({ model, messages, max_tokens, temperature, stream: true }),
+    });
+  
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const stream = response.body;
+    stream.on('data', (chunk) => {
+      const str = chunk.toString().trim();
+      str.split(/\r?\n\r?\n/).forEach((part) => {
+        if (!part.startsWith('data:')) return;
+        const payload = part.replace(/^data:\s*/, '');
+        if (payload === '[DONE]') return;
+        try {
+          const parsed = JSON.parse(payload);
+          console.log(parsed);
+        } catch (err) {
+          console.error('Could not parse SSE chunk JSON', err);
+        }
+      });
+    });
+
+    return stream;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};  
