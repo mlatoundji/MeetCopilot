@@ -6,25 +6,20 @@ import { encode as cborEncode } from 'https://cdn.skypack.dev/cbor-x';
  */
 export class APIHandler {
   constructor() {
-    this.headers = {
-      'Accept': 'application/json'
-    };
-    
-    // Définir le préfixe de l'API
+    this.headers = { 'Accept': 'application/json' };
     this.apiPrefix = '/api';
-    
-    // Détermination dynamique du backend
-    // 1. L'application peut définir explicitement window.BACKEND_BASE_URL avant de charger les scripts.
-    // 2. Sinon, si le fichier est servi via http(s) **et** le port vaut 3000, on garde la même origine.
-    // 3. Dans les autres cas (par ex. front-end sur Vite :5173 ou file://), on utilise localhost:3000.
 
+    // Determine backend base URL:
+    // 1. Use explicit override if provided (e.g. <script>window.BACKEND_BASE_URL='https://localhost:3000'</script>)
+    // 2. Else derive from current page protocol and host
     if (typeof window !== 'undefined' && window.BACKEND_BASE_URL) {
-      this.baseURL = window.BACKEND_BASE_URL.replace(/\/$/, ''); // remove trailing slash
-    } else if (typeof window !== 'undefined' && window.location && window.location.origin.startsWith('http')) {
-      const { origin } = window.location;
-      const currentPort = new URL(origin).port;
-      this.baseURL = (currentPort === '' || currentPort === '3000') ? origin : 'http://localhost:3000';
+      this.baseURL = window.BACKEND_BASE_URL.replace(/\/$/, '');
+    } else if (typeof window !== 'undefined' && window.location && window.location.protocol && window.location.host) {
+      console.log("window.location.protocol", window.location.protocol);
+      console.log("window.location.host", window.location.host);
+      this.baseURL = `${window.location.protocol}//${window.location.host}`;
     } else {
+      // fallback for non-browser or unknown context
       this.baseURL = 'http://localhost:3000';
     }
   }

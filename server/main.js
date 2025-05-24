@@ -13,6 +13,8 @@ import { metricsMiddleware } from './middleware/metricsMiddleware.js';
 import conversationRouter from './routes/conversationRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import compression from 'compression';
+import http2 from 'http2';
+import fs from 'fs';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 let __dirname;
@@ -146,26 +148,19 @@ async function handleCleanup(signal) {
 process.on('SIGINT', () => handleCleanup('SIGINT'));
 process.on('SIGTERM', () => handleCleanup('SIGTERM'));
 
-// Start Server only if not in test environment
+// Start server with optional HTTP/2
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log('Available routes:');
-      console.log(`- GET  /`);
-      console.log(`- POST /api/summary or /summary`);
-      console.log(`- POST /api/summary/batch or /summary/batch`);
-      console.log(`- GET  /api/cache/stats`);
-      console.log(`- POST /api/cache/clear`);
-      console.log(`- POST /api/transcribe/assemblyai`);
-      console.log(`- POST /api/transcribe/whisper`);
-      console.log(`- POST /api/suggestions/local (Uses local LLM)`);
-      console.log(`- POST /api/meetings`);
-      console.log(`- POST /api/conversation`);
-      console.log(`- POST /api/auth/login`);
-      console.log(`- POST /api/auth/register`);
-      console.log(`- POST /api/conversation/:cid/messages`);
-      console.log(`- GET /api/conversation/:cid/stream`);
-  });
+  if (process.env.HTTP2 === 'true' && process.env.HTTP2_KEY_PATH && process.env.HTTP2_CERT_PATH) {
+    const key = fs.readFileSync(process.env.HTTP2_KEY_PATH);
+    const cert = fs.readFileSync(process.env.HTTP2_CERT_PATH);
+    const server2 = http2.createSecureServer({ key, cert, allowHTTP1: true }, app);
+    server2.on('sessionError', (err) => console.error('HTTP/2 session error:', err));
+    server2.on('error', (err) => console.error('HTTP/2 server error:', err));
+    server2.listen(PORT, () => console.log(`HTTP/2 server listening on port ${PORT}`));
+  } else {
+    const server1 = app.listen(PORT, () => console.log(`HTTP/1.1 server listening on port ${PORT}`));
+    server1.on('error', (err) => console.error('HTTP/1 server error:', err));
+  }
 }
 
 export default app;

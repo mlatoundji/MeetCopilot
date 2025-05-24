@@ -1,9 +1,13 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import https from 'https';
 
 dotenv.config();
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+
+// Agent for keep-alive connections to external APIs
+const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 100, keepAliveMsecs: 30000 });
 
 export const chatCompletion = async (messages, { model = 'mistral-medium', max_tokens = 256, temperature = 0.7, timeout = 30000, stream = false } = {}) => {
   const controller = new AbortController();
@@ -13,32 +17,33 @@ export const chatCompletion = async (messages, { model = 'mistral-medium', max_t
     const response = await fetch(MISTRAL_API_URL, {
       method: 'POST',
       headers: {
-      'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ model, messages, max_tokens, temperature, stream }),
-  });
+        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      agent: keepAliveAgent,
+      body: JSON.stringify({ model, messages, max_tokens, temperature, stream }),
+    });
 
-  clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+    const data = await response.json();
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from API');
+    }
+    const assistantMsg = data.choices[0].message;
+    return assistantMsg;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out after ' + (timeout / 1000) + ' seconds');
+    }
+    throw error;
   }
-  const data = await response.json();
-  if (!data.choices?.[0]?.message?.content) {
-    throw new Error('Invalid response format from API');
-  }
-  const assistantMsg = data.choices[0].message;
-  return assistantMsg;
-} catch (error) {
-  clearTimeout(timeoutId);
-  if (error.name === 'AbortError') {
-    throw new Error('Request timed out after ' + (timeout / 1000) + ' seconds');
-  }
-  throw error;
-}
 }; 
 
 export const streamChatCompletion = async (messages, { model = 'mistral-medium', max_tokens = 256, temperature = 0.7, timeout = 30000 } = {}) => {
@@ -53,6 +58,7 @@ export const streamChatCompletion = async (messages, { model = 'mistral-medium',
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
       },
+      agent: keepAliveAgent,
       body: JSON.stringify({ model, messages, max_tokens, temperature, stream: true }),
     });
   

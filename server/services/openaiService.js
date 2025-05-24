@@ -1,9 +1,12 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import https from 'https';
 
 dotenv.config();
 
 const CHATGPT_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 100, keepAliveMsecs: 30000 });
 
 export const chatCompletion = async (messages, { model = 'gpt-4o-mini', max_tokens = 256, temperature = 0.7, timeout = 30000 } = {}) => {
     const controller = new AbortController();
@@ -17,6 +20,7 @@ export const chatCompletion = async (messages, { model = 'gpt-4o-mini', max_toke
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
+            agent: keepAliveAgent,
             body: JSON.stringify({ model, messages, max_tokens, temperature, stream: false }),
         });
 
