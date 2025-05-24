@@ -1,3 +1,5 @@
+import { encode as cborEncode } from 'https://cdn.skypack.dev/cbor-x';
+
 /**
  * Gère les appels aux différentes API externes.
  * Centralise les appels HTTP et gère les erreurs de manière cohérente.
@@ -229,5 +231,30 @@ export class APIHandler {
     };
     return eventSource;
   }
-  
+
+  /**
+   * Envoie un delta de conversation au format CBOR (binary)
+   * @param {string} cid - conversation id
+   * @param {Array<{role:string,content:string}>} messages - nouveaux messages
+   */
+  async sendConversationMessagesCbor(cid, messages) {
+    const url = `${this.baseURL}${this.apiPrefix}/conversation/${encodeURIComponent(cid)}/messages`;
+    const payload = cborEncode({ msg: messages });
+    // Prepare headers with Authorization if available
+    const headers = { 'Content-Type': 'application/cbor' };
+    try {
+      const token = localStorage.getItem('jwt');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch (_e) {}
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: payload
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => null);
+      throw new Error(text || `HTTP error ${response.status}`);
+    }
+    return response.json();
+  }
 } 

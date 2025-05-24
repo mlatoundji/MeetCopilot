@@ -163,7 +163,7 @@ export class ConversationContextHandler {
         try {
             delta = this.unsentMessages.splice(0, this.unsentMessages.length);
             console.log("Sending unsent messages", delta);
-            const res = await this.apiHandler.sendConversationMessages(this.conversationId, delta);
+            const res = await this.apiHandler.sendConversationMessagesCbor(this.conversationId, delta);
             if(res && res.assistant && res.assistant.content){
                 // Display assistant reply in UI (as suggestion area)
                 const assistantText = res.assistant.content;
