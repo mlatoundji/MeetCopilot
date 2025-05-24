@@ -1,9 +1,14 @@
 import { insertMetric } from '../services/metricsService.js';
+import { Counter, Histogram } from 'prom-client';
 
 // Read env flags (default true)
 const recordMetricsTranscript = process.env.RECORD_METRICS_TRANSCRIPT?.toLowerCase() !== 'false';
 const recordMetricsSummary = process.env.RECORD_METRICS_SUMMARY?.toLowerCase() !== 'false';
 const recordMetricsSuggestions = process.env.RECORD_METRICS_SUGGESTIONS?.toLowerCase() !== 'false';
+
+// Prometheus counters/histograms
+const promptTokensCounter = new Counter({ name: 'prompt_tokens_total', help: 'Total approximate prompt tokens sent', labelNames: ['path'] });
+const latencyHistogram = new Histogram({ name: 'latency_ms_bucket', help: 'Latency of LLM endpoints in ms', labelNames: ['path','method'], buckets: [50,100,200,500,1000,2000,5000,10000] });
 
 // Middleware to measure request latency and token usage for LLM-related endpoints
 export const metricsMiddleware = (req, res, next) => {
@@ -23,16 +28,20 @@ export const metricsMiddleware = (req, res, next) => {
     if (!/\/api\/(suggestions|summary|transcribe)/.test(url)) return;
 
     const bodyText = JSON.stringify(req.body || {});
-    const wordCount = bodyText.split(/\s+/).length;
-    const approxTokens = Math.round(wordCount / 0.75); // rough heuristic
+    const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+    const approxTokens = Math.round(wordCount / 0.75);
 
     const metric = {
-      path: req.originalUrl,
+      path: url,
       method: req.method,
       latency_ms: durationMs,
       tokens: approxTokens,
       created_at: new Date().toISOString(),
     };
+
+    // Prometheus metrics
+    promptTokensCounter.inc({ path: metric.path }, metric.tokens);
+    latencyHistogram.observe({ path: metric.path, method: metric.method }, metric.latency_ms);
 
     // Async insert (fire-and-forget)
     insertMetric(metric).catch((err) => console.error('Metric insert failed', err));

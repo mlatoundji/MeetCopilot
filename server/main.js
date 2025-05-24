@@ -15,6 +15,13 @@ import authRoutes from './routes/authRoutes.js';
 import compression from 'compression';
 import http2 from 'http2';
 import fs from 'fs';
+import { register } from 'prom-client';
+import cron from 'node-cron';
+import redis from './utils/redisClient.js';
+import { fetchConversation, persistConversation } from './controllers/conversationController.js';
+import { estimateTokens } from './utils/tokenEstimator.js';
+import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
+import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 let __dirname;
@@ -161,6 +168,53 @@ if (process.env.NODE_ENV !== 'test') {
     const server1 = app.listen(PORT, () => console.log(`HTTP/1.1 server listening on port ${PORT}`));
     server1.on('error', (err) => console.error('HTTP/1 server error:', err));
   }
+}
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
+// Auto-tuning cron: every hour, compress long conversations
+if (process.env.NODE_ENV !== 'test' && process.env.AUTO_TUNER === 'true') {
+cron.schedule('0 * * * *', async () => {
+  console.log('Auto-tuner: running memory check...');
+  try {
+    const keys = await redis.keys('conv:*');
+    for (const key of keys) {
+      const cid = key.split(':')[1];
+      let memory;
+      try {
+        memory = await fetchConversation(cid);
+      } catch (err) {
+        console.error(`Auto-tuner fetch failed for ${cid}:`, err.message);
+        continue;
+      }
+      const summaryTokens = estimateTokens(memory.summary);
+      const messageTokens = estimateTokens(memory.messages);
+      const totalTokens = summaryTokens + messageTokens;
+      if (totalTokens > 50000) {
+        console.log(`Compressing conversation ${cid}: ${totalTokens} tokens`);
+        const chunkToSummarise = memory.messages.slice(0, -WINDOW_MAX_TURNS);
+        if (chunkToSummarise.length) {
+          try {
+            const prompt = buildAssistantSummaryPrompt(chunkToSummarise);
+            const newSummary = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
+            memory.summary = newSummary;
+            memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
+            await persistConversation(cid, memory, null);
+            console.log(`Conversation ${cid} compressed successfully`);
+          } catch (err) {
+            console.error(`Auto-tuner compression failed for ${cid}:`, err.message);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Auto-tuner job failed:', err.message);
+  }
+});
 }
 
 export default app;

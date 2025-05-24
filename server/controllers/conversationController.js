@@ -7,6 +7,7 @@ import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
 import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
 import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
 import fetch from 'node-fetch';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -131,36 +132,41 @@ export const addMessages = async (req, res) => {
 
     await persistConversation(cid, memory, userId);
 
-
-
     let lastMessage = memory.messages[memory.messages.length - 1];
     if (lastMessage.speaker === 'User') {
       console.log("User message, no assistant reply");
       return res.json({ assistant: null, cid });
-      
     }
-    // optionally build prompt and get assistant reply
+
+    // before assistant suggestion block, insert caching for default suggestion flow
+
+    // Build prompt and handle caching
     if (USE_AUTO_SUGGESTION) {
-      if (memory.messages.length % ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES === 0) {
-      const updatedTokenCount = estimateTokens(memory.messages);
-      console.log("Updated token count", updatedTokenCount);
-      const needAssistantSuggestionByTokens = updatedTokenCount > ASSISTANT_SUGGESTION_TRIGGER_EVERY_TOKENS;
-      if (needAssistantSuggestionByTokens) {
-        const prompt = buildAssistantSuggestionPrompt(memory);
-        const assistantMessage = await mistralChatCompletion(prompt);
-        // Append assistant message
+      if (memory.messages.length >= ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES) {
+      const promptMessages = buildAssistantSuggestionPrompt(memory);
+        const promptTokens = estimateTokens(promptMessages);
+        let assistantMessage;
+        if (promptTokens < 2000) {
+          const promptHash = crypto.createHash('md5').update(JSON.stringify(promptMessages)).digest('hex');
+          const cacheKey = `cache:${cid}:${promptHash}`;
+          const cached = await redis.get(cacheKey);
+          if (cached) {
+            assistantMessage = JSON.parse(cached);
+            console.log('Returning assistant response from cache');
+          } else {
+            assistantMessage = await mistralChatCompletion(promptMessages);
+            await redis.set(cacheKey, JSON.stringify(assistantMessage), { EX: 1800 });
+          }
+        } else {
+          assistantMessage = await mistralChatCompletion(promptMessages);
+        }
+        // Append and persist
         memory.messages.push(assistantMessage);
         await persistConversation(cid, memory, userId);
-        console.log("Persisted conversation", cid);
-        console.log("Assistant reply", assistantMessage);
+
         return res.json({ assistant: assistantMessage, cid });
       }
     }
-  }
-  console.log("No assistant reply");
-  return res.json({ assistant: null, cid });
-
-
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });
@@ -207,4 +213,7 @@ export const streamConversation = async (req, res) => {
     console.error('Streaming failed', err);
     res.end();
   }
-}; 
+};
+
+// Export helpers for auto-tuner
+export { fetchConversation, persistConversation, WINDOW_MAX_TURNS }; 
