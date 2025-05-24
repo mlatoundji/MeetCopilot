@@ -1,4 +1,4 @@
-import { encode as cborEncode } from 'https://cdn.skypack.dev/cbor-x';
+import { encode as cborEncode } from 'cbor-x';
 
 /**
  * Gère les appels aux différentes API externes.
