@@ -562,7 +562,8 @@ export class MeetingPage {
               language: this.app.currentLanguage,
               source: source
             });
-            await this.app.conversationContextHandler.updateConversationContext();
+            const updated = await this.app.conversationContextHandler.updateConversationContext();
+            this.app.conversationContextHandler.sendConversationMessage();
             this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
           }
         } catch (error) {
@@ -664,6 +665,7 @@ export class MeetingPage {
             this.app.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
           }
           const updated = await this.app.conversationContextHandler.updateConversationContext();
+          this.app.conversationContextHandler.sendConversationMessage();
         }
         this.uiHandler.updateTranscription(
           this.app?.conversationContextHandler?.conversationContextText || filteredText

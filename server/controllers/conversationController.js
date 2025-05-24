@@ -24,7 +24,7 @@ const SUMMARY_TRIGGER_EVERY = 8; // messages
 const WINDOW_MAX_TURNS = 10; // keep last N turns verbatim
 const SUMMARY_TOKEN_THRESHOLD = 3500; // if prompt tokens exceed, force summary
 
-const USE_AUTO_SUGGESTION = true
+const USE_AUTO_SUGGESTION = false
 
 const ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES = 10; // messages
 const ASSISTANT_SUGGESTION_TRIGGER_EVERY_TOKENS = 1000; // tokens

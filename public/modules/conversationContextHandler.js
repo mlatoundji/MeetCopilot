@@ -154,29 +154,29 @@ export class ConversationContextHandler {
         `;
         console.log("Words count : ", this.conversationContextText.split(" ").length);
         
-        if(this.unsentMessages.length > 0 && this.apiHandler){
-            let delta;
-            try {
-                delta = this.unsentMessages.splice(0, this.unsentMessages.length);
-                console.log("Sending unsent messages", delta);
-                const res = await this.apiHandler.sendConversationMessages(this.conversationId, delta);
-                if(res && res.assistant && res.assistant.content){
-                    // Display assistant reply in UI (as suggestion area)
-                    const assistantText = res.assistant.content;
-                    this.assistantSuggestions.push({ speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
-                    // no further recursive push to unsentMessages
-                    // update UI transcription
-                    if(typeof this.updateUIAfterAssistant === 'function'){
-                        this.updateUIAfterAssistant(assistantText);
-                    }
-                }
-            } catch(err){
-                console.error('Failed to push conversation delta', err);
-                // Requeue messages on failure
-                if (delta) this.unsentMessages.unshift(...delta);
+    }
+
+    async sendConversationMessage() {
+      console.log("Sending conversation message to server");
+      if(this.unsentMessages.length > 0 && this.apiHandler){
+        let delta;
+        try {
+            delta = this.unsentMessages.splice(0, this.unsentMessages.length);
+            console.log("Sending unsent messages", delta);
+            const res = await this.apiHandler.sendConversationMessages(this.conversationId, delta);
+            if(res && res.assistant && res.assistant.content){
+                // Display assistant reply in UI (as suggestion area)
+                const assistantText = res.assistant.content;
+                this.assistantSuggestions.push({ speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
+
             }
+        } catch(err){
+            console.error('Failed to push conversation delta', err);
+            // Requeue messages on failure
+            if (delta) this.unsentMessages.unshift(...delta);
         }
     }
+  }
 
     async generateSummary(context) {
         try {

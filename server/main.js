@@ -156,13 +156,15 @@ if (process.env.NODE_ENV !== 'test') {
       console.log(`- POST /api/summary/batch or /summary/batch`);
       console.log(`- GET  /api/cache/stats`);
       console.log(`- POST /api/cache/clear`);
-      console.log(`- POST /api/transcribe/assemblyai or /transcribe/assemblyai`);
-      console.log(`- POST /api/transcribe/whisper or /transcribe/whisper`);
-      console.log(`- POST /api/suggestions/local or /suggestions/local (Uses local LLM)`);
+      console.log(`- POST /api/transcribe/assemblyai`);
+      console.log(`- POST /api/transcribe/whisper`);
+      console.log(`- POST /api/suggestions/local (Uses local LLM)`);
       console.log(`- POST /api/meetings`);
       console.log(`- POST /api/conversation`);
       console.log(`- POST /api/auth/login`);
       console.log(`- POST /api/auth/register`);
+      console.log(`- POST /api/conversation/:cid/messages`);
+      console.log(`- GET /api/conversation/:cid/stream`);
   });
 }
 
