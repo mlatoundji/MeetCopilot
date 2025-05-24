@@ -1,5 +1,5 @@
 import express from 'express';
-import { addMessages, streamConversation } from '../controllers/conversationController.js';
+import { addMessages } from '../controllers/conversationController.js';
 import bodyParser from 'body-parser';
 import cbor from 'cbor';
 
@@ -24,7 +24,6 @@ router.post('/:cid/messages',
   },
   addMessages
 );
-// Streaming endpoint (SSE)
-router.get('/:cid/stream', streamConversation);
+
 
 export default router; 

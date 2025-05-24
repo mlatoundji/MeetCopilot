@@ -173,47 +173,5 @@ export const addMessages = async (req, res) => {
   }
 };
 
-// Stream conversation as server-sent events (SSE)
-export const streamConversation = async (req, res) => {
-  const { cid } = req.params;
-  // Set SSE headers
-  res.set({
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive'
-  });
-  res.flushHeaders();
-  try {
-    // Fetch prior conversation + build prompt
-    const memory = await fetchConversation(cid);
-    const messages = buildAssistantSuggestionPrompt(memory);
-
-    // Call Mistral with streaming
-    let stream;
-    try {
-      stream = await mistralStreamChatCompletion(messages);
-    } catch (streamErr) {
-      console.error('Mistral streaming error', streamErr);
-      res.write(`data: ERROR ${streamErr.message}\n\n`);
-      return res.end();
-    }
-
-    // Pipe Mistral's SSE directly to client
-    stream.on('data', chunk => {
-      res.write(chunk);
-    });
-    stream.on('end', () => {
-      res.end();
-    });
-    stream.on('error', err => {
-      console.error('Stream error', err);
-      res.end();
-    });
-  } catch (err) {
-    console.error('Streaming failed', err);
-    res.end();
-  }
-};
-
 // Export helpers for auto-tuner
 export { fetchConversation, persistConversation, WINDOW_MAX_TURNS }; 

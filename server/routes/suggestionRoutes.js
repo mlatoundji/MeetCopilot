@@ -6,6 +6,7 @@ import {
     generateSuggestionsViaLocal,
     generateSuggestionsWithFallback
 } from '../controllers/suggestionController.js';
+import { streamSuggestions } from '../controllers/suggestionController.js';
 
 const router = express.Router();
 
@@ -19,5 +20,8 @@ router.post('/openai', generateSuggestionsViaOpenAI);
 
 // Parallel processing route (uses both models)
 router.post('/parallel', generateParallelSuggestions);
+
+// Streaming endpoint (SSE)
+router.get('/:cid/stream', streamSuggestions);
 
 export default router;

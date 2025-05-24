@@ -207,7 +207,7 @@ export class APIHandler {
    * @returns {Promise<Object>} - Les suggestions générées
    */
   async startSuggestionsStreaming(cid) {
-    const url = `${this.baseURL}${this.apiPrefix}/conversation/${encodeURIComponent(cid)}/stream`;
+    const url = `${this.baseURL}${this.apiPrefix}/suggestions/${encodeURIComponent(cid)}/stream`;
     const eventSource = new EventSource(url);
     eventSource.onmessage = (e) => {
       const data = e.data;
