@@ -112,6 +112,12 @@ app.use(apiPrefix + '/meetings', meetingsRouter);
 app.use(apiPrefix + '/conversation', conversationRouter);
 app.use(apiPrefix + '/auth', authRoutes);
 
+// Prometheus metrics endpoint (moved above error handler)
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
 // Function to sanitize URL for logging
 function sanitizeUrl(url) {
   return url.replace(/[^\w\s-]/g, '');
@@ -169,12 +175,6 @@ if (process.env.NODE_ENV !== 'test') {
     server1.on('error', (err) => console.error('HTTP/1 server error:', err));
   }
 }
-
-// Prometheus metrics endpoint
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
 
 // Auto-tuning cron: every hour, compress long conversations
 if (process.env.NODE_ENV !== 'test' && process.env.AUTO_TUNER === 'true') {
