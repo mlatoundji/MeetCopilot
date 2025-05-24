@@ -43,6 +43,14 @@ export class HomePage {
         this.loadFragment(nav);
       });
     });
+    this.highlightSidebarItem('dashboard');
+
+  }
+
+  highlightSidebarItem(navKey) {
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-nav') === navKey);
+    });
   }
 
   /**

@@ -90,15 +90,6 @@ class App {
     window.addEventListener('pageLoaded', (event) => {
       const pageName = event.detail.page;
       console.log(`Page loaded: ${pageName}`);
-      
-      let tabKey;
-     if (pageName === 'home') {
-        // Highlight Home dashboard
-        tabKey = 'dashboard';
-      } else {
-        tabKey = null;
-      }
-      if (tabKey) this.highlightSidebarItem(tabKey);
     });
     
     // Set the initial page based on the current URL or go to home
@@ -108,18 +99,12 @@ class App {
     console.log("App initialized");
   }
 
-  /**
-   * Adds 'active' class to the sidebar-item matching navKey, removes from others
-   */
-  highlightSidebarItem(navKey) {
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.classList.toggle('active', item.getAttribute('data-nav') === navKey);
-    });
-  }
+
 }
 
 // Start the app
 const app = new App();
+window.app = app;
 document.addEventListener('DOMContentLoaded', () => {
     app.init();
 });
