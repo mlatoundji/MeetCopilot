@@ -46,3 +46,18 @@ export const chatCompletion = async (messages, { model = 'gpt-4o-mini', max_toke
         throw error;
     }
 }
+
+export const analyzeImage = async (image, { model = 'gpt-4o-mini-vision', max_tokens = 500, temperature = 0.7, stream = false } = {}) => {
+    const response = await fetch(CHATGPT_API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        agent: keepAliveAgent,
+        body: JSON.stringify({ model, image, max_tokens, temperature, stream }),
+    });
+    return response;
+}
+

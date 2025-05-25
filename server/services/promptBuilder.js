@@ -8,7 +8,7 @@ export const buildAssistantSuggestionPrompt= (conversation) => {
   if (typeof conversation == 'object') {
     const { summary = '', messages = [] } = conversation;
     const lastTurns = messages.slice(-6);
-    const promptMessages = [];
+    let promptMessages = [];
   promptMessages.push({ role: 'system', content: systemPrompt });
   if (summary) {
     promptMessages.push({ role: 'user', content: `Résumé de la conversation jusque-là : ${summary}` });
@@ -60,3 +60,18 @@ Voici la conversation à résumer :
   }
 };
 
+export const buildAssistantImageAnalysisPrompt = (image) => {
+  const systemPrompt = `
+  Vous êtes un assistant IA chargé d'analyser une image et de fournir une description concise et pertinente.
+  Voici l'image à analyser :
+`;
+
+  let promptMessages = [];
+  let userContentMessage = [
+    { type: 'text', text: 'Analyze the following image and provide a concise description:' },
+    { type: 'image_url', image_url: image }
+  ]
+  promptMessages.push({ role: 'system', content: systemPrompt });
+  promptMessages.push({ role: 'user', content: userContentMessage });
+  return promptMessages;
+};

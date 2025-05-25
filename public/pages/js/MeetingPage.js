@@ -758,7 +758,7 @@ export class MeetingPage {
   /**
    * Capture a frame from the screen-capture video and generate a PNG data URL
    */
-  captureImage() {
+  async captureImage() {
     const video = document.getElementById('screen-capture');
     if (!video) {
       console.error('Video element not found for screen capture');
@@ -781,6 +781,19 @@ export class MeetingPage {
         container.appendChild(thumbnail);
       }
       thumbnail.src = imageData;
+      // Analyze the captured image and display description
+      try {
+        const result = await this.apiHandler.analyzeImage(imageData);
+        let descEl = container.querySelector('.analysis-description');
+        if (!descEl) {
+          descEl = document.createElement('div');
+          descEl.className = 'analysis-description';
+          container.appendChild(descEl);
+        }
+        descEl.textContent = result.description || 'No description received';
+      } catch (err) {
+        console.error('Image analysis failed:', err);
+      }
     } else {
       console.error('Container for thumbnail not found');
     }

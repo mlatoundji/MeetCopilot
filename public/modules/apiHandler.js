@@ -148,6 +148,20 @@ export class APIHandler {
   }
 
   /**
+   * Analyse une image Base64 pour description et extraction de texte via une API externe
+   * @param {string} imageData - Base64-encoded PNG image
+   * @param {string} provider - Le fournisseur (mistral, openai)
+   * @returns {Promise<Object>} - L'analyse de l'image
+   */
+  async analyzeImage(imageData, provider = 'mistral') {
+    const url = this.getEndpoint('analyze', provider);
+    return this.callApi(url, {
+      method: 'POST',
+      body: JSON.stringify({ image: imageData })
+    });
+  }
+
+  /**
    * Sauvegarde les données d'une réunion
    * @param {Object} meetingData - Les données de la réunion
    * @param {string} saveMethod - La méthode de sauvegarde (local, supabase)

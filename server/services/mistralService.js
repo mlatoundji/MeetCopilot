@@ -88,3 +88,17 @@ export const streamChatCompletion = async (messages, { model = 'mistral-medium',
     throw error;
   }
 };  
+
+export const analyzeImage = async (messages, { model = 'pixtral-12b-latest', max_tokens = 500, temperature = 0.7, stream = false } = {}) => {
+  const response = await fetch(MISTRAL_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    agent: keepAliveAgent,
+    body: JSON.stringify({ model, messages, max_tokens, temperature, stream }),
+  });
+  return response;
+};
