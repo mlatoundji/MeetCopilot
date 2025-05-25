@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Ensure service role key is provided for private bucket operations
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.SUPABASE_URL) {
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL in environment');
+  process.exit(1);
+}
 // Initialize Supabase client with service role key
 const supabase = createSupabaseClient(
   process.env.SUPABASE_URL,
@@ -54,4 +59,6 @@ export const addChatHistory = async (req, res) => {
     console.error('Error adding chat history', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
-}; 
+};
+
+export { supabase }; 

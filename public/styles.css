@@ -1766,3 +1766,42 @@ body.no-global-ui #main-sidebar {
 .chatbot-message.user {
   margin-right: 0 !important;
 }
+
+/* Chatbot attachment styles */
+.chatbot-attachment-image {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.chatbot-attachment-link {
+  display: block;
+  color: var(--primary-color);
+  text-decoration: underline;
+  margin: 4px 0;
+}
+
+/* Chatbot attachments preview */
+.chatbot-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  max-height: 120px;
+  overflow-y: auto;
+  border-bottom: 1px solid #ccc;
+}
+.chatbot-preview img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.chatbot-preview .chatbot-attachment-name {
+  padding: 0.25rem 0.5rem;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  max-width: 100px;
+  word-wrap: break-word;
+}

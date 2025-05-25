@@ -5,6 +5,7 @@
 export class ChatbotHandler {
   constructor(apiHandler) {
     this.apiHandler = apiHandler;
+    this.previewContainer = null;
     this.toggleBtn = null;
     this.drawer = null;
     this.input = null;
@@ -29,6 +30,7 @@ export class ChatbotHandler {
     this.input = document.getElementById('chatbotInput');
     this.sendBtn = document.getElementById('chatbotSend');
     this.messagesContainer = document.getElementById('chatbotMessages');
+    this.previewContainer = document.getElementById('chatbotPreview');
     this.attachBtn = document.getElementById('chatbotAttach');
     this.cameraBtn = document.getElementById('chatbotCamera');
     this.fileInput = document.getElementById('chatbotFileInput');
@@ -146,8 +148,22 @@ export class ChatbotHandler {
    */
   handleFiles(files) {
     this.attachments = Array.from(files);
-    const names = this.attachments.map(f => f.name).join(', ');
-    if (this.input) this.input.placeholder = `Attach: ${names}`;
+    // clear previous previews
+    if (this.previewContainer) this.previewContainer.innerHTML = '';
+    // render previews
+    this.attachments.forEach(file => {
+      let el;
+      if (file.type.startsWith('image/')) {
+        el = document.createElement('img');
+        el.src = URL.createObjectURL(file);
+        el.onload = () => URL.revokeObjectURL(el.src);
+      } else {
+        el = document.createElement('div');
+        el.className = 'chatbot-attachment-name';
+        el.innerText = file.name;
+      }
+      if (this.previewContainer) this.previewContainer.appendChild(el);
+    });
   }
 
   async sendMessage() {
@@ -159,8 +175,18 @@ export class ChatbotHandler {
     userMsgEl.className = 'chatbot-message user';
     userMsgEl.innerText = question;
     this.messagesContainer.appendChild(userMsgEl);
-    // Persist user message
-    this.apiHandler.saveChatbotHistory(this.sessionId, 'user', question).catch(err => console.error('Save history error', err));
+    // Render attachments thumbnails in chat and clear preview
+    if (this.previewContainer) {
+      Array.from(this.previewContainer.children).forEach(el => {
+        const clone = el.cloneNode(true);
+        clone.className = el.tagName === 'IMG' ? 'chatbot-attachment-image' : 'chatbot-attachment-name';
+        this.messagesContainer.appendChild(clone);
+      });
+      this.previewContainer.innerHTML = '';
+    }
+    // Persist user message only if non-empty
+    if (question) this.apiHandler.saveChatbotHistory(this.sessionId, 'user', question).catch(err => console.error('Save history error', err));
+
     // Clear input and reset attachments
     this.input.value = '';
     this.input.placeholder = 'Ask your question...';
@@ -183,22 +209,41 @@ export class ChatbotHandler {
 
     // If there are attachments, send via FormData and await JSON response
     if (this.attachments.length > 0) {
+      // prepare attachments for upload
+      const attachmentsToSend = this.attachments.slice();
+      this.attachments = [];
       try {
-        const data = await this.apiHandler.sendChatbotMessage(question, this.attachments, model, this.contextSnippet);
+        const data = await this.apiHandler.sendChatbotMessage(question, attachmentsToSend, model, this.contextSnippet, this.sessionId);
+        // Render uploaded attachments
+        data.uploaded.forEach(url => {
+          let el;
+          if (/\.(png|jpe?g|gif|webp)$/i.test(url)) {
+            el = document.createElement('img');
+            el.src = url;
+            el.className = 'chatbot-attachment-image';
+          } else {
+            el = document.createElement('a');
+            el.href = url;
+            el.target = '_blank';
+            el.innerText = url.split('/').pop();
+            el.className = 'chatbot-attachment-link';
+          }
+          this.messagesContainer.appendChild(el);
+        });
         typingEl.remove();
         botMsgEl.innerText = data.response || 'No response';
         // Persist assistant message
-        await this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText);
+        await this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText).catch(err => console.error('Save history error', err));
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
       } catch (err) {
         console.error('Chatbot request failed', err);
         typingEl.remove();
-      } finally {
-        this.attachments = [];
       }
+      // attachments remain for follow-up unless user clears
+      return;
     } else {
       // Stream response via SSE as raw text
-      const streamUrl = `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/chatbot/message/stream?question=${encodeURIComponent(question)}${model ? `&model=${encodeURIComponent(model)}` : ''}`;
+      const streamUrl = `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/chatbot/message/stream?sessionId=${encodeURIComponent(this.sessionId)}&question=${encodeURIComponent(question)}${model ? `&model=${encodeURIComponent(model)}` : ''}${this.contextSnippet ? `&contextSnippet=${encodeURIComponent(this.contextSnippet)}` : ''}`;
       const es = new EventSource(streamUrl);
       es.onmessage = (e) => {
         if (e.data === '[DONE]') {
@@ -251,40 +296,4 @@ export class ChatbotHandler {
     document.removeEventListener('mousemove', this._onDragMove);
     document.removeEventListener('mouseup', this._onDragEnd);
   }
-} 
-
-    //   // Stream response via POST and fetch streaming API
-    //   try {
-    //     const url = `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/chatbot/message/stream`;
-    //     const response = await fetch(url, {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //       body: JSON.stringify({ question })
-    //     });
-    //     if (!response.ok || !response.body) {
-    //       throw new Error(`HTTP error ${response.status}`);
-    //     }
-    //     const reader = response.body.getReader();
-    //     const decoder = new TextDecoder('utf-8');
-    //     while (true) {
-    //       const { done, value } = await reader.read();
-    //       if (done) break;
-    //       const chunk = decoder.decode(value, { stream: true });
-    //       // SSE framing: split by data: prefix
-    //       const lines = chunk.split(/\r?\n/).filter(l => l.startsWith('data:'));
-    //       lines.forEach(line => {
-    //         const text = line.replace(/^data:\s*/, '');
-    //         if (text === '[DONE]') {
-    //           // End of stream
-    //         } else {
-    //           botMsgEl.innerText += text + ' ';
-    //         }
-    //       });
-    //       this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
-    //     }
-    //   } catch (err) {
-    //     console.error('Chatbot stream POST error', err);
-    //     botMsgEl.innerText = 'Error';
-    //   } finally {
-    //     typingEl.remove();
-    //   }
+}

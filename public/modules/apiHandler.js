@@ -271,14 +271,20 @@ export class APIHandler {
    * Send a message to the chatbot, with optional file attachments
    * @param {string} question - The user's question
    * @param {File[]} [attachments] - Optional array of File objects to upload
+   * @param {string} model - The model to use for the chatbot
+   * @param {string} contextSnippet - The context snippet to use for the chatbot
+   * @param {string} sessionId - The session ID to use for the chatbot
    * @returns {Promise<Object>} - The chatbot response
    */
-  async sendChatbotMessage(question, attachments = []) {
+  async sendChatbotMessage(question, attachments = [], model, contextSnippet, sessionId) {
     const url = `${this.baseURL}${this.apiPrefix}/chatbot/message`;
     // If attachments are present, use multipart/form-data
     if (attachments.length > 0) {
       const formData = new FormData();
       formData.append('question', question);
+      if (model) formData.append('model', model);
+      if (contextSnippet) formData.append('contextSnippet', contextSnippet);
+      formData.append('sessionId', sessionId);
       attachments.forEach((file) => formData.append('attachments', file));
       return this.callApi(url, {
         method: 'POST',
@@ -288,7 +294,7 @@ export class APIHandler {
     // Else, send JSON
     return this.callApi(url, {
       method: 'POST',
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, model, contextSnippet, sessionId }),
     });
   }
 
