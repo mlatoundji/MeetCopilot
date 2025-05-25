@@ -39,6 +39,8 @@ export class ConversationContextHandler {
         this.conversationContextMeetingInfosText = "";
 
         this.conversationContextDialogsIndexStart = 0;
+        this.startTime = Date.now();
+        this.useRelativeTime = false;
 
         this.defaultLang = "fr";
         this.translations = {

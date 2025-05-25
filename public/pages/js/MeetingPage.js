@@ -18,13 +18,15 @@ export class MeetingPage {
     this.suggestionsHandler = app?.suggestionsHandler || new SuggestionsHandler(this.apiHandler);
     this.audioCapture = app?.audioCapture || new AudioCapture();
     this.layoutManager = new LayoutManager();
+    this.conversationContextHandler = app?.conversationContextHandler || new ConversationContextHandler();
+    this.conversationContextHandler.startTime = Date.now();
 
     // Constantes pour les sources audio
-    this.SYSTEM_SOURCE = this.app.conversationContextHandler.SYSTEM_SOURCE || 'system';
-    this.MIC_SOURCE = this.app.conversationContextHandler.MIC_SOURCE || 'mic';
+    this.SYSTEM_SOURCE = this.conversationContextHandler.SYSTEM_SOURCE || 'system';
+    this.MIC_SOURCE = this.conversationContextHandler.MIC_SOURCE || 'mic';
     // Labels pour context
-    this.systemLabel = this.app.conversationContextHandler.systemLabel || 'Guest';
-    this.micLabel = this.app.conversationContextHandler.micLabel || 'User';
+    this.systemLabel = this.conversationContextHandler.systemLabel || 'Guest';
+    this.micLabel = this.conversationContextHandler.micLabel || 'User';
 
     this.isRecording = false;
     this.systemCapture = null;
@@ -135,7 +137,7 @@ export class MeetingPage {
     console.log("Quitting meeting");
 
 
-    this.app.conversationContextHandler.resetConversationContext();
+    this.conversationContextHandler.resetConversationContext();
     // Arrêter les enregistrements audio
     if (this.audioCapture.isSystemRecording) {
       this.toggleSystemCapture();
@@ -229,8 +231,8 @@ export class MeetingPage {
     this.layoutManager.applySidebarState(savedState);
     // Mettre à jour la visibilité et le contenu du bloc de contexte
     const contextHeaderElement = document.getElementById('conversationContextHeader');
-    if (contextHeaderElement && this.app && this.app.conversationContextHandler) {
-      const headerText = this.app.conversationContextHandler.conversationContextHeaderText;
+    if (contextHeaderElement && this.conversationContextHandler) {
+      const headerText = this.conversationContextHandler.conversationContextHeaderText;
       contextHeaderElement.innerHTML = headerText.split('\n').map(line => line.trim()).join('<br>');
       if (savedState === 'expanded') {
         contextHeaderElement.classList.remove('hidden');
@@ -307,9 +309,9 @@ export class MeetingPage {
     try {
       if (!this.audioCapture.isSystemRecording) {
         // Réinitialiser le contexte de conversation
-        if (this.app && this.app.conversationContextHandler) {
+        if (this.conversationContextHandler) {
           //this.app.conversationContextHandler.resetConversationContext();
-          this.app.conversationContextHandler.lastSummaryTime = Date.now();
+          this.conversationContextHandler.lastSummaryTime = Date.now();
         }
         
         // Démarrer la capture système
@@ -521,8 +523,8 @@ export class MeetingPage {
       if (isTranscribing) return;
       const buffer = source === this.SYSTEM_SOURCE ? this.audioCapture.systemBuffer : this.audioCapture.micBuffer;
       const speakerLabel = source === this.SYSTEM_SOURCE ? 
-        this.app.conversationContextHandler.systemLabel : 
-        this.app.conversationContextHandler.micLabel;
+        this.conversationContextHandler.systemLabel : 
+        this.conversationContextHandler.micLabel;
 
       if (buffer.length > 0) {
         isTranscribing = true;
@@ -555,16 +557,20 @@ export class MeetingPage {
             const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
             if (filteredText === "") return;
 
-            this.app.conversationContextHandler.conversationContextDialogs.push({
+            this.conversationContextHandler.conversationContextDialogs.push({
               speaker: speakerLabel,
               text: filteredText,
               time: Date.now(),
               language: this.app.currentLanguage,
               source: source
             });
-            const updated = await this.app.conversationContextHandler.updateConversationContext();
-            this.app.conversationContextHandler.sendConversationMessage();
-            this.uiHandler.updateTranscription(this.app.conversationContextHandler.conversationContextText);
+            const updated = await this.conversationContextHandler.updateConversationContext();
+            this.conversationContextHandler.sendConversationMessage();
+            this.uiHandler.renderTranscription(
+              this.conversationContextHandler.conversationContextDialogs,
+              this.conversationContextHandler.startTime,
+              this.conversationContextHandler.useRelativeTime
+            );
           }
         } catch (error) {
           console.error('Error in transcription loop:', error.message || error);
@@ -584,8 +590,8 @@ export class MeetingPage {
   async generateSuggestion() {
     try {
       let context;
-      if (this.app && this.app.conversationContextHandler) {
-        context = this.app.conversationContextHandler.conversationContextText;
+      if (this.conversationContextHandler) {
+        context = this.conversationContextHandler.conversationContextText;
         console.log("Conversation context handler text loaded");
       } else {
         context = document.getElementById('transcription').innerText;
@@ -601,8 +607,8 @@ export class MeetingPage {
       this.uiHandler.updateSuggestions(suggestions);
       
       // Enregistrer la suggestion dans le conversationContextHandler
-      if (this.app && this.app.conversationContextHandler) {
-        this.app.conversationContextHandler.conversationContextSuggestions.push({
+      if (this.conversationContextHandler) {
+        this.conversationContextHandler.conversationContextSuggestions.push({
           text: suggestions,
           time: Date.now(),
           language: this.app.currentLanguage
@@ -610,8 +616,8 @@ export class MeetingPage {
       }
       
       // Enregistrer la suggestion dans le backupHandler si disponible
-      if (this.app && this.app.backupHandler) {
-        this.app.backupHandler.addSuggestion(suggestions);
+      if (this.backupHandler) {
+        this.backupHandler.addSuggestion(suggestions);
       }
     } catch (error) {
       console.error("Error generating suggestion:", error);
@@ -620,8 +626,8 @@ export class MeetingPage {
   }
 
   async startSuggestionsStreaming() {
-    if (this.app && this.app.conversationContextHandler) {
-      const eventSource = await this.suggestionsHandler.startSuggestionsStreaming(this.app.conversationContextHandler.conversationId);
+    if (this.conversationContextHandler) {
+      const eventSource = await this.suggestionsHandler.startSuggestionsStreaming(this.conversationContextHandler.conversationId);
       eventSource.onmessage = (e) => {
         const data = e.data;
         if (data === '[DONE]') {
@@ -653,23 +659,27 @@ export class MeetingPage {
       const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
       if (filteredText) {
         // Update conversation context
-        if (this.app.conversationContextHandler) {
-          this.app.conversationContextHandler.conversationContextDialogs.push({
+        if (this.conversationContextHandler) {
+          this.conversationContextHandler.conversationContextDialogs.push({
             speaker: speakerLabel,
             text: filteredText,
             time: Date.now(),
             language: this.app.currentLanguage,
             source: src
           });
-          if (this.app.conversationContextHandler.unsentMessages) {
-            this.app.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
+          if (this.conversationContextHandler.unsentMessages) {
+            this.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
           }
-          const updated = await this.app.conversationContextHandler.updateConversationContext();
-          this.app.conversationContextHandler.sendConversationMessage();
+          const updated = await this.conversationContextHandler.updateConversationContext();
+          this.conversationContextHandler.sendConversationMessage();
+          this.uiHandler.renderTranscription(
+            this.conversationContextHandler.conversationContextDialogs,
+            this.conversationContextHandler.startTime,
+            this.conversationContextHandler.useRelativeTime
+          );
+        } else {
+          this.uiHandler.updateTranscription(filteredText);
         }
-        this.uiHandler.updateTranscription(
-          this.app?.conversationContextHandler?.conversationContextText || filteredText
-        );
       }
     }
   }

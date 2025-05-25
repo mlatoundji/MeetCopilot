@@ -95,6 +95,12 @@ export class Router {
   }
   
   async navigateToMeetingDetails(meetingId) {
+    // Authentication guard: redirect to login if not authenticated
+    const token = localStorage.getItem('jwt');
+    if (!token) {
+      window.location.hash = 'login';
+      return false;
+    }
     console.log(`Navigation vers détails de la réunion: ${meetingId}`);
     const mainContent = document.querySelector('.main-content');
     
@@ -147,6 +153,13 @@ export class Router {
    * @returns {Promise<boolean>} - Success/failure of navigation
    */
   async navigate(pageName, pushState = true) {
+    // Authentication guard: restrict access if not authenticated
+    const publicRoutes = ['landing', 'login', 'register'];
+    const token = localStorage.getItem('jwt');
+    if (!token && !publicRoutes.includes(pageName)) {
+      window.location.hash = 'login';
+      return false;
+    }
     if (!this.routes[pageName]) {
       console.error(`Route '${pageName}' not found`);
       pageName = 'home';

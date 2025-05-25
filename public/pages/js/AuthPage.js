@@ -10,6 +10,7 @@ export default class AuthPage {
     this.loginRoot.style.minHeight = '100vh';
     this.loginRoot.style.overflowY = 'auto';
     this.apiHandler = new APIHandler();
+    this.injectedStyleNodes = [];  // Track injected auth styles
   }
 
   // Initialize the auth page by rendering its content
@@ -38,7 +39,10 @@ export default class AuthPage {
     const doc = parser.parseFromString(htmlText, 'text/html');
     // Append <link> and <style> from auth.html to document head
     doc.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
-      document.head.appendChild(node.cloneNode(true));
+      const clone = node.cloneNode(true);
+      clone.setAttribute('data-auth-style', '');
+      document.head.appendChild(clone);
+      this.injectedStyleNodes.push(clone);
     });
     // Extract only the main container from auth.html
     const containerLogin = doc.querySelector('.container-login');
@@ -147,6 +151,11 @@ export default class AuthPage {
   }
 
   destroy() {
+    // Remove injected auth styles
+    this.injectedStyleNodes.forEach(node => {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+    this.injectedStyleNodes = [];
     // Remove event listeners
     const loginBtn = this.loginRoot.querySelector('.login-btn');
     const signupBtn = this.loginRoot.querySelector('.signup-btn');

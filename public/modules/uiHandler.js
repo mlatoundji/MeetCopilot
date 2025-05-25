@@ -427,5 +427,53 @@ export class UIHandler {
     getTranslations() {
         return this.selectedTranslations || this.translations[this.defaultLang];
     }
+
+    // Add new method to render transcription messages as styled cards
+    renderTranscription(messages, startTime, useRelativeTime) {
+        if (!this.transcriptionDiv) {
+            this.transcriptionDiv = document.getElementById("transcription");
+        }
+        if (!this.transcriptionDiv) return;
+        // Clear existing content
+        this.transcriptionDiv.innerHTML = "";
+        if (!Array.isArray(messages) || messages.length === 0) {
+            this.transcriptionDiv.innerText = "No transcription available.";
+            return;
+        }
+        // Ensure container styling
+        this.transcriptionDiv.classList.add("transcription-cards-container");
+        // Render each message as a card
+        messages.forEach(msg => {
+            const card = document.createElement("div");
+            card.className = "transcription-card";
+            // Speaker name
+            const speakerEl = document.createElement("div");
+            speakerEl.className = "speaker-name";
+            speakerEl.innerText = msg.speaker;
+            card.appendChild(speakerEl);
+            // Timestamp
+            const timeEl = document.createElement("div");
+            timeEl.className = "message-timestamp";
+            let timeText = "";
+            if (useRelativeTime) {
+                const diff = msg.time - startTime;
+                const hrs = String(Math.floor(diff / 3600000)).padStart(2, "0");
+                const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+                const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+                timeText = `+${hrs}:${mins}:${secs}`;
+            } else {
+                timeText = new Date(msg.time).toLocaleTimeString();
+            }
+            timeEl.innerText = timeText;
+            card.appendChild(timeEl);
+            // Message text
+            const textEl = document.createElement("div");
+            textEl.className = "message-text";
+            textEl.innerText = msg.text;
+            card.appendChild(textEl);
+            // Append card
+            this.transcriptionDiv.appendChild(card);
+        });
+    }
 }
   
