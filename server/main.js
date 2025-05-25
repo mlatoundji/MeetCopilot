@@ -23,6 +23,7 @@ import { fetchConversation, persistConversation } from './controllers/conversati
 import { estimateTokens } from './utils/tokenEstimator.js';
 import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
 import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
+import chatbotRoutes from './routes/chatbotRoutes.js';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 let __dirname;
@@ -113,6 +114,7 @@ app.use(apiPrefix + '/analyze', imageAnalysisRoutes);
 app.use(apiPrefix + '/meetings', meetingsRouter);
 app.use(apiPrefix + '/conversation', conversationRouter);
 app.use(apiPrefix + '/auth', authRoutes);
+app.use(apiPrefix + '/chatbot', chatbotRoutes);
 
 // Prometheus metrics endpoint (moved above error handler)
 app.get('/metrics', async (req, res) => {

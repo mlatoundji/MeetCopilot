@@ -8,6 +8,7 @@ import { UI } from './modules/ui.js';
 import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
 import { DataStore } from './modules/dataStore.js';
+import { ChatbotHandler } from './modules/chatbotHandler.js';
 
 class App {
   constructor() {
@@ -24,6 +25,7 @@ class App {
     this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
 
     this.backupHandler = new BackupHandler(this);
+    this.chatbotHandler = new ChatbotHandler(this.apiHandler);
     this.ui = new UI();
     
     this.sessionActive = false; 
@@ -84,6 +86,7 @@ class App {
     window.addEventListener('pageLoaded', (event) => {
       const pageName = event.detail.page;
       console.log(`Page loaded: ${pageName}`);
+      this.chatbotHandler.init();
     });
     
     // Set the initial page based on the current URL or go to home

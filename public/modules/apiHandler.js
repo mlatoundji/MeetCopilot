@@ -266,4 +266,19 @@ export class APIHandler {
     }
     return response.json();
   }
+
+  /**
+   * Envoie un message au chatbot
+   * @param {string} question - Le message à envoyer
+   * @returns {Promise<Object>} - La réponse du chatbot
+   */
+  async sendChatbotMessage(question) {
+    const url = `${this.baseURL}${this.apiPrefix}/chatbot/message`;
+    return this.callApi(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question })
+    });
+  }
 } 
+
