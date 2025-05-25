@@ -138,7 +138,13 @@
       <option value="gpt-3.5-turbo">ChatGPT-3.5</option>
       <option value="gpt-4">ChatGPT-4</option>
     </select>
+    <button id="chatbotSettings" class="chatbot-settings-btn" title="Settings">⚙️</button>
     <button id="chatbotClose" class="chatbot-close-btn" title="Close Chatbot">✕</button>
+  </div>
+  <div id="chatbotSettingsPanel" class="chatbot-settings-panel">
+    <label>Opacity <input id="settingsOpacity" type="range" min="20" max="100" value="100"></label>
+    <label>Width <input id="settingsWidth" type="number" min="200" max="600" value="320"></label>
+    <label>Height <input id="settingsHeight" type="number" min="200" max="800" value="400"></label>
   </div>
   <div id="chatbotMessages" class="chatbot-messages"></div>
   <div class="chatbot-input-container">

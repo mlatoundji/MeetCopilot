@@ -74,6 +74,42 @@ export class ChatbotHandler {
         }
       });
     }
+
+    // Draggable drawer via header
+    const header = this.drawer.querySelector('.chatbot-header');
+    if (header) {
+      header.addEventListener('mousedown', (e) => {
+        // Only start drag when clicking on header background, not on buttons, inputs, selects
+        if (e.target.closest('button, input, select')) return;
+        this.startDrag(e);
+      });
+    }
+
+    // Settings panel toggle and inputs
+    this.settingsBtn = document.getElementById('chatbotSettings');
+    this.settingsPanel = document.getElementById('chatbotSettingsPanel');
+    const opacityInput = document.getElementById('settingsOpacity');
+    const widthInput = document.getElementById('settingsWidth');
+    const heightInput = document.getElementById('settingsHeight');
+    if (this.settingsBtn && this.settingsPanel) {
+      this.settingsBtn.addEventListener('click', () => this.settingsPanel.classList.toggle('open'));
+    }
+    if (opacityInput) {
+      opacityInput.addEventListener('input', (e) => {
+        const v = e.target.value;
+        document.documentElement.style.setProperty('--chatbot-opacity', v / 100);
+      });
+    }
+    if (widthInput) {
+      widthInput.addEventListener('input', (e) => {
+        this.drawer.style.width = e.target.value + 'px';
+      });
+    }
+    if (heightInput) {
+      heightInput.addEventListener('input', (e) => {
+        this.drawer.style.height = e.target.value + 'px';
+      });
+    }
   }
 
   /**
@@ -183,6 +219,37 @@ export class ChatbotHandler {
         console.error('Chatbot stream error', err);
       };
     }
+  }
+
+  /** Start dragging the chatbot drawer */
+  startDrag(e) {
+    e.preventDefault();
+    const rect = this.drawer.getBoundingClientRect();
+    this.offsetX = e.clientX - rect.left;
+    this.offsetY = e.clientY - rect.top;
+    // Fix position
+    this.drawer.style.left = rect.left + 'px';
+    this.drawer.style.top = rect.top + 'px';
+    this.drawer.style.right = 'auto';
+    this.drawer.style.bottom = 'auto';
+    this.drawer.style.transform = 'none';
+    // Bind move/end
+    this._onDragMove = this.onDrag.bind(this);
+    this._onDragEnd = this.onDragEnd.bind(this);
+    document.addEventListener('mousemove', this._onDragMove);
+    document.addEventListener('mouseup', this._onDragEnd);
+  }
+
+  /** Handle dragging movement */
+  onDrag(e) {
+    this.drawer.style.left = (e.clientX - this.offsetX) + 'px';
+    this.drawer.style.top = (e.clientY - this.offsetY) + 'px';
+  }
+
+  /** End dragging */
+  onDragEnd() {
+    document.removeEventListener('mousemove', this._onDragMove);
+    document.removeEventListener('mouseup', this._onDragEnd);
   }
 } 
 

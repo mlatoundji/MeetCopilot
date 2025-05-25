@@ -30,6 +30,7 @@
   --error-color: #F44336;
   --success-color: #4CAF50;
   --warning-color: #FFC107;
+  --chatbot-opacity: 1;
 }
 
 [data-theme="dark"] {
@@ -63,6 +64,7 @@
   --error-color: #EF5350;
   --success-color: #66BB6A;
   --warning-color: #FFCA28;
+  --chatbot-opacity: 1;
 }
 
 body {
@@ -1607,24 +1609,29 @@ body.no-global-ui #main-sidebar {
   color: #fff;
   font-size: 24px;
   cursor: pointer;
-  z-index: 1000;
+  z-index: 1001;
 }
 .chatbot-drawer {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 300px;
-  max-height: 400px;
-  background: #fff;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  bottom: 1rem;
+  right: 1rem;
+  width: 320px;
+  height: 400px;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
   transform: translateY(100%);
-  transition: transform 0.3s ease-in-out;
+  visibility: hidden;
+  opacity: 0;
+  transition: transform 0.3s ease-in-out, opacity 0.2s ease;
   z-index: 1000;
 }
 .chatbot-drawer.open {
   transform: translateY(0);
+  visibility: visible;
+  opacity: var(--chatbot-opacity);
 }
 .chatbot-header {
   display: flex;
@@ -1633,6 +1640,7 @@ body.no-global-ui #main-sidebar {
   padding: 0.5rem;
   background-color: #2196F3;
   color: #fff;
+  cursor: move;
 }
 .chatbot-messages {
   flex: 1;
@@ -1640,34 +1648,47 @@ body.no-global-ui #main-sidebar {
   overflow-y: auto;
 }
 .chatbot-input-container {
+  flex: none;
   display: flex;
-  padding: 0.5rem;
-  border-top: 1px solid #ccc;
+  align-items: center;
 }
-.chatbot-input-container input {
+.chatbot-input-container input[type="text"] {
   flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
-.chatbot-send-btn {
-  margin-left: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  background-color: #2196F3;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
+.chatbot-message {
+  max-width: 80%;
+  padding: 8px 12px;
+  margin: 4px 8px;
+  word-wrap: break-word;
 }
 .chatbot-message.user {
-  text-align: right;
-  color: #2196F3;
-  margin-bottom: 0.5rem;
+  align-self: flex-end;
+  margin-left: auto;
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+  border-radius: 12px 12px 0 12px;
 }
 .chatbot-message.bot {
-  text-align: left;
-  color: #000;
-  margin-bottom: 0.5rem;
+  align-self: flex-start;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 12px 12px 12px 0;
+  border: 1px solid var(--border-color);
+}
+.chatbot-model-select {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+.chatbot-opacity-range {
+  display: none !important;
+}
+.chatbot-context-btn,
+.chatbot-attach-btn,
+.chatbot-camera-btn,
+.chatbot-send-btn {
+  flex: none;
 }
 
 /* Chatbot Attach & Camera Buttons */
@@ -1692,8 +1713,7 @@ body.no-global-ui #main-sidebar {
   margin-left: 0.5rem;
   padding: 0.25rem;
   border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 0.9rem;
+  border: 1px solid var(--border-color);
 }
 
 /* Chatbot context button */
@@ -1704,4 +1724,45 @@ body.no-global-ui #main-sidebar {
   font-size: 18px;
   margin-right: 0.5rem;
   cursor: pointer;
+}
+
+/* Settings button */
+.chatbot-settings-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 20px;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+/* Settings panel */
+.chatbot-settings-panel {
+  position: absolute;
+  top: 2.5rem;
+  right: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: none;
+  z-index: 1001;
+  width: 220px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.chatbot-settings-panel.open {
+  display: block;
+}
+.chatbot-settings-panel label {
+  display: block;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+.chatbot-settings-panel input {
+  margin-left: 0.5rem;
+}
+
+/* Ensure user messages align right */
+.chatbot-message.user {
+  margin-right: 0 !important;
 }
