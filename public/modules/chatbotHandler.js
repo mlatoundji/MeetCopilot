@@ -148,22 +148,43 @@ export class ChatbotHandler {
    */
   handleFiles(files) {
     this.attachments = Array.from(files);
-    // clear previous previews
-    if (this.previewContainer) this.previewContainer.innerHTML = '';
-    // render previews
-    this.attachments.forEach(file => {
-      let el;
+    this.renderPreview();
+  }
+
+  /** Render the attachments preview area with remove buttons */
+  renderPreview() {
+    if (!this.previewContainer) return;
+    this.previewContainer.innerHTML = '';
+    this.attachments.forEach((file, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'chatbot-preview-item';
+      let previewEl;
       if (file.type.startsWith('image/')) {
-        el = document.createElement('img');
-        el.src = URL.createObjectURL(file);
-        el.onload = () => URL.revokeObjectURL(el.src);
+        previewEl = document.createElement('img');
+        const url = URL.createObjectURL(file);
+        previewEl.src = url;
+        previewEl.className = 'chatbot-preview-image';
+        previewEl.onload = () => URL.revokeObjectURL(url);
       } else {
-        el = document.createElement('div');
-        el.className = 'chatbot-attachment-name';
-        el.innerText = file.name;
+        previewEl = document.createElement('div');
+        previewEl.className = 'chatbot-attachment-name';
+        previewEl.innerText = file.name;
       }
-      if (this.previewContainer) this.previewContainer.appendChild(el);
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'chatbot-preview-remove-btn';
+      removeBtn.innerText = '✕';
+      removeBtn.addEventListener('click', () => this.removeAttachment(idx));
+      wrapper.appendChild(previewEl);
+      wrapper.appendChild(removeBtn);
+      this.previewContainer.appendChild(wrapper);
     });
+  }
+
+  /** Remove an attachment by index and re-render preview */
+  removeAttachment(idx) {
+    this.attachments.splice(idx, 1);
+    this.renderPreview();
   }
 
   async sendMessage() {
@@ -175,15 +196,27 @@ export class ChatbotHandler {
     userMsgEl.className = 'chatbot-message user';
     userMsgEl.innerText = question;
     this.messagesContainer.appendChild(userMsgEl);
-    // Render attachments thumbnails in chat and clear preview
-    if (this.previewContainer) {
-      Array.from(this.previewContainer.children).forEach(el => {
-        const clone = el.cloneNode(true);
-        clone.className = el.tagName === 'IMG' ? 'chatbot-attachment-image' : 'chatbot-attachment-name';
-        this.messagesContainer.appendChild(clone);
-      });
-      this.previewContainer.innerHTML = '';
-    }
+    // Display thumbnails inline with the user's message
+    const attachmentsToSend = this.attachments.slice();
+    this.attachments = [];
+    attachmentsToSend.forEach(file => {
+      let thumb;
+      if (file.type.startsWith('image/')) {
+        thumb = document.createElement('img');
+        const url = URL.createObjectURL(file);
+        thumb.src = url;
+        thumb.className = 'chatbot-attachment-image';
+        thumb.onload = () => URL.revokeObjectURL(url);
+      } else {
+        thumb = document.createElement('div');
+        thumb.className = 'chatbot-attachment-name';
+        thumb.innerText = file.name;
+      }
+      this.messagesContainer.appendChild(thumb);
+    });
+    // Clear preview area
+    if (this.previewContainer) this.previewContainer.innerHTML = '';
+
     // Persist user message only if non-empty
     if (question) this.apiHandler.saveChatbotHistory(this.sessionId, 'user', question).catch(err => console.error('Save history error', err));
 
@@ -208,10 +241,7 @@ export class ChatbotHandler {
     const model = this.modelSelect ? this.modelSelect.value : undefined;
 
     // If there are attachments, send via FormData and await JSON response
-    if (this.attachments.length > 0) {
-      // prepare attachments for upload
-      const attachmentsToSend = this.attachments.slice();
-      this.attachments = [];
+    if (attachmentsToSend.length > 0) {
       try {
         const data = await this.apiHandler.sendChatbotMessage(question, attachmentsToSend, model, this.contextSnippet, this.sessionId);
         // Render uploaded attachments

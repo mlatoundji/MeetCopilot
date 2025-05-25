@@ -75,3 +75,22 @@ export const buildAssistantImageAnalysisPrompt = (image) => {
   promptMessages.push({ role: 'user', content: userContentMessage });
   return promptMessages;
 };
+
+export const buildChatbotMessages = (history, question, contextSnippet, attachmentDescriptions, uploadedUrls) => {
+  const messages = [];
+  messages.push({ role: 'system', content: 'You are a helpful AI assistant.' });
+  if (history) {
+    for (const message of history) {
+      messages.push({ role: message.role, content: message.content });
+    }
+  }
+  if (question) messages.push({ role: 'user', content: question });
+  if (contextSnippet) messages.push({ role: 'system', content: `Context: ${contextSnippet}` });
+  if (attachmentDescriptions.length > 0) {
+    messages.push({ role: 'system', content: `Image descriptions:\n${attachmentDescriptions.join('\n')}` });
+  }
+  if (uploadedUrls.length > 0) {
+    messages.push({ role: 'system', content: `Attached files: ${uploadedUrls.join(', ')}` });
+  }
+  return messages;
+};

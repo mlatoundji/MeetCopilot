@@ -1,7 +1,7 @@
 import express from 'express';
 import { fetchChatHistory, addChatHistory, supabase } from '../controllers/chatbotController.js';
 import multer from 'multer';
-import { chatCompletion, streamChatCompletion, analyzeImage as mistralAnalyzeImage } from '../services/mistralService.js';
+import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion, analyzeImage as mistralAnalyzeImage } from '../services/mistralService.js';
 import { buildAssistantImageAnalysisPrompt } from '../services/promptBuilder.js';
 const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
@@ -68,21 +68,11 @@ router.post('/message', upload.array('attachments'), async (req, res) => {
     if (!histErr) history = pastMessages;
   } catch (_) {}
   // 2. Build messages array for AI
-  const messages = [];
-  messages.push({ role: 'system', content: 'You are a helpful AI assistant.' });
-  if (contextSnippet) messages.push({ role: 'system', content: `Context: ${contextSnippet}` });
-  if (attachmentDescriptions.length > 0) {
-    messages.push({ role: 'system', content: `Image descriptions:\n${attachmentDescriptions.join('\n')}` });
-  }
-  if (uploadedUrls.length > 0) {
-    messages.push({ role: 'system', content: `Attached files: ${uploadedUrls.join(', ')}` });
-  }
-  for (const m of history) messages.push({ role: m.role, content: m.content });
-  messages.push({ role: 'user', content: question });
+  const messages = buildChatbotMessages(history, question, contextSnippet, attachmentDescriptions, uploadedUrls);
   // 3. Call AI
   let assistantMsg;
   try {
-    assistantMsg = await chatCompletion(messages, { model: model || 'mistral-medium' });
+    assistantMsg = await mistralChatCompletion(messages, { model: model || 'mistral-medium' });
   } catch (aiErr) {
     console.error('AI chat completion error', aiErr);
     return res.status(500).json({ error: 'AI completion failed' });
@@ -124,16 +114,11 @@ router.get('/message/stream', async (req, res) => {
     if (!attachErr && attachRows) attachmentsList = attachRows.map(a => a.file_url);
   } catch (_) {}
   // 2) Build prompt messages
-  const messages = [];
-  messages.push({ role: 'system', content: 'You are a helpful AI assistant.' });
-  if (contextSnippet) messages.push({ role: 'system', content: `Context: ${contextSnippet}` });
-  if (attachmentsList.length > 0) messages.push({ role: 'system', content: `Attached files: ${attachmentsList.join(', ')}` });
-  for (const m of history) messages.push({ role: m.role, content: m.content });
-  messages.push({ role: 'user', content: question });
+  const messages = buildChatbotMessages(history, question, contextSnippet, attachmentDescriptions, uploadedUrls);
   // 3) Call AI streaming
   let assistantFull = '';
   try {
-    const aiStream = await streamChatCompletion(messages, { model: model || 'mistral-medium' });
+    const aiStream = await mistralStreamChatCompletion(messages, { model: model || 'mistral-medium' });
     aiStream.on('data', (chunk) => {
       const str = chunk.toString();
       // SSE parts come as 'data: <json>' separated by double newlines
