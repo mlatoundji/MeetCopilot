@@ -61,6 +61,7 @@ export class MeetingPage {
     this.quitButton = document.getElementById('quitButton');
     this.meetingContentGrid = document.getElementById('meetingContentGrid');
     this.meetingSidebar = document.getElementById('meetingSidebar');
+    this.captureButton = document.getElementById('captureButton');
 
     // Masquer la sidebar principale dans la page meeting
     const mainSidebar = document.querySelector('.sidebar');
@@ -106,6 +107,10 @@ export class MeetingPage {
     const toggleFullSidebarBtn = document.getElementById('toggleSidebarFull');
     if (toggleFullSidebarBtn) {
       toggleFullSidebarBtn.addEventListener('click', () => this.toggleFullSidebar());
+    }
+
+    if (this.captureButton) {
+      this.captureButton.addEventListener('click', () => this.captureImage());
     }
   }
 
@@ -744,6 +749,37 @@ export class MeetingPage {
     // Call additional initialize logic if present
     if (typeof this.initialize === 'function') {
       await this.initialize();
+    }
+  }
+
+  /**
+   * Capture a frame from the screen-capture video and generate a PNG data URL
+   */
+  captureImage() {
+    const video = document.getElementById('screen-capture');
+    if (!video) {
+      console.error('Video element not found for screen capture');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/png');
+    console.log('Captured image data URL:', imageData);
+    // Display the captured image as a thumbnail in the screen capture area
+    const container = document.querySelector('#screenCaptureArea .area-content');
+    if (container) {
+      let thumbnail = container.querySelector('.capture-thumbnail');
+      if (!thumbnail) {
+        thumbnail = document.createElement('img');
+        thumbnail.className = 'capture-thumbnail';
+        container.appendChild(thumbnail);
+      }
+      thumbnail.src = imageData;
+    } else {
+      console.error('Container for thumbnail not found');
     }
   }
 } 

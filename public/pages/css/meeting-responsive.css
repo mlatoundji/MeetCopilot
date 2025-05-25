@@ -206,10 +206,33 @@
   background-color: var(--button-hover, #e0e0e0);
 }
 
+.area-control.capture-button {
+  color: var(--primary-color, #2196F3);
+}
+
+.area-control.capture-button:hover {
+  background-color: var(--primary-color, #2196F3);
+  color: #fff;
+}
+
+.area-control.capture-button:focus {
+  outline: 2px solid var(--primary-color, #2196F3);
+}
+
 .area-content {
   flex: 1;
   overflow: auto;
   padding: 12px;
+}
+
+/* Thumbnail for captured images */
+.capture-thumbnail {
+  display: block;
+  max-width: 100%;
+  max-height: 150px;
+  margin-top: 10px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 4px;
 }
 
 /* Style pour la vidéo */
