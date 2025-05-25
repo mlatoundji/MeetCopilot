@@ -7,6 +7,7 @@ import { DataStore } from '../../modules/dataStore.js';
 import { AudioCapture } from '../../modules/audioCapture.js';
 import { LayoutManager } from '../../modules/layoutManager.js';
 import { filterTranscription } from '../../utils.js';
+import { shortcuts } from '../../modules/shortcuts.js';
 
 export class MeetingPage {
   constructor(app) {
@@ -226,6 +227,8 @@ export class MeetingPage {
     // Initialiser les éléments UI
     this.initializeElements();
     this.bindEvents();
+    // Attach keyboard shortcuts
+    this.attachKeyboardShortcuts();
     
     // Initialiser le gestionnaire de mise en page responsive
     this.layoutManager.initialize();
@@ -780,6 +783,58 @@ export class MeetingPage {
       thumbnail.src = imageData;
     } else {
       console.error('Container for thumbnail not found');
+    }
+  }
+
+  /**
+   * Attach global keyboard shortcuts
+   */
+  attachKeyboardShortcuts() {
+    window.addEventListener('keydown', (e) => {
+      // Require Ctrl + Alt
+      if (!e.ctrlKey || !e.altKey) return;
+      const key = e.key.toLowerCase();
+      shortcuts.forEach((sc) => {
+        if (
+          key === sc.key &&
+          e.ctrlKey === sc.ctrl &&
+          e.altKey === sc.alt &&
+          e.shiftKey === sc.shift
+        ) {
+          e.preventDefault();
+          // Call corresponding method
+          if (typeof this[sc.method] === 'function') {
+            this[sc.method]();
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Toggle the layout presets panel
+   */
+  toggleLayoutPresets() {
+    this.layoutManager.toggleLayoutPresetsPanel();
+  }
+
+  /**
+   * Toggle transcription area visibility
+   */
+  toggleTranscriptionArea() {
+    const area = document.getElementById('transcriptionArea');
+    if (area) {
+      area.style.display = area.style.display === 'none' ? 'flex' : 'none';
+    }
+  }
+
+  /**
+   * Toggle suggestions area visibility
+   */
+  toggleSuggestionsArea() {
+    const area = document.getElementById('suggestionsArea');
+    if (area) {
+      area.style.display = area.style.display === 'none' ? 'flex' : 'none';
     }
   }
 } 

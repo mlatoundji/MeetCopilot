@@ -370,15 +370,6 @@ export class UIHandler {
         this.modalOverlay.style.display = "none";
     }
     
-    initializeKeydownEventListeners() {        
-        document.addEventListener("keydown", (event) => {
-            if (event.code === "Space" && this.meetingModal.style.display === "none") {
-                event.preventDefault();
-                this.suggestionButton.click();
-            }
-        });
-    }
-
     /**
      * Obtient le mode d'utilisation actuel.
      * @returns {string} - Mode d'utilisation ('libre' ou 'assiste').
