@@ -268,16 +268,73 @@ export class APIHandler {
   }
 
   /**
-   * Envoie un message au chatbot
-   * @param {string} question - Le message à envoyer
-   * @returns {Promise<Object>} - La réponse du chatbot
+   * Send a message to the chatbot, with optional file attachments
+   * @param {string} question - The user's question
+   * @param {File[]} [attachments] - Optional array of File objects to upload
+   * @returns {Promise<Object>} - The chatbot response
    */
-  async sendChatbotMessage(question) {
+  async sendChatbotMessage(question, attachments = []) {
     const url = `${this.baseURL}${this.apiPrefix}/chatbot/message`;
+    // If attachments are present, use multipart/form-data
+    if (attachments.length > 0) {
+      const formData = new FormData();
+      formData.append('question', question);
+      attachments.forEach((file) => formData.append('attachments', file));
+      return this.callApi(url, {
+        method: 'POST',
+        body: formData,
+      });
+    }
+    // Else, send JSON
     return this.callApi(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question }),
+    });
+  }
+
+  /**
+   * Stream a message to the chatbot, with optional file attachments
+   * @param {string} question - The user's question
+   * @param {File[]} [attachments] - Optional array of File objects to upload
+   * @returns {Promise<Object>} - The chatbot response
+   */
+  async streamChatbotMessage(question, attachments = []) {
+    const url = `${this.baseURL}${this.apiPrefix}/chatbot/message/stream?question=${encodeURIComponent(question)}`;
+    const eventSource = new EventSource(url);
+    eventSource.onmessage = (e) => {
+      const data = e.data;
+      if (data === '[DONE]') {
+        eventSource.close();
+      } else {
+        const parsedData = JSON.parse(data);
+        console.log("Streaming data:", parsedData);
+      }
+    };
+    return eventSource;
+  }
+
+  /**
+   * Fetch chat history for a given session ID
+   * @param {string} sessionId
+   * @returns {Promise<Object>} - { messages: [...] }
+   */
+  async getChatbotHistory(sessionId) {
+    const url = `${this.baseURL}${this.apiPrefix}/chatbot/history/${encodeURIComponent(sessionId)}`;
+    return this.callApi(url, { method: 'GET' });
+  }
+
+  /**
+   * Save a chat message to history for a given session ID
+   * @param {string} sessionId
+   * @param {string} role - 'user' or 'assistant'
+   * @param {string} content - message content
+   * @returns {Promise<Object>}
+   */
+  async saveChatbotHistory(sessionId, role, content) {
+    const url = `${this.baseURL}${this.apiPrefix}/chatbot/history/${encodeURIComponent(sessionId)}`;
+    return this.callApi(url, {
+      method: 'POST',
+      body: JSON.stringify({ role, content })
     });
   }
 } 

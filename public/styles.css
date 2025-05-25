@@ -1669,3 +1669,39 @@ body.no-global-ui #main-sidebar {
   color: #000;
   margin-bottom: 0.5rem;
 }
+
+/* Chatbot Attach & Camera Buttons */
+.chatbot-attach-btn,
+.chatbot-camera-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 20px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+/* Typing indicator style */
+.chatbot-message.typing {
+  font-style: italic;
+  color: #999;
+}
+
+/* Chatbot model selector */
+.chatbot-model-select {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+}
+
+/* Chatbot context button */
+.chatbot-context-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 18px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}

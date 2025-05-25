@@ -133,11 +133,21 @@
 <div id="chatbotDrawer" class="chatbot-drawer">
   <div class="chatbot-header">
     <h3>Chatbot</h3>
+    <select id="chatbotModelSelect" class="chatbot-model-select">
+      <option value="mistral-medium">Mistral</option>
+      <option value="gpt-3.5-turbo">ChatGPT-3.5</option>
+      <option value="gpt-4">ChatGPT-4</option>
+    </select>
     <button id="chatbotClose" class="chatbot-close-btn" title="Close Chatbot">✕</button>
   </div>
   <div id="chatbotMessages" class="chatbot-messages"></div>
   <div class="chatbot-input-container">
+    <button id="chatbotContext" class="chatbot-context-btn" title="Attach context">📄</button>
+    <button id="chatbotAttach" class="chatbot-attach-btn" title="Attach files">📎</button>
+    <button id="chatbotCamera" class="chatbot-camera-btn" title="Capture image">📷</button>
     <input id="chatbotInput" type="text" placeholder="Ask your question..." />
     <button id="chatbotSend" class="chatbot-send-btn" title="Send">▶</button>
+    <input id="chatbotFileInput" type="file" multiple hidden />
+    <input id="chatbotCameraInput" type="file" accept="image/*" capture="environment" hidden />
   </div>
 </div> 
