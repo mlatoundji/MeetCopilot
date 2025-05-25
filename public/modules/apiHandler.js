@@ -343,5 +343,15 @@ export class APIHandler {
       body: JSON.stringify({ role, content })
     });
   }
+
+  /**
+   * Clear chat session (delete history and attachments)
+   * @param {string} sessionId
+   * @returns {Promise<Object>}
+   */
+  async clearChatbotSession(sessionId) {
+    const url = `${this.baseURL}${this.apiPrefix}/chatbot/session/${encodeURIComponent(sessionId)}`;
+    return this.callApi(url, { method: 'DELETE' });
+  }
 } 
 

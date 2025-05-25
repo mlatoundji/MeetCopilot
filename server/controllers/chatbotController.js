@@ -61,4 +61,32 @@ export const addChatHistory = async (req, res) => {
   }
 };
 
+/**
+ * Clear chat session data: remove storage files and DB records
+ */
+export const clearChatSession = async (req, res) => {
+  const { sessionId } = req.params;
+  try {
+    // List and remove files in storage bucket folder
+    const { data: list, error: listErr } = await supabase.storage
+      .from('chat-attachments')
+      .list(sessionId, { limit: 100 });
+    if (!listErr && list.length) {
+      const paths = list.map(obj => `${sessionId}/${obj.name}`);
+      const { error: removeErr } = await supabase.storage
+        .from('chat-attachments')
+        .remove(paths);
+      if (removeErr) console.error('Supabase remove error', removeErr.message);
+    }
+    // Delete attachment metadata
+    await supabase.from('chat_attachments').delete().eq('session_id', sessionId);
+    // Delete chat messages
+    await supabase.from('chat_messages').delete().eq('session_id', sessionId);
+    res.json({ message: 'Session cleared' });
+  } catch (err) {
+    console.error('Clear session error', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export { supabase }; 

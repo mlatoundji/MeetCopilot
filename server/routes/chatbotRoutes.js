@@ -1,8 +1,8 @@
 import express from 'express';
-import { fetchChatHistory, addChatHistory, supabase } from '../controllers/chatbotController.js';
+import { fetchChatHistory, addChatHistory, supabase, clearChatSession } from '../controllers/chatbotController.js';
 import multer from 'multer';
 import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion, analyzeImage as mistralAnalyzeImage } from '../services/mistralService.js';
-import { buildAssistantImageAnalysisPrompt } from '../services/promptBuilder.js';
+import { buildAssistantImageAnalysisPrompt, buildChatbotMessages } from '../services/promptBuilder.js';
 const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
 
@@ -182,5 +182,7 @@ router.post('/message/stream', express.json(), (req, res) => {
 // Chat history persistence
 router.get('/history/:sessionId', fetchChatHistory);
 router.post('/history/:sessionId', express.json(), addChatHistory);
+// Clear session (delete messages and attachments)
+router.delete('/session/:sessionId', clearChatSession);
 
 export default router; 

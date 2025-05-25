@@ -1,10 +1,12 @@
 /**
  * Gestionnaire du chatbot
  * @param {Object} apiHandler - L'instance de l'APIHandler
+ * @param {Object} conversationContextHandler - L'instance du conversationContextHandler
  */
 export class ChatbotHandler {
-  constructor(apiHandler) {
+  constructor(apiHandler, conversationContextHandler) {
     this.apiHandler = apiHandler;
+    this.conversationContextHandler = conversationContextHandler;
     this.previewContainer = null;
     this.toggleBtn = null;
     this.drawer = null;
@@ -48,17 +50,38 @@ export class ChatbotHandler {
       this.attachBtn.addEventListener('click', () => this.fileInput.click());
       this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
     }
-    if (this.cameraBtn && this.cameraInput) {
-      this.cameraBtn.addEventListener('click', () => this.cameraInput.click());
-      this.cameraInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+    if (this.cameraBtn) {
+      this.cameraBtn.addEventListener('click', () => {
+        // If system video capture is active, grab frame
+        const videoEl = document.getElementById('screen-capture');
+        if (videoEl && !videoEl.paused && videoEl.videoWidth) {
+          const canvas = document.createElement('canvas');
+          canvas.width = videoEl.videoWidth;
+          canvas.height = videoEl.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(videoEl, 0, 0);
+          canvas.toBlob((blob) => {
+            blob.name = `capture_${Date.now()}.png`;
+            this.handleFiles([blob]);
+          }, 'image/png');
+        } else if (this.cameraInput) {
+          this.cameraInput.click();
+        }
+      });
+      if (this.cameraInput) this.cameraInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
     }
     if (contextBtn) {
       contextBtn.addEventListener('click', () => {
-        const sel = window.getSelection().toString().trim();
-        if (sel) {
-          this.contextSnippet = sel;
-          this.input.placeholder = `Context attached: ${sel.slice(0,20)}...`;
-        }
+        // const sel = window.getSelection().toString().trim();
+        // if (sel) {
+        //   this.contextSnippet = sel;
+        //   // Add selected dialog to conversation context
+        //   if (this.conversationContextHandler) {
+        //     this.conversationContextHandler.conversationContextDialogs.push({ speaker: 'User', text: sel, time: Date.now(), source: this.conversationContextHandler.MIC_SOURCE });
+        //     this.conversationContextHandler.updateConversationContext();
+        //   }
+        //   this.input.placeholder = `Context attached: ${sel.slice(0,20)}...`;
+        // }
       });
     }
     // Load existing chat history
@@ -111,6 +134,11 @@ export class ChatbotHandler {
       heightInput.addEventListener('input', (e) => {
         this.drawer.style.height = e.target.value + 'px';
       });
+    }
+    // Reset conversation button
+    this.resetBtn = document.getElementById('chatbotReset');
+    if (this.resetBtn) {
+      this.resetBtn.addEventListener('click', () => this.resetConversation());
     }
   }
 
@@ -325,5 +353,22 @@ export class ChatbotHandler {
   onDragEnd() {
     document.removeEventListener('mousemove', this._onDragMove);
     document.removeEventListener('mouseup', this._onDragEnd);
+  }
+
+  /** Reset the conversation state both server-side and client-side */
+  async resetConversation() {
+    try {
+      await this.apiHandler.clearChatbotSession(this.sessionId);
+    } catch (err) {
+      console.error('Reset session error', err);
+    }
+    // Clear chat UI
+    if (this.messagesContainer) this.messagesContainer.innerHTML = '';
+    if (this.previewContainer) this.previewContainer.innerHTML = '';
+    // Generate new session ID
+    this.sessionId = '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chatbotSessionId', this.sessionId);
+    // Close settings panel
+    if (this.settingsPanel) this.settingsPanel.classList.remove('open');
   }
 }

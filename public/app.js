@@ -25,7 +25,7 @@ class App {
     this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
 
     this.backupHandler = new BackupHandler(this);
-    this.chatbotHandler = new ChatbotHandler(this.apiHandler);
+    this.chatbotHandler = new ChatbotHandler(this.apiHandler, this.conversationContextHandler);
     this.ui = new UI();
     
     this.sessionActive = false; 
