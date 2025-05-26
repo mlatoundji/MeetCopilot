@@ -68,7 +68,6 @@ export const buildAssistantImageAnalysisPrompt = (image) => {
 
   let promptMessages = [];
   let userContentMessage = [
-    { type: 'text', text: 'Analyze the following image and provide a concise description:' },
     { type: 'image_url', image_url: image }
   ]
   promptMessages.push({ role: 'system', content: systemPrompt });
@@ -76,7 +75,7 @@ export const buildAssistantImageAnalysisPrompt = (image) => {
   return promptMessages;
 };
 
-export const buildChatbotMessages = (history, question, contextSnippet, attachmentDescriptions, uploadedUrls) => {
+export const buildChatbotMessages = (history, question, contextSnippet, uploadedUrls, attachmentDescriptions = []) => {
   const messages = [];
   messages.push({ role: 'system', content: 'You are a helpful AI assistant.' });
   if (history) {

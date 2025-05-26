@@ -246,7 +246,7 @@ export class ChatbotHandler {
     if (this.previewContainer) this.previewContainer.innerHTML = '';
 
     // Persist user message only if non-empty
-    if (question) this.apiHandler.saveChatbotHistory(this.sessionId, 'user', question).catch(err => console.error('Save history error', err));
+    // if (question) this.apiHandler.saveChatbotHistory(this.sessionId, 'user', question).catch(err => console.error('Save history error', err));
 
     // Clear input and reset attachments
     this.input.value = '';
@@ -291,7 +291,7 @@ export class ChatbotHandler {
         typingEl.remove();
         botMsgEl.innerText = data.response || 'No response';
         // Persist assistant message
-        await this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText).catch(err => console.error('Save history error', err));
+        // await this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText).catch(err => console.error('Save history error', err));
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
       } catch (err) {
         console.error('Chatbot request failed', err);
@@ -308,7 +308,7 @@ export class ChatbotHandler {
           typingEl.remove();
           es.close();
           // Persist full assistant message
-          this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText.trim()).catch(err => console.error('Save history error', err));
+          // this.apiHandler.saveChatbotHistory(this.sessionId, 'assistant', botMsgEl.innerText.trim()).catch(err => console.error('Save history error', err));
           return;
         }
         // Append raw text chunk

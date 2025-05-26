@@ -1,5 +1,5 @@
 import express from 'express';
-import { fetchChatHistory, addChatHistory, supabase, clearChatSession } from '../controllers/chatbotController.js';
+import { fetchChatHistory, addChatHistory, supabase, clearChatSession, handleChatAttachments } from '../controllers/chatbotController.js';
 import multer from 'multer';
 import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion, analyzeImage as mistralAnalyzeImage } from '../services/mistralService.js';
 import { buildAssistantImageAnalysisPrompt, buildChatbotMessages } from '../services/promptBuilder.js';
@@ -10,7 +10,55 @@ const router = express.Router();
 router.post('/message', upload.array('attachments'), async (req, res) => {
   const { question, model, contextSnippet, sessionId } = req.body;
   const files = req.files || [];
-  // Generate text descriptions for any image attachments
+
+  // Handle attachments upload and metadata with controller
+  let uploadedUrls = [];
+  try {
+    uploadedUrls = await handleChatAttachments(sessionId, files);
+  } catch (attachmentErr) {
+    console.error('Attachment handling error', attachmentErr);
+    return res.status(500).json({ error: 'File upload failed' });
+  }
+
+  // Build AI prompt
+  // 1. Fetch existing chat history
+  let history = [];
+  try {
+    const { data: pastMessages, error: histErr } = await supabase
+      .from('chat_messages')
+      .select('role, content')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+    if (!histErr) history = pastMessages;
+  } catch (_) {}
+  // 2 & 3. Build messages and call AI depending on selected model
+  let assistantMsg;
+  if (model === 'pixtral-12b-latest') {
+    console.log('Pixtral model selected');
+    // Pixtral multimodal model: include base64 images directly
+    const pixMessages = [];
+    history.forEach(m => pixMessages.push({ role: m.role, content: m.content }));
+    if (contextSnippet) pixMessages.push({ role: 'system', content: `Context: ${contextSnippet}` });
+    for (const file of files) {
+      if (file.mimetype.startsWith('image/')) {
+        const base64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        const promptMsgs = buildAssistantImageAnalysisPrompt(base64);
+        promptMsgs.forEach(pm => pixMessages.push(pm));
+      }
+    }
+    if (question) pixMessages.push({ role: 'user', content: question });
+    console.log('Pix messages:', pixMessages);
+    try {
+      let response = await mistralAnalyzeImage(pixMessages, { model });
+      const data = await response.json();
+      // Extract assistant message content
+      assistantMsg = data.choices?.[0]?.message || '';
+    } catch (aiErr) {
+      console.error('AI chat completion error', aiErr);
+      return res.status(500).json({ error: 'AI completion failed' });
+    }
+  } else {
+      // Generate text descriptions for any image attachments
   const attachmentDescriptions = [];
   for (const file of files) {
     if (file.mimetype.startsWith('image/')) {
@@ -24,58 +72,15 @@ router.post('/message', upload.array('attachments'), async (req, res) => {
       } catch (imgErr) {
         console.error('Image analysis error', imgErr);
       }
+      }
     }
-  }
-  const uploadedUrls = [];
-  for (const file of files) {
-    // build unique path
-    const path = `${sessionId}/${Date.now()}_${file.originalname}`;
-    // upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('chat-attachments')
-      .upload(path, file.buffer, { contentType: file.mimetype });
-    if (uploadError) {
-      console.error('Supabase storage upload error', uploadError.message);
-      return res.status(500).json({ error: 'File upload failed' });
+    const messages = buildChatbotMessages(history, question, contextSnippet, uploadedUrls, attachmentDescriptions);
+    try {
+      assistantMsg = await mistralChatCompletion(messages, { model: model || 'mistral-medium' });
+    } catch (aiErr) {
+      console.error('AI chat completion error', aiErr);
+      return res.status(500).json({ error: 'AI completion failed' });
     }
-    // generate signed URL (private bucket)
-    const { data: signedData, error: urlError } = await supabase.storage
-      .from('chat-attachments')
-      .createSignedUrl(path, 60 * 60); // expires in 1 hour
-    if (urlError) {
-      console.error('Supabase createSignedUrl error', urlError.message);
-      return res.status(500).json({ error: 'URL creation failed' });
-    }
-    const signedURL = signedData.signedUrl;
-    uploadedUrls.push(signedURL);
-    // persist attachment metadata
-    const { error: dbError } = await supabase.from('chat_attachments').insert([
-      { session_id: sessionId, file_url: signedURL, file_name: file.originalname, mime_type: file.mimetype }
-    ]);
-    if (dbError) {
-      console.error('Supabase insert attachment error', dbError.message);
-    }
-  }
-  // Build AI prompt
-  // 1. Fetch existing chat history
-  let history = [];
-  try {
-    const { data: pastMessages, error: histErr } = await supabase
-      .from('chat_messages')
-      .select('role, content')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: true });
-    if (!histErr) history = pastMessages;
-  } catch (_) {}
-  // 2. Build messages array for AI
-  const messages = buildChatbotMessages(history, question, contextSnippet, attachmentDescriptions, uploadedUrls);
-  // 3. Call AI
-  let assistantMsg;
-  try {
-    assistantMsg = await mistralChatCompletion(messages, { model: model || 'mistral-medium' });
-  } catch (aiErr) {
-    console.error('AI chat completion error', aiErr);
-    return res.status(500).json({ error: 'AI completion failed' });
   }
   // 4. Persist assistant response
   try {
@@ -114,7 +119,7 @@ router.get('/message/stream', async (req, res) => {
     if (!attachErr && attachRows) attachmentsList = attachRows.map(a => a.file_url);
   } catch (_) {}
   // 2) Build prompt messages
-  const messages = buildChatbotMessages(history, question, contextSnippet, attachmentDescriptions, uploadedUrls);
+  const messages = buildChatbotMessages(history, question, contextSnippet, uploadedUrls);
   // 3) Call AI streaming
   let assistantFull = '';
   try {

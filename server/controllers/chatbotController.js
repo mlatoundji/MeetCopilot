@@ -15,6 +15,44 @@ const supabase = createSupabaseClient(
 );
 
 /**
+ * Uploads files to Supabase Storage, creates signed URLs, and persists attachment metadata.
+ * @param {string} sessionId - The session ID for the chat.
+ * @param {Express.Multer.File[]} files - Array of uploaded files from the request.
+ * @returns {Promise<string[]>} - Array of signed URLs for the uploaded files.
+ */
+export const handleChatAttachments = async (sessionId, files) => {
+  const uploadedUrls = [];
+  for (const file of files) {
+    const path = `${sessionId}/${Date.now()}_${file.originalname}`;
+    // upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('chat-attachments')
+      .upload(path, file.buffer, { contentType: file.mimetype });
+    if (uploadError) {
+      throw new Error(`Supabase upload error: ${uploadError.message}`);
+    }
+    // generate signed URL (private bucket)
+    const { data: signedData, error: urlError } = await supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(path, 60 * 60);
+    if (urlError) {
+      throw new Error(`Supabase URL creation error: ${urlError.message}`);
+    }
+    const signedURL = signedData.signedUrl;
+    uploadedUrls.push(signedURL);
+    // persist attachment metadata
+    const { error: dbError } = await supabase.from('chat_attachments').insert([
+      { session_id: sessionId, file_url: signedURL, file_name: file.originalname, mime_type: file.mimetype }
+    ]);
+    if (dbError) {
+      console.error('Supabase insert attachment error', dbError.message);
+    }
+    console.log('Uploaded file:', file.originalname, 'to', signedURL);
+  }
+  return uploadedUrls;
+};
+
+/**
  * Fetch chat history for a given session ID
  */
 export const fetchChatHistory = async (req, res) => {
@@ -88,5 +126,6 @@ export const clearChatSession = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 export { supabase }; 

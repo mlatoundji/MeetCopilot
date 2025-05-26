@@ -20,6 +20,7 @@ router.post('/:provider', async (req, res) => {
     if (provider === 'mistral') {
       // Mistral vision via chat completions
       const promptMessages = buildAssistantImageAnalysisPrompt(image);
+      console.log('Prompt messages:', promptMessages);
       const response = await analyzeImageMistral(promptMessages);
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
