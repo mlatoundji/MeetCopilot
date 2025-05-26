@@ -75,7 +75,7 @@ export const buildAssistantImageAnalysisPrompt = (image) => {
   return promptMessages;
 };
 
-export const buildChatbotMessages = (history, question, contextSnippet, uploadedUrls, attachmentDescriptions = []) => {
+export const buildChatbotMessages = (history, question, contextSnippet, uploadedUrls=[], attachmentDescriptions = []) => {
   const messages = [];
   messages.push({ role: 'system', content: 'You are a helpful AI assistant.' });
   if (history) {

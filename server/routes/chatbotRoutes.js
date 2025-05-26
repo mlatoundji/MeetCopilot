@@ -83,6 +83,11 @@ router.post('/message', upload.array('attachments'), async (req, res) => {
     }
   }
   // 4. Persist assistant response
+  try{
+    await supabase.from('chat_messages').insert([{ session_id: sessionId, role: 'user', content: question }]);
+  } catch (persistErr) {
+    console.error('Persist user history error', persistErr);
+  }
   try {
     await supabase.from('chat_messages').insert([{ session_id: sessionId, role: 'assistant', content: assistantMsg.content }]);
   } catch (persistErr) {
@@ -118,8 +123,10 @@ router.get('/message/stream', async (req, res) => {
       .eq('session_id', sessionId);
     if (!attachErr && attachRows) attachmentsList = attachRows.map(a => a.file_url);
   } catch (_) {}
+
+
   // 2) Build prompt messages
-  const messages = buildChatbotMessages(history, question, contextSnippet, uploadedUrls);
+  const messages = buildChatbotMessages(history, question, contextSnippet);
   // 3) Call AI streaming
   let assistantFull = '';
   try {
@@ -144,6 +151,11 @@ router.get('/message/stream', async (req, res) => {
       });
     });
     aiStream.on('end', async () => {
+      try{
+        await supabase.from('chat_messages').insert([{ session_id: sessionId, role: 'user', content: question }]);
+      } catch (persistErr) {
+        console.error('Persist user history error', persistErr);
+      }
       // Persist full assistant response
       try {
         await supabase.from('chat_messages').insert([{ session_id: sessionId, role: 'assistant', content: assistantFull.trim() }]);
