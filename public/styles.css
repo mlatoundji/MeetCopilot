@@ -1821,3 +1821,16 @@ body.no-global-ui #main-sidebar {
 .chatbot-reset-btn:hover {
   background-color: #d32f2f;
 }
+
+/* Ensure transcription cards align vertically */
+.transcription-cards-container {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 1rem;
+  overflow-x: auto !important;
+}
+.transcription-cards-container .transcription-card {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+}
