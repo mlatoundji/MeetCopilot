@@ -70,16 +70,45 @@ export class AudioCapture {
     processAndClearBuffers() {
       // Process system buffer if needed
       if (this.systemBuffer.length > 0) {
-        // TODO: Implement data processing and export functionality
         console.log(`Processing ${this.systemBuffer.length} system audio chunks`);
-        // this.systemBuffer = []; // Commented out until processing is implemented
+        // Concatenate buffered system audio chunks
+        const bufferedAudio = this.systemBuffer.reduce(
+          (acc, chunk) => {
+            const combined = new Float32Array(acc.length + chunk.length);
+            combined.set(acc, 0);
+            combined.set(chunk, acc.length);
+            return combined;
+          },
+          new Float32Array()
+        );
+        // Invoke callback for utterance end
+        if (this.onUtteranceEnd) {
+          this.onUtteranceEnd('system', bufferedAudio);
+        }
+        // Clear system buffer
+        this.systemBuffer = [];
       }
 
       // Process mic buffer if needed
-      if (this.micBuffer.length > 0) {
-        // TODO: Implement data processing and export functionality
-        console.log(`Processing ${this.micBuffer.length} mic audio chunks`);
-        // this.micBuffer = []; // Commented out until processing is implemented
+      if (this.micRawBuffer.length > 0) {
+        console.log(`Processing ${this.micRawBuffer.length} mic audio chunks`);
+        // Concatenate buffered mic audio chunks
+        const bufferedAudio = this.micRawBuffer.reduce(
+          (acc, chunk) => {
+            const combined = new Float32Array(acc.length + chunk.length);
+            combined.set(acc, 0);
+            combined.set(chunk, acc.length);
+            return combined;
+          },
+          new Float32Array()
+        );
+        // Invoke callback for utterance end
+        if (this.onUtteranceEnd) {
+          this.onUtteranceEnd('mic', bufferedAudio);
+        }
+        // Clear mic buffers
+        this.micRawBuffer = [];
+        this.micBuffer = [];
       }
     }
 
