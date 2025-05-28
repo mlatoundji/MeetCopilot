@@ -109,6 +109,7 @@ export const addMessages = async (req, res) => {
     // === Auto-summary & sliding window ===
     if (USE_AUTO_SUMMARIZATION) {
     const updatedTokenCount = estimateTokens(memory.messages);
+    console.log("Token count :", updatedTokenCount);
     const needSummaryByCount = memory.messages.length >= WINDOW_MAX_TURNS + SUMMARY_TRIGGER_EVERY;
     const needSummaryByTokens = updatedTokenCount > SUMMARY_TOKEN_THRESHOLD;
     if (needSummaryByCount || needSummaryByTokens) {
@@ -142,6 +143,7 @@ export const addMessages = async (req, res) => {
 
     // Build prompt and handle caching
     if (USE_AUTO_SUGGESTION) {
+      console.log("Building assistant suggestion prompt");
       if (memory.messages.length >= ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES) {
       const promptMessages = buildAssistantSuggestionPrompt(memory);
         const promptTokens = estimateTokens(promptMessages);
@@ -166,7 +168,11 @@ export const addMessages = async (req, res) => {
 
         return res.json({ assistant: assistantMessage, cid });
       }
+      console.log("No assistant suggestion prompt");
+      return res.json({ assistant: null, cid });
     }
+    console.log("Add messages done");
+    return res.json({ assistant: null, cid });
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });
