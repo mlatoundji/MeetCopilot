@@ -169,7 +169,7 @@ export class ConversationContextHandler {
             if(res && res.assistant && res.assistant.content){
                 // Display assistant reply in UI (as suggestion area)
                 const assistantText = res.assistant.content;
-                this.assistantSuggestions.push({ speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
+                this.assistantSuggestions.push({ id: `${this.conversationId}-${Date.now()}`, speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
 
             }
         } catch(err){

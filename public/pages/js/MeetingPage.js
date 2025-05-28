@@ -541,13 +541,18 @@ export class MeetingPage {
             const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
             if (filteredText === "") return;
 
-            this.conversationContextHandler.conversationContextDialogs.push({
+            const dialog = {
+              id: `${this.conversationContextHandler.conversationId}-${Date.now()}`,
               speaker: speakerLabel,
               text: filteredText,
               time: Date.now(),
               language: this.app.currentLanguage,
               source: source
-            });
+            };
+            this.conversationContextHandler.conversationContextDialogs.push(dialog);
+            if (this.conversationContextHandler.unsentMessages) {
+              this.conversationContextHandler.unsentMessages.push(dialog);
+            }
             const updated = await this.conversationContextHandler.updateConversationContext();
             this.conversationContextHandler.sendConversationMessage();
             this.uiHandler.renderTranscription(
@@ -645,15 +650,18 @@ export class MeetingPage {
       if (filteredText) {
         // Update conversation context
         if (this.conversationContextHandler) {
-          this.conversationContextHandler.conversationContextDialogs.push({
+          const timestamp = Date.now();
+          const dialog = {  
+            id: `${this.conversationContextHandler.conversationId}-${timestamp}`,
             speaker: speakerLabel,
             text: filteredText,
-            time: Date.now(),
+            time: timestamp,
             language: this.app.currentLanguage,
             source: src
-          });
+          };
+          this.conversationContextHandler.conversationContextDialogs.push(dialog);
           if (this.conversationContextHandler.unsentMessages) {
-            this.conversationContextHandler.unsentMessages.push({ speaker: speakerLabel, content: filteredText });
+            this.conversationContextHandler.unsentMessages.push(dialog);
           }
           const updated = await this.conversationContextHandler.updateConversationContext();
           this.conversationContextHandler.sendConversationMessage();
