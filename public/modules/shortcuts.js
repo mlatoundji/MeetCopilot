@@ -10,5 +10,6 @@ export const shortcuts = [
   { key: 'f', ctrl: true, alt: true, shift: false, method: 'toggleFullSidebar', description: 'Toggle Full Sidebar / Basculer en sidebar "plein"' },
   { key: 'p', ctrl: true, alt: true, shift: false, method: 'toggleLayoutPresets', description: 'Open/Close Layout Presets Panel' },
   { key: 't', ctrl: true, alt: true, shift: false, method: 'toggleTranscriptionArea', description: 'Toggle Transcription Area' },
-  { key: 'u', ctrl: true, alt: true, shift: false, method: 'toggleSuggestionsArea', description: 'Toggle Suggestions Area' }
+  { key: 'u', ctrl: true, alt: true, shift: false, method: 'toggleSuggestionsArea', description: 'Toggle Suggestions Area' },
+  { key: 'h', ctrl: true, alt: true, shift: false, method: 'manualFlush', description: 'Manual flush audio buffers' }
 ]; 

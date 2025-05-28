@@ -4,6 +4,7 @@ import { UIHandler } from '../../modules/uiHandler.js';
 import { TranscriptionHandler } from '../../modules/transcriptionHandler.js';
 import { SuggestionsHandler } from '../../modules/suggestionsHandler.js';
 import { DataStore } from '../../modules/dataStore.js';
+import { AudioCaptureWorklet } from '../../modules/audioCaptureAudioWorklet.js';
 import { AudioCapture } from '../../modules/audioCapture.js';
 import { LayoutManager } from '../../modules/layoutManager.js';
 import { filterTranscription } from '../../utils.js';
@@ -17,7 +18,8 @@ export class MeetingPage {
     this.uiHandler = app?.uiHandler || new UIHandler();
     this.transcriptionHandler = app?.transcriptionHandler || new TranscriptionHandler(this.apiHandler);
     this.suggestionsHandler = app?.suggestionsHandler || new SuggestionsHandler(this.apiHandler);
-    this.audioCapture = app?.audioCapture || new AudioCapture();
+    const useAudioWorklet = app?.useAudioWorklet ?? false;
+    this.audioCapture = app?.audioCapture || (useAudioWorklet ? new AudioCaptureWorklet() : new AudioCapture());
     this.layoutManager = new LayoutManager();
     this.conversationContextHandler = app?.conversationContextHandler || new ConversationContextHandler();
     this.conversationContextHandler.startTime = Date.now();
@@ -34,10 +36,16 @@ export class MeetingPage {
     this.micCapture = null;
     this.selectedTranslations = this.uiHandler.getTranslations();
     // Silence-mode auto-flush timeout: duration in ms (0 to disable)
-    this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 10000;
+    this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 20000;
     this.enableSilenceTimeout = this.silenceTimeoutDuration > 0;
     this.systemSilenceTimeoutId = null;
     this.micSilenceTimeoutId = null;
+    // Guards to prevent overlapping silence-mode transcriptions
+    this.silenceTranscribing = {
+      [this.SYSTEM_SOURCE]: false,
+      [this.MIC_SOURCE]: false
+    };
+    this.maxDurationSec = (this.app?.maxDurationSec)  || (this.silenceTimeoutDuration / 1000) || 30;
   }
 
   async loadFragment() {
@@ -329,6 +337,12 @@ export class MeetingPage {
           return;
         }
         
+        // If using silence-mode, disable periodic buffer cleanup (we'll flush manually)
+        if (this.app.useSilenceMode) {
+          console.log("Silence mode active: disabling periodic buffer cleanup");
+          this.audioCapture.stopBufferCleanup();
+        }
+        
         // Mettre à jour l'interface
         this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, true);
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
@@ -337,35 +351,7 @@ export class MeetingPage {
         if (this.app.useSilenceMode) {
           // use consolidated silence-mode handlers for system source
           this.setupSilenceModeHandlers(this.SYSTEM_SOURCE);
-          // schedule initial auto-flush if enabled
-          if (this.enableSilenceTimeout) {
-            this.systemSilenceTimeoutId = setTimeout(() => {
-              if (this.audioCapture.isSystemRecording && this.audioCapture.utteranceInProgress.system && this.audioCapture.systemBuffer.length > 0) {
-                // Combine raw PCM chunks
-                const allSamples = this.audioCapture.systemBuffer.reduce((acc, val) => {
-                  const tmp = new Float32Array(acc.length + val.length);
-                  tmp.set(acc, 0);
-                  tmp.set(val, acc.length);
-                  return tmp;
-                }, new Float32Array());
-                // Clear buffer and reset utterance state
-                this.audioCapture.systemBuffer = [];
-                this.audioCapture.utteranceInProgress.system = false;
-                // Limit to last N seconds to avoid huge payloads
-                const sampleRate = this.audioCapture.systemAudioContext?.sampleRate || 44100;
-                const maxDurationSec = 30;
-                const maxSamples = sampleRate * maxDurationSec;
-                const finalSamples = allSamples.length > maxSamples
-                  ? allSamples.subarray(allSamples.length - maxSamples)
-                  : allSamples;
-                try {
-                  this.triggerTranscription(this.SYSTEM_SOURCE, finalSamples);
-                } catch (err) {
-                  console.error('Error triggering transcription on stop:', err);
-                }
-              }
-            }, this.silenceTimeoutDuration);
-          }
+   
         } else {
           await this.startTranscriptionWithInterval(this.SYSTEM_SOURCE);
         }
@@ -445,28 +431,18 @@ export class MeetingPage {
           // Si la capture n'a pas démarré (annulation), on ne fait rien
           return;
         }
+        // If using silence-mode, disable periodic buffer cleanup for mic as well
+        if (this.app.useSilenceMode) {
+          console.log("Silence mode active: disabling periodic buffer cleanup for mic");
+          this.audioCapture.stopBufferCleanup();
+        }
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
         // Transcription : silence-mode ou polling
         if (this.app.useSilenceMode) {
           console.log("Using Silence Mode : Mic")
           // use consolidated silence-mode handlers for mic source
           this.setupSilenceModeHandlers(this.MIC_SOURCE);
-          // schedule initial auto-flush if enabled
-          if (this.enableSilenceTimeout) {
-            this.micSilenceTimeoutId = setTimeout(() => {
-              if (this.audioCapture.isMicRecording && this.audioCapture.utteranceInProgress.mic && this.audioCapture.micRawBuffer.length > 0) {
-                const bufferedAudio = this.audioCapture.micRawBuffer.reduce((acc, val) => {
-                  const tmp = new Float32Array(acc.length + val.length);
-                  tmp.set(acc, 0);
-                  tmp.set(val, acc.length);
-                  return tmp;
-                }, new Float32Array());
-                this.audioCapture.micRawBuffer = [];
-                this.audioCapture.utteranceInProgress.mic = false;
-                this.triggerTranscription(this.MIC_SOURCE, bufferedAudio);
-              }
-            }, this.silenceTimeoutDuration);
-          }
+   
         } else {
           await this.startTranscriptionWithInterval(this.MIC_SOURCE);
         }
@@ -656,6 +632,7 @@ export class MeetingPage {
 
   // Helper to trigger transcription for any audio segment
   async triggerTranscription(src, audioBuffer) {
+    console.log(`Triggering Transcription for ${src}`);
     const speakerLabel = src === this.SYSTEM_SOURCE ? this.systemLabel : this.micLabel;
     const sampleRate = (src === this.SYSTEM_SOURCE
       ? this.audioCapture.systemAudioContext?.sampleRate
@@ -695,6 +672,7 @@ export class MeetingPage {
   // Helper: assign silence-mode utterance handlers and manage auto-flush timeouts
   setupSilenceModeHandlers(src) {
     console.log("Using silence mode");
+    console.log(`setupSilenceModeHandlers called for source: ${src}`);
     this.audioCapture.onUtteranceStart = (src) => {
       console.log(`Utterance started for source: ${src}`);
       if (src === this.SYSTEM_SOURCE && this.systemSilenceTimeoutId) {
@@ -704,9 +682,57 @@ export class MeetingPage {
         clearTimeout(this.micSilenceTimeoutId);
         this.micSilenceTimeoutId = null;
       }
+
+      if (this.enableSilenceTimeout) {
+        // Schedule initial auto-flush if enabled
+        const timeoutId = setTimeout(async () => {
+          console.log(`Auto-flush callback for ${src}`);
+          const isRecording = src === this.SYSTEM_SOURCE
+            ? this.audioCapture.isSystemRecording
+            : this.audioCapture.isMicRecording;
+          const buffer = src === this.SYSTEM_SOURCE
+            ? this.audioCapture.systemBuffer
+            : this.audioCapture.micBuffer;
+          if (isRecording && buffer.length > 0) {
+            // Combine raw PCM chunks
+            const allSamples = buffer.reduce((acc, chunk) => {
+              const combined = new Float32Array(acc.length + chunk.length);
+              combined.set(acc, 0);
+              combined.set(chunk, acc.length);
+              return combined;
+            }, new Float32Array());
+            // Clear buffer and reset utterance state
+            buffer.length = 0;
+            this.audioCapture.utteranceInProgress[src] = false;
+            // Limit to last N seconds to avoid huge payloads
+            const sampleRate = (src === this.SYSTEM_SOURCE
+              ? this.audioCapture.systemAudioContext?.sampleRate
+              : this.audioCapture.micAudioContext?.sampleRate) || 44100;
+            const maxSamples = sampleRate * this.maxDurationSec;
+            const finalSamples = allSamples.length > maxSamples
+              ? allSamples.subarray(allSamples.length - maxSamples)
+              : allSamples;
+            try {
+              await this.triggerTranscription(src, finalSamples);
+            } catch (err) {
+              console.error(`Error triggering transcription on auto-flush for ${src}:`, err);
+            } finally {
+              this.silenceTranscribing[src] = false;
+            }
+          }
+        }, this.silenceTimeoutDuration);
+        if (src === this.SYSTEM_SOURCE) {
+          this.systemSilenceTimeoutId = timeoutId;
+        } else if (src === this.MIC_SOURCE) {
+          this.micSilenceTimeoutId = timeoutId;
+        }
+      }
     };
+
     this.audioCapture.onUtteranceEnd = async (src, audioBuffer) => {
+      
       console.log(`Utterance ended for source: ${src}`);
+      // Clear existing timeout
       if (src === this.SYSTEM_SOURCE && this.systemSilenceTimeoutId) {
         clearTimeout(this.systemSilenceTimeoutId);
         this.systemSilenceTimeoutId = null;
@@ -714,34 +740,13 @@ export class MeetingPage {
         clearTimeout(this.micSilenceTimeoutId);
         this.micSilenceTimeoutId = null;
       }
-      await this.triggerTranscription(src, audioBuffer);
-      // Schedule next auto-flush if still recording
-      if (this.enableSilenceTimeout) {
-        const id = setTimeout(() => {
-          console.log("Auto-flush timeout");
-          const buffer = src === this.SYSTEM_SOURCE
-            ? this.audioCapture.systemBuffer
-            : this.audioCapture.micRawBuffer;
-          if (buffer.length > 0) {
-            const bufferedAudio = buffer.reduce((acc, val) => {
-              const tmp = new Float32Array(acc.length + val.length);
-              tmp.set(acc, 0);
-              tmp.set(val, acc.length);
-              return tmp;
-            }, new Float32Array());
-            if (src === this.SYSTEM_SOURCE) {
-              this.audioCapture.systemBuffer = [];
-              this.audioCapture.utteranceInProgress.system = false;
-            } else {
-              this.audioCapture.micRawBuffer = [];
-              this.audioCapture.utteranceInProgress.mic = false;
-            }
-            this.triggerTranscription(src, bufferedAudio);
-          }
-        }, this.silenceTimeoutDuration);
-        if (src === this.SYSTEM_SOURCE) this.systemSilenceTimeoutId = id;
-        else this.micSilenceTimeoutId = id;
+      // Wrap transcription and rescheduling in try/catch to avoid silent failures
+      try {
+        await this.triggerTranscription(src, audioBuffer);
+      } catch (err) {
+        console.error(`Error in onUtteranceEnd for ${src}:`, err);
       }
+
     };
   }
 
@@ -848,6 +853,46 @@ export class MeetingPage {
     const area = document.getElementById('suggestionsArea');
     if (area) {
       area.style.display = area.style.display === 'none' ? 'flex' : 'none';
+    }
+  }
+
+  /**
+   * Manually flush audio buffers for silence-mode transcription.
+   */
+  async manualFlush() {
+    console.log("Manual flush triggered");
+    const sources = [this.SYSTEM_SOURCE, this.MIC_SOURCE];
+    for (const src of sources) {
+      // choose correct buffer
+      const buffer = src === this.SYSTEM_SOURCE
+        ? this.audioCapture.systemBuffer
+        : this.audioCapture.micRawBuffer;
+      if (buffer.length > 0 && !this.silenceTranscribing[src]) {
+        this.silenceTranscribing[src] = true;
+        console.log(`Manual flush: flushing ${buffer.length} ${src} chunks`);
+        // Combine buffered chunks
+        const allSamples = buffer.reduce((acc, val) => {
+          const tmp = new Float32Array(acc.length + val.length);
+          tmp.set(acc, 0);
+          tmp.set(val, acc.length);
+          return tmp;
+        }, new Float32Array());
+        // Clear buffer and reset utterance state
+        if (src === this.SYSTEM_SOURCE) {
+          this.audioCapture.systemBuffer = [];
+          this.audioCapture.utteranceInProgress.system = false;
+        } else {
+          this.audioCapture.micRawBuffer = [];
+          this.audioCapture.utteranceInProgress.mic = false;
+        }
+        try {
+          await this.triggerTranscription(src, allSamples);
+        } catch (err) {
+          console.error(`Error in manual flush for ${src}:`, err);
+        } finally {
+          this.silenceTranscribing[src] = false;
+        }
+      }
     }
   }
 } 
