@@ -69,8 +69,9 @@ export class MeetingPage {
     this.suggestionsContainer = document.querySelector('.suggestions-container');
     this.transcriptionSection = document.getElementById('transcriptionArea');
     this.container = document.querySelector('.container');
-    this.saveAndQuitButton = document.getElementById('saveAndQuitButton');
     this.quitButton = document.getElementById('quitButton');
+    this.finishButton = document.getElementById('finishButton');
+    this.finishNoSaveButton = document.getElementById('finishNoSaveButton');
     this.meetingContentGrid = document.getElementById('meetingContentGrid');
     this.meetingSidebar = document.getElementById('meetingSidebar');
     this.captureButton = document.getElementById('captureButton');
@@ -90,11 +91,14 @@ export class MeetingPage {
     if (this.suggestionButton) {
       this.suggestionButton.addEventListener('click', () => this.startSuggestionsStreaming());
     }
-    if (this.saveAndQuitButton) {
-      this.saveAndQuitButton.addEventListener('click', () => this.saveAndQuitMeeting());
-    }
     if (this.quitButton) {
       this.quitButton.addEventListener('click', () => this.quitMeeting());
+    }
+    if (this.finishButton) {
+      this.finishButton.addEventListener('click', () => this.finishMeeting());
+    }
+    if (this.finishNoSaveButton) {
+      this.finishNoSaveButton.addEventListener('click', () => this.finishNoSaveMeeting());
     }
     
     // Eléments d'agencement flexible
@@ -126,33 +130,38 @@ export class MeetingPage {
     }
   }
 
-  saveAndQuitMeeting() {
-    if (this.app && this.app.backupHandler) {
-      this.app.backupHandler.saveMeetingData()
-        .then(() => {
-          if (this.saveAndQuitButton) {
-            this.saveAndQuitButton.classList.add('save-success');
-          }
-          setTimeout(() => {
-            if (this.saveAndQuitButton) {
-              this.saveAndQuitButton.classList.remove('save-success');
-            }
-            this.quitMeeting();
-          }, 500);
-        })
-        .catch(error => {
-          console.error('Error saving meeting data:', error);
-          alert('Error saving meeting data. Please try again.');
-        });
-    } else {
-      console.error('No backup handler available');
-      this.quitMeeting();
+  async finishMeeting() {
+    const sessionId = localStorage.getItem('currentSessionId');
+    if (!sessionId) return;
+    try {
+      await this.apiHandler.callApi(
+        `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
+        { method: 'PATCH', body: JSON.stringify({ status: 'completed' }) }
+      );
+    } catch (err) {
+      console.error('Error finishing session:', err);
     }
+    localStorage.removeItem('currentSessionId');
+    window.location.hash = 'home';
+  }
+
+  async finishNoSaveMeeting() {
+    const sessionId = localStorage.getItem('currentSessionId');
+    if (!sessionId) return;
+    try {
+      await this.apiHandler.callApi(
+        `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
+        { method: 'DELETE' }
+      );
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    }
+    localStorage.removeItem('currentSessionId');
+    window.location.hash = 'home';
   }
 
   quitMeeting() {
     console.log("Quitting meeting");
-
 
     this.conversationContextHandler.resetConversationContext();
     // Arrêter les enregistrements audio

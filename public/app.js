@@ -18,7 +18,7 @@ class App {
     
     // Initialize handlers that depend on API
     this.audioCapture = new AudioCapture();
-    this.uiHandler = new UIHandler();
+    this.uiHandler = new UIHandler(this);
     this.dataStore = new DataStore(this.apiHandler);
     this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
     this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);

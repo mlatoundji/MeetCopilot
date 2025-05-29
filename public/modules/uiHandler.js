@@ -4,9 +4,12 @@
  */
 
 const SYSTEM_SOURCE = 'system';
+import { meetingFieldsConfig } from '../resources/meetingFieldsConfig.js';
+
 export class UIHandler {
 
-    constructor() {
+    constructor(app) {
+        this.app = app;
         this.isRecording = false;
         this.systemCaptureButton = document.getElementById("systemCaptureButton");
         this.micCaptureButton = document.getElementById("micCaptureButton");
@@ -61,6 +64,7 @@ export class UIHandler {
                 modeLibreDesc: "Transcription simple sans ajout d'informations contextuel",
                 modeAssisteDesc: "Transcription avec ajout d'informations pour un meilleur contexte",
                 startSession: "Démarrer la session",
+                sessionResume: "Reprendre la session en cours",
                 meetingsInfosLabels : [
                     "Titre du poste", 
                     "Missions", 
@@ -89,6 +93,7 @@ export class UIHandler {
                 modeLibreDesc: "Simple transcription without additional context information",
                 modeAssisteDesc: "Transcription with additional context information for better understanding",
                 startSession: "Start Session",
+                sessionResume: "Resume pending session",
                 meetingsInfosLabels : [
                     "Job Title", 
                     "Missions", 
@@ -287,14 +292,30 @@ export class UIHandler {
 
         if (!this.dynamicFields) return; // safety
 
-        // Création du contenu de la modale avec onglets
+        // Build multi-step wizard
         this.dynamicFields.innerHTML = `
             <div class="modal-tabs">
-                <div class="modal-tab active" data-tab-modal="session">${this.selectedTranslations.sessionTabTitle}</div>
-                <div class="modal-tab" data-tab-modal="meeting">${this.selectedTranslations.meetingTabTitle}</div>
+                ${meetingFieldsConfig.map((cat, idx) => `<div class="modal-tab${idx === 0 ? ' active' : ''}" data-tab-modal="${cat.id}">${cat.title}</div>`).join('')}
+                <div class="modal-tab" data-tab-modal="session">${this.selectedTranslations.sessionTabTitle}</div>
             </div>
-            
-            <div id="session-tab" class="tab-content-modal active">
+
+            ${meetingFieldsConfig.map((cat, idx) => `
+                <div id="${cat.id}-tab" class="tab-content-modal${idx === 0 ? ' active' : ''}">
+                    <div class="meeting-info-fields">
+                        ${cat.fields.map(field => `
+                            <div class="field-group">
+                                <label for="input-${field.key}">${field.label}</label>
+                                ${field.type === 'textarea'
+                                    ? `<textarea id="input-${field.key}" placeholder="${field.label}"></textarea>`
+                                    : `<input type="text" id="input-${field.key}" placeholder="${field.label}" />`
+                                }
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+
+            <div id="session-tab" class="tab-content-modal">
                 <div class="session-modes">
                     <div class="session-mode ${this.mode === 'libre' ? 'selected' : ''}" data-mode="libre">
                         <h3>${this.selectedTranslations.modeLibre}</h3>
@@ -305,18 +326,13 @@ export class UIHandler {
                         <p>${this.selectedTranslations.modeAssisteDesc}</p>
                     </div>
                 </div>
-                <button id="startSessionButton" class="button mode-start-session">${this.selectedTranslations.startSession}</button>
             </div>
-            
-            <div id="meeting-tab" class="tab-content-modal">
-                <div class="meeting-info-fields">
-                    ${this.meetingsInfosLabels.map(key => `
-                        <div class="field-group">
-                            <label for="input-${key}">${key}</label>
-                            <input type="text" id="input-${key}" placeholder="${key}">
-                        </div>
-                    `).join('')}
-                </div>
+
+
+            <div class="modal-nav">
+                <button id="prevStepButton" class="button-secondary">${this.selectedTranslations.prev || 'Précédent'}</button>
+                <button id="nextStepButton" class="button-primary">${this.selectedTranslations.next || 'Suivant'}</button>
+                <button id="startSessionButton" class="button mode-start-session">${this.selectedTranslations.startSession}</button>
             </div>
         `;
 
@@ -334,26 +350,42 @@ export class UIHandler {
     }
 
     setupModalEventListeners() {
-        // Gestionnaires d'événements pour les onglets
-        const tabs = this.dynamicFields.querySelectorAll('.modal-tab');
-        tabs.forEach(tab => {
+        const tabs = Array.from(this.dynamicFields.querySelectorAll('.modal-tab'));
+        const contents = Array.from(this.dynamicFields.querySelectorAll('.tab-content-modal'));
+        const prevBtn = this.dynamicFields.querySelector('#prevStepButton');
+        const nextBtn = this.dynamicFields.querySelector('#nextStepButton');
+
+        const updateNavButtons = () => {
+            const activeIdx = tabs.findIndex(t => t.classList.contains('active'));
+            if (prevBtn) prevBtn.style.display = activeIdx <= 0 ? 'none' : 'inline-block';
+            if (nextBtn) nextBtn.style.display = activeIdx >= tabs.length - 1 ? 'none' : 'inline-block';
+        };
+
+        tabs.forEach((tab, idx) => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
-                const tabId = tab.getAttribute('data-tab-modal');
-                this.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(`${tabId}-tab`).classList.add('active');
-
-                // Afficher/masquer le bouton de sauvegarde selon l'onglet actif
-                if (this.saveMeetingInfosButton) {
-                    this.saveMeetingInfosButton.style.display = tabId === 'meeting' ? 'block' : 'none';
-                }
+                contents.forEach(c => c.classList.remove('active'));
+                const id = tab.getAttribute('data-tab-modal');
+                const pane = document.getElementById(`${id}-tab`);
+                if (pane) pane.classList.add('active');
+                updateNavButtons();
             });
         });
-        
+
+        if (prevBtn) prevBtn.addEventListener('click', () => {
+            const active = tabs.find(t => t.classList.contains('active'));
+            const idx = tabs.indexOf(active);
+            if (idx > 0) tabs[idx - 1].click();
+        });
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+            const active = tabs.find(t => t.classList.contains('active'));
+            const idx = tabs.indexOf(active);
+            if (idx < tabs.length - 1) tabs[idx + 1].click();
+        });
+
+        updateNavButtons();
+
         // Gestionnaires d'événements pour les modes de session
         const sessionModes = this.dynamicFields.querySelectorAll('.session-mode');
         sessionModes.forEach(mode => {
@@ -363,6 +395,35 @@ export class UIHandler {
                 this.mode = mode.getAttribute('data-mode');
             });
         });
+
+        // Start session API call
+        const startBtn = this.dynamicFields.querySelector('#startSessionButton');
+        if (startBtn) {
+            startBtn.addEventListener('click', async () => {
+                // Gather metadata from all fields
+                const metadata = {};
+                meetingFieldsConfig.forEach(cat => {
+                    cat.fields.forEach(field => {
+                        const input = document.getElementById(`input-${field.key}`);
+                        metadata[field.key] = input ? input.value : '';
+                    });
+                });
+                const mode = this.getMode();
+                try {
+                    const resp = await this.app.apiHandler.callApi(
+                        `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions`,
+                        { method: 'POST', body: JSON.stringify({ mode, metadata }) }
+                    );
+                    const sessionId = resp.session_id;
+                    localStorage.setItem('currentSessionId', sessionId);
+                    this.closeMeetingModal();
+                    window.location.hash = 'meeting';
+                } catch (err) {
+                    console.error('Error creating session:', err);
+                    alert(this.selectedTranslations.errorSessionCreate || 'Erreur lors de la création de la session.');
+                }
+            });
+        }
     }
 
     closeMeetingModal() {

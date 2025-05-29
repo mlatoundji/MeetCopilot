@@ -1,4 +1,3 @@
-
 export default class HomePageDashboard {
   constructor(app) {
     this.app = app;
@@ -10,6 +9,7 @@ export default class HomePageDashboard {
   async init() {
     console.log('[HomePageDashboard] init() called');
     await this.loadFragment();
+    await this.renderResumeSessionButton();
     this.bindEvents();
     await this.render();
   }
@@ -126,6 +126,42 @@ export default class HomePageDashboard {
   async handleSessionControl() {
     if (this.app) {
       await this.app.uiHandler.populateMeetingModal();
+    }
+  }
+
+  /**
+   * If there is a pending session, show a resume button
+   */
+  async renderResumeSessionButton() {
+    try {
+      // Use APIHandler to include JWT
+      const res = await this.app.apiHandler.callApi(
+        `${this.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions?status=pending`,
+        { method: 'GET' }
+      );
+      const sessions = res.data || res;
+      if (Array.isArray(sessions) && sessions.length > 0) {
+        const session = sessions[0];
+        const container = this.dashboardContainer;
+        if (container) {
+          // Create resume button
+          const resumeBtn = document.createElement('button');
+          resumeBtn.id = 'resumeSessionButton';
+          resumeBtn.className = 'button session-resume-btn';
+          resumeBtn.style.marginBottom = '1rem';
+          resumeBtn.textContent = this.app.uiHandler.selectedTranslations.sessionResume || 'Reprendre la session en cours';
+          resumeBtn.addEventListener('click', () => {
+            window.location.hash = 'meeting';
+          });
+          // Insert above start button
+          const startBtn = container.querySelector('#sessionControlButton');
+          if (startBtn && startBtn.parentNode) {
+            startBtn.parentNode.insertBefore(resumeBtn, startBtn.nextSibling);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching pending sessions:', err);
     }
   }
 } 

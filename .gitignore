@@ -13,3 +13,4 @@ ProtoMeet/
 start-vercel-mcp.ps1
 !server/__tests__
 models/
+diagrams/
