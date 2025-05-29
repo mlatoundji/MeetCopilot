@@ -42,7 +42,7 @@ const PORT = process.env.PORT || 3000;
 // CORS Configuration
 const corsOptions = {
     origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:8000', 'http://localhost:3000', 'http://localhost:5173', 'http://[::]:8000', 'http://[::]:5173'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true
 };
@@ -79,7 +79,7 @@ app.use((req, res, next) => {
         res.header('Access-Control-Allow-Origin', origin);
     }
     res.header('Access-Control-Allow-Credentials', true);
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,PATCH,DELETE,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization');
     if (req.method === 'OPTIONS') {
         return res.status(200).end();

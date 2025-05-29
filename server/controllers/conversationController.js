@@ -44,7 +44,7 @@ const fetchConversation = async (cid) => {
   if (memoryRaw) return JSON.parse(memoryRaw);
 
   // Try to fetch existing conversation; maybeSingle returns null if not found
-  const { data, error } = await supabase.from('conversations').select('*').eq('cid', cid).maybeSingle();
+  const { data, error } = await supabase.from('conversations').select('*').eq('id', cid).maybeSingle();
   if (error) {
     console.error('Error fetching conversation from Supabase', error.message);
     throw error;
@@ -66,7 +66,12 @@ const fetchConversation = async (cid) => {
   };
 };
 
-const persistConversation = async (cid, memory, userId) => {
+const fetchConversationContext = async (cid) => {
+  const { data, error } = await supabase.from('conversation_context').select('*').eq('conversation_id', cid).maybeSingle();
+  return data?.context;
+};
+
+const persistConversation = async (cid, memory) => {
   console.log("Persisting conversation", cid);
   const redisKey = `${CONV_KEY_PREFIX}${cid}`;
   try {
@@ -74,13 +79,32 @@ const persistConversation = async (cid, memory, userId) => {
   } catch (err) {
     console.warn('Redis set failed', err.message);
   }
+  // Retrieve existing conversation to preserve session_id and speaker_id
+  let sessionId = null;
+  let speakerId = null;
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('conversations')
+      .select('session_id, speaker_id')
+      .eq('id', cid)
+      .maybeSingle();
+    if (fetchErr) throw fetchErr;
+    if (existing) {
+      sessionId = existing.session_id;
+      speakerId = existing.speaker_id;
+    }
+  } catch (err) {
+    console.error('Error fetching existing conversation for persist:', err.message);
+  }
+  // Upsert conversation record with required foreign keys
   const upsert = {
-    cid: cid,
-    user_id: userId,
+    id: cid,
+    session_id: sessionId,
+    speaker_id: speakerId,
     memory_json: memory,
     created_at: new Date().toISOString(),
   };
-  const { error } = await supabase.from('conversations').upsert(upsert, { onConflict: 'cid' });
+  const { error } = await supabase.from('conversations').upsert(upsert, { onConflict: 'id' });
   if (error) console.error('Supabase upsert conv fail', error.message);
 };
 
@@ -89,18 +113,14 @@ export const addMessages = async (req, res) => {
     const { cid } = req.params;
     const { msg } = req.body; // array of {role, content}
 
-    if (!cid || !Array.isArray(msg) || msg.length === 0) {
-      return res.status(400).json({ error: 'cid and msg[] required' });
+    // Validate conversation ID
+    if (!cid || cid === 'null' || !Array.isArray(msg) || msg.length === 0) {
+      return res.status(400).json({ error: 'Valid cid and msg[] required' });
     }
 
     // Extract user ID from JWT in Authorization header
     const authHeader = req.headers.authorization || '';
-    let userId = null;
-    if (authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      const decoded = jwt.decode(token);
-      if (decoded && decoded.sub) userId = decoded.sub;
-    }
+
 
     let memory = await fetchConversation(cid);
 
@@ -131,7 +151,7 @@ export const addMessages = async (req, res) => {
     }
   }
 
-    await persistConversation(cid, memory, userId);
+    await persistConversation(cid, memory);
 
     let lastMessage = memory.messages[memory.messages.length - 1];
     if (lastMessage.speaker === 'User') {
@@ -164,7 +184,7 @@ export const addMessages = async (req, res) => {
         }
         // Append and persist
         memory.messages.push(assistantMessage);
-        await persistConversation(cid, memory, userId);
+        await persistConversation(cid, memory);
 
         return res.json({ assistant: assistantMessage, cid });
       }
@@ -179,5 +199,29 @@ export const addMessages = async (req, res) => {
   }
 };
 
+/**
+ * Get the stored conversation memory for a given conversation ID
+ */
+export const getConversation = async (req, res) => {
+  try {
+    const { cid } = req.params;
+    if (!cid) {
+      return res.status(400).json({ error: 'cid is required' });
+    }
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('memory_json')
+      .eq('id', cid)
+      .single();
+    if (error) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    return res.json({ memory_json: data.memory_json });
+  } catch (error) {
+    console.error('Error fetching conversation:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 // Export helpers for auto-tuner
-export { fetchConversation, persistConversation, WINDOW_MAX_TURNS }; 
+export { fetchConversation, persistConversation, fetchConversationContext, WINDOW_MAX_TURNS }; 

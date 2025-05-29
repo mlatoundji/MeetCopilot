@@ -1,4 +1,4 @@
-export const buildAssistantSuggestionPrompt= (conversation) => {
+export const buildAssistantSuggestionPrompt= (context, conversation) => {
   const systemPrompt = `
   Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
   suggestions de réponses d'utilisateurs dans une conversation.
@@ -10,11 +10,19 @@ export const buildAssistantSuggestionPrompt= (conversation) => {
     const lastTurns = messages.slice(-6);
     let promptMessages = [];
   promptMessages.push({ role: 'system', content: systemPrompt });
+  if (context) {
+    const contextText = Object.entries(context)
+      .filter(([_, value]) => value != null && value !== '')
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+    console.log("Context", contextText);
+    promptMessages.push({ role: 'user', content: `Contexte de la conversation : ${contextText}` });
+  }
   if (summary) {
     promptMessages.push({ role: 'user', content: `Résumé de la conversation jusque-là : ${summary}` });
   }
   for (const message of lastTurns) {
-      promptMessages.push({ role: 'user', content: `[${message.speaker}] : ${message.content}` });
+      promptMessages.push({ role: 'user', content: `${message.speaker}: ${message.text}` });
     }
     return promptMessages;
   }

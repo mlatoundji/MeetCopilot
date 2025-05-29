@@ -76,8 +76,7 @@ export class ConversationContextHandler {
 
         this.translateContext(this.defaultLang);
   
-        const generateId = () => (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2)));
-        this.conversationId = generateId();
+        this.conversationId = null;
         this.unsentMessages = [];
         console.log("Conversation ID", this.conversationId);
     }

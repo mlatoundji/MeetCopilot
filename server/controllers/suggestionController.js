@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
 import { chatCompletion as openAIChatCompletion } from '../services/openaiService.js';
 import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
-import { fetchConversation } from '../controllers/conversationController.js';
+import { fetchConversation, fetchConversationContext } from '../controllers/conversationController.js';
 import { streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
 
 
@@ -329,7 +329,8 @@ export const streamSuggestions = async (req, res) => {
     try {
       // Fetch prior conversation + build prompt
       const memory = await fetchConversation(cid);
-      const messages = buildAssistantSuggestionPrompt(memory);
+      const context = await fetchConversationContext(cid);
+      const messages = buildAssistantSuggestionPrompt(context, memory);
   
       // Call Mistral with streaming
       let stream;

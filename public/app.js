@@ -9,23 +9,25 @@ import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
 import { DataStore } from './modules/dataStore.js';
 import { ChatbotHandler } from './modules/chatbotHandler.js';
+import { SessionHandler } from './modules/sessionHandler.js';
 
 class App {
   constructor() {
     // Initialize API Handler first
     this.apiHandler = new APIHandler();
     
-    
-    // Initialize handlers that depend on API
-    this.audioCapture = new AudioCapture();
-    this.uiHandler = new UIHandler(this);
-    this.dataStore = new DataStore(this.apiHandler);
-    this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
-    this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);
-    this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
+    // Initialize session-centered handlers
+    this.sessionHandler = new SessionHandler(this);
 
-    this.backupHandler = new BackupHandler(this);
-    this.chatbotHandler = new ChatbotHandler(this.apiHandler, this.conversationContextHandler);
+    // Delegate to SessionHandler
+    this.audioCapture = this.sessionHandler.audioCapture;
+    this.uiHandler = new UIHandler(this);
+    this.dataStore = this.sessionHandler.dataStore;
+    this.transcriptionHandler = this.sessionHandler.transcriptionHandler;
+    this.suggestionsHandler = this.sessionHandler.suggestionsHandler;
+    this.conversationContextHandler = this.sessionHandler.conversationContextHandler;
+    this.backupHandler = this.sessionHandler.backupHandler;
+    this.chatbotHandler = this.sessionHandler.chatbotHandler;
     this.ui = new UI();
     
     this.sessionActive = false; 

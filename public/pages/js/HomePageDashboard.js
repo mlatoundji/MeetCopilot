@@ -37,7 +37,21 @@ export default class HomePageDashboard {
   bindEvents() {
     const startBtn = document.getElementById('sessionControlButton');
     if (startBtn) {
-      startBtn.addEventListener('click', () => this.handleSessionControl());
+      startBtn.addEventListener('click', async () => {
+        // If a session is already in progress, ask user what to do via modal
+        const current = localStorage.getItem('currentSessionId');
+        if (current) {
+          const action = await this.showSessionDecisionModal(); // 'save', 'delete', 'cancel'
+          if (action === 'save') {
+            await this.app.sessionHandler.completeSession();
+          } else if (action === 'delete') {
+            await this.app.sessionHandler.deleteSession();
+          } else {
+            return; // Cancel new session creation
+          }
+        }
+        this.handleSessionControl();
+      });
     }
   }
 
@@ -142,6 +156,7 @@ export default class HomePageDashboard {
       const sessions = res.data || res;
       if (Array.isArray(sessions) && sessions.length > 0) {
         const session = sessions[0];
+        localStorage.setItem('currentSessionId', session.id);
         const container = this.dashboardContainer;
         if (container) {
           // Create resume button
@@ -151,6 +166,7 @@ export default class HomePageDashboard {
           resumeBtn.style.marginBottom = '1rem';
           resumeBtn.textContent = this.app.uiHandler.selectedTranslations.sessionResume || 'Reprendre la session en cours';
           resumeBtn.addEventListener('click', () => {
+            // Save pending session ID for resume logic
             window.location.hash = 'meeting';
           });
           // Insert above start button
@@ -163,5 +179,38 @@ export default class HomePageDashboard {
     } catch (err) {
       console.error('Error fetching pending sessions:', err);
     }
+  }
+
+  /**
+   * Display a modal with options to save, delete, or cancel session in progress.
+   * @returns {Promise<'save'|'delete'|'cancel'>}
+   */
+  showSessionDecisionModal() {
+    return new Promise(resolve => {
+      // Overlay
+      const overlay = document.createElement('div');
+      Object.assign(overlay.style, {
+        position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+        background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: '1000'
+      });
+      // Modal box
+      const modal = document.createElement('div');
+      Object.assign(modal.style, {
+        background: '#fff', padding: '1rem', borderRadius: '4px', textAlign: 'center', minWidth: '300px'
+      });
+      const message = document.createElement('p');
+      message.innerText = 'Une session est déjà en cours. Que voulez-vous faire ?';
+      modal.appendChild(message);
+      // Buttons
+      const btnSave = document.createElement('button'); btnSave.innerText = 'Terminer et sauvegarder';
+      const btnDelete = document.createElement('button'); btnDelete.innerText = 'Terminer sans sauvegarder';
+      const btnCancel = document.createElement('button'); btnCancel.innerText = 'Annuler';
+      [btnSave, btnDelete, btnCancel].forEach(btn => { btn.style.margin = '0.5rem'; modal.appendChild(btn); });
+      btnSave.onclick = () => { resolve('save'); document.body.removeChild(overlay); };
+      btnDelete.onclick = () => { resolve('delete'); document.body.removeChild(overlay); };
+      btnCancel.onclick = () => { resolve('cancel'); document.body.removeChild(overlay); };
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    });
   }
 } 

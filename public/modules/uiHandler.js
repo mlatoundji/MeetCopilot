@@ -65,13 +65,16 @@ export class UIHandler {
                 modeAssisteDesc: "Transcription avec ajout d'informations pour un meilleur contexte",
                 startSession: "Démarrer la session",
                 sessionResume: "Reprendre la session en cours",
+                sessionInProgressPrompt: "Une session est déjà en cours. Entrez 1 pour terminer et sauvegarder, 2 pour terminer sans sauvegarder, ou autre pour annuler.",
                 meetingsInfosLabels : [
                     "Titre du poste", 
                     "Missions", 
                     "Informations sur l'entreprise",
                     "Informations sur le candidat (utilisateur)", 
                     "Informations complémentaires"
-                ]
+                ],
+                promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
+                promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
             },
             en: {
                 systemButtonStart: "Start System Capture",
@@ -94,13 +97,16 @@ export class UIHandler {
                 modeAssisteDesc: "Transcription with additional context information for better understanding",
                 startSession: "Start Session",
                 sessionResume: "Resume pending session",
+                sessionInProgressPrompt: "A session is already in progress. Enter 1 to complete and save, 2 to complete without saving, or any other key to cancel.",
                 meetingsInfosLabels : [
                     "Job Title", 
                     "Missions", 
                     "Company Information",
                     "Candidate Information (User)", 
                     "Additional Information"
-                ]
+                ],
+                promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
+                promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
             },
         };
 
@@ -410,12 +416,12 @@ export class UIHandler {
                 });
                 const mode = this.getMode();
                 try {
-                    const resp = await this.app.apiHandler.callApi(
-                        `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions`,
-                        { method: 'POST', body: JSON.stringify({ mode, metadata }) }
-                    );
+                    // Use SessionHandler to create session and set conversationId
+                    const resp = await this.app.sessionHandler.createSession(mode, metadata);
                     const sessionId = resp.session_id;
+                    const conversationId = resp.conversation_id;
                     localStorage.setItem('currentSessionId', sessionId);
+                    localStorage.setItem('currentConversationId', conversationId);
                     this.closeMeetingModal();
                     window.location.hash = 'meeting';
                 } catch (err) {

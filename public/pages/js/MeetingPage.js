@@ -142,6 +142,7 @@ export class MeetingPage {
       console.error('Error finishing session:', err);
     }
     localStorage.removeItem('currentSessionId');
+    localStorage.removeItem('currentConversationId');
     window.location.hash = 'home';
   }
 
@@ -157,6 +158,7 @@ export class MeetingPage {
       console.error('Error deleting session:', err);
     }
     localStorage.removeItem('currentSessionId');
+    localStorage.removeItem('currentConversationId');
     window.location.hash = 'home';
   }
 
@@ -217,6 +219,25 @@ export class MeetingPage {
     this.uiHandler.updateTranscription(transcriptionPlaceholder);
     this.uiHandler.updateSuggestions(suggestionsPlaceholder);
     
+    // Resume previous session conversation if present
+    if (this.app.sessionHandler && !this.app.sessionHandler.sessionId) {
+      const storedSessionId = localStorage.getItem('currentSessionId');
+      if (storedSessionId) {
+        try {
+          const memoryResp = await this.app.sessionHandler.resumeSession();
+          const messages = memoryResp.memory_json?.messages || [];
+          this.conversationContextHandler.conversationContextDialogs = messages;
+          this.uiHandler.renderTranscription(
+            messages,
+            this.conversationContextHandler.startTime,
+            this.conversationContextHandler.useRelativeTime
+          );
+        } catch (err) {
+          console.error('Error resuming session conversation:', err);
+        }
+      }
+    }
+
     // Afficher la sidebar de réunion
     const meetingSidebar = document.querySelector('.meeting-sidebar');
     if (meetingSidebar) {

@@ -49,8 +49,47 @@ export const createSession = async (req, res) => {
       .select();
     if (error) throw error;
     const session = data[0];
+
+    // Create host participant for the session
+    const participantHostRecord = {
+      session_id: session.id,
+      user_id: userId,
+      name: sessionData.host_name,
+      role: 'host',
+    };
+    const { data: participants, error: participantError } = await supabase
+      .from('participants')
+      .insert([participantHostRecord])
+      .select();
+    if (participantError) throw participantError;
+    const participant = participants[0];
+
+    // Create initial conversation entry
+    const conversationRecord = {
+      session_id: session.id,
+      speaker_id: participant.id,
+      memory_json: {},
+    };
+    const { data: conversations, error: convError } = await supabase
+      .from('conversations')
+      .insert([conversationRecord])
+      .select();
+    if (convError) throw convError;
+    const conversation = conversations[0];
+
+    // Seed conversation_context with initial context
+    const contextRecord = {
+      conversation_id: conversation.id,
+      context: metadata || {},
+    };
+    const { error: contextError } = await supabase
+      .from('conversation_context')
+      .insert([contextRecord]);
+    if (contextError) throw contextError;
+
     return res.status(201).json({
       session_id: session.id,
+      conversation_id: conversation.id,
       start_time: session.start_time,
       status: session.status,
     });
@@ -99,7 +138,17 @@ export const getSession = async (req, res) => {
       }
       throw error;
     }
-    return res.json({ data });
+    // Fetch initial conversation ID for this session
+    const { data: conv, error: convError } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('session_id', id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (convError) throw convError;
+    const conversation_id = conv?.id;
+    return res.json({ data: { ...data, conversation_id } });
   } catch (error) {
     console.error('Error fetching session:', error);
     return res.status(500).json({ error: error.message });
