@@ -7,6 +7,7 @@ import { DataStore } from '../../modules/dataStore.js';
 import { AudioCaptureWorklet } from '../../modules/audioCaptureAudioWorklet.js';
 import { AudioCapture } from '../../modules/audioCapture.js';
 import { LayoutManager } from '../../modules/layoutManager.js';
+import { ConversationContextHandler } from '../../modules/conversationContextHandler.js';
 import { filterTranscription } from '../../utils.js';
 import { shortcuts } from '../../modules/shortcuts.js';
 
@@ -35,6 +36,8 @@ export class MeetingPage {
     this.systemCapture = null;
     this.micCapture = null;
     this.selectedTranslations = this.uiHandler.getTranslations();
+
+    this.useSilenceMode = this.app?.useSilenceMode ?? true;
     // Silence-mode auto-flush timeout: duration in ms (0 to disable)
     this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 20000;
     this.enableSilenceTimeout = this.silenceTimeoutDuration > 0;
@@ -338,7 +341,7 @@ export class MeetingPage {
         }
         
         // If using silence-mode, disable periodic buffer cleanup (we'll flush manually)
-        if (this.app.useSilenceMode) {
+        if (this.useSilenceMode) {
           console.log("Silence mode active: disabling periodic buffer cleanup");
           this.audioCapture.stopBufferCleanup();
         }
@@ -348,7 +351,7 @@ export class MeetingPage {
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
         
         // Transcription : silence-mode ou polling
-        if (this.app.useSilenceMode) {
+        if (this.useSilenceMode) {
           // use consolidated silence-mode handlers for system source
           this.setupSilenceModeHandlers(this.SYSTEM_SOURCE);
    
@@ -432,13 +435,13 @@ export class MeetingPage {
           return;
         }
         // If using silence-mode, disable periodic buffer cleanup for mic as well
-        if (this.app.useSilenceMode) {
+        if (this.useSilenceMode) {
           console.log("Silence mode active: disabling periodic buffer cleanup for mic");
           this.audioCapture.stopBufferCleanup();
         }
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
         // Transcription : silence-mode ou polling
-        if (this.app.useSilenceMode) {
+        if (this.useSilenceMode) {
           console.log("Using Silence Mode : Mic")
           // use consolidated silence-mode handlers for mic source
           this.setupSilenceModeHandlers(this.MIC_SOURCE);

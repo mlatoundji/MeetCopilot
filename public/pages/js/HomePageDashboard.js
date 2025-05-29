@@ -1,4 +1,3 @@
-import HomePageHistory from './HomePageHistory.js';
 
 export default class HomePageDashboard {
   constructor(app) {

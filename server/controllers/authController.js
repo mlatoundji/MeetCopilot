@@ -8,11 +8,11 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    console.warn({ event: 'login_failed', email, reason: error?.message });
-    if (error) {
-      return res.status(401).json({ error: error.message });
-    }
+const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+     if (error) {
+      console.warn({ event: 'login_failed', email, reason: error?.message });
+       return res.status(401).json({ error: error.message });
+     }
 
     const token = data.session?.access_token;
     const userId = data.user?.id;

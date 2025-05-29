@@ -30,9 +30,6 @@ class App {
     
     this.sessionActive = false; 
     
-    // Current app state
-    this.useSilenceMode = true; // toggle between interval and silence-detection modes
-    
     this.currentLanguage = 'fr';
     this.initializeLanguage();
 

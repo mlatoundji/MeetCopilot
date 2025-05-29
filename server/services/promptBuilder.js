@@ -18,7 +18,7 @@ export const buildAssistantSuggestionPrompt= (conversation) => {
     }
     return promptMessages;
   }
-  else if (typeof conversation == 'string') {
+  else if (typeof conversation === 'string') {
     const promptMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: conversation },
@@ -40,15 +40,18 @@ Voici le format de la réponse attendue :
 - Dernière question : ...
 Voici la conversation à résumer :
 `;
-  if (typeof conversation == 'array') {
-    const contextText = conversation.map(m => `${m.speaker}: ${m.content}`).join('\n');
+  if (Array.isArray(conversation)) {
+    const contextText = conversation
+   .filter(m => m && typeof m === 'object' && m.speaker && m.content)
+   .map(m => `${m.speaker}: ${m.content}`)
+   .join('\n');
     const promptMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: contextText },
     ];
     return promptMessages;
   }
-  else if (typeof conversation == 'string') {
+  else if (typeof conversation === 'string') {
     const promptMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: conversation },
