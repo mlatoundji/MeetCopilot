@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import { extractUserId } from '../utils/extractUserId.js';
 
 dotenv.config();
 
@@ -10,11 +11,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
 );
 
-// Helper to extract user ID from JWT
-const extractUserId = (req) => {
-  const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+/**
     try {
       const decoded = jwt.decode(token);
       return decoded?.sub || null;
@@ -126,34 +123,31 @@ export const getSession = async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { id } = req.params;
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Session not found' });
-      }
-      throw error;
-    }
-    // Fetch initial conversation ID for this session
-    const { data: conv, error: convError } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('session_id', id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (convError) throw convError;
-    const conversation_id = conv?.id;
-    return res.json({ data: { ...data, conversation_id } });
+
+    const session = await fetchSession(id, userId);
+
+    return res.json({ data: session });
   } catch (error) {
     console.error('Error fetching session:', error);
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const fetchSession = async (sessionId, userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching session:', error);
+    return null;
+  }
+}
 
 /**
  * Update a session (e.g., mark completed)

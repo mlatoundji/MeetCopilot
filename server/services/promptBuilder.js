@@ -1,4 +1,4 @@
-export const buildAssistantSuggestionPrompt= (context, conversation) => {
+export const buildAssistantSuggestionPrompt= (conversation, context=null) => {
   const systemPrompt = `
   Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
   suggestions de réponses d'utilisateurs dans une conversation.
@@ -15,8 +15,13 @@ export const buildAssistantSuggestionPrompt= (context, conversation) => {
       .filter(([_, value]) => value != null && value !== '')
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
-    console.log("Context", contextText);
-    promptMessages.push({ role: 'user', content: `Contexte de la conversation : ${contextText}` });
+    
+    const contextPrompt = `
+    Contexte de la conversation : 
+      ${contextText}
+    `;
+    console.log("Context prompt", contextPrompt);
+    promptMessages.push({ role: 'user', content: contextPrompt });
   }
   if (summary) {
     promptMessages.push({ role: 'user', content: `Résumé de la conversation jusque-là : ${summary}` });
@@ -50,13 +55,61 @@ Voici la conversation à résumer :
 `;
   if (Array.isArray(conversation)) {
     const contextText = conversation
-   .filter(m => m && typeof m === 'object' && m.speaker && m.content)
-   .map(m => `${m.speaker}: ${m.content}`)
+   .map(m => `${m.speaker}: ${m.text}`)
    .join('\n');
     const promptMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: contextText },
     ];
+    return promptMessages;
+  }
+  else if (typeof conversation === 'string') {
+    const promptMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: conversation },
+    ];
+    return promptMessages;
+  }
+  else {
+    throw new Error('Conversation must be an array or a string');
+  }
+};
+
+export const buildAssistantDetailedSummaryPrompt = (conversation, context=null, session=null) => {
+
+  const systemPrompt = `
+  Tu es un assistant IA chargé de résumer une conversation en détail.
+  Le résumé doit être complet et détaillé, incluant toutes les informations importantes de la conversation.
+  Voici la conversation à résumer :
+`;
+  if (typeof conversation == 'object') {
+    const { summary = '', messages = [] } = conversation;
+    let promptMessages = [];
+    promptMessages.push({ role: 'system', content: systemPrompt });
+    if (session) {
+      if (session.description) {
+        const { description = '' } = session.description;
+        promptMessages.push({ role: 'user', content: `Description de la session : ${description}` });
+      }
+    }
+    if (context) {
+    const contextText = Object.entries(context)
+    .filter(([_, value]) => value != null && value !== '')
+    .map(([key, value]) => `${key}: ${value}`)
+    .join('\n');
+    const contextPrompt = `
+    Contexte de la conversation : 
+      ${contextText}
+    `;
+    promptMessages.push({ role: 'user', content: contextPrompt });
+    }
+    if (summary) {
+      promptMessages.push({ role: 'user', content: `Résumé de la conversation jusque-là : ${summary}` });
+    }
+    for (const message of messages) {
+      promptMessages.push({ role: 'user', content: `${message.speaker}: ${message.text}` });
+    }
+
     return promptMessages;
   }
   else if (typeof conversation === 'string') {

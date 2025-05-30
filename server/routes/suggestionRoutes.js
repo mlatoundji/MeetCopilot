@@ -4,9 +4,11 @@ import {
     generateSuggestionsViaOpenAI,
     generateParallelSuggestions,
     generateSuggestionsViaLocal,
-    generateSuggestionsWithFallback
+    generateSuggestionsWithFallback,
+    streamSuggestions,
+    saveSuggestions,
+    loadSuggestions
 } from '../controllers/suggestionController.js';
-import { streamSuggestions } from '../controllers/suggestionController.js';
 
 const router = express.Router();
 
@@ -23,5 +25,9 @@ router.post('/parallel', generateParallelSuggestions);
 
 // Streaming endpoint (SSE)
 router.get('/:cid/stream', streamSuggestions);
+
+// Persistence routes for saving and loading suggestions
+router.post('/save', saveSuggestions);
+router.get('/load', loadSuggestions);
 
 export default router;

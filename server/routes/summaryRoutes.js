@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateSummaryViaMistral, generateBatchSummaries } from '../controllers/summaryController.js';
+import { generateSummaryViaMistral, generateBatchSummaries, generateDetailedSummary } from '../controllers/summaryController.js';
 import { getCacheStats, clearAllCaches } from '../utils/cache.js';
 import { generateLocalSuggestions, generateLocalBatchSuggestions } from '../services/localLLMService.js';
 
@@ -35,6 +35,9 @@ router.post('/batch', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate batch suggestions' });
     }
 });
+
+// Detailed summary route (triggered at end of session)
+router.post('/detailed', generateDetailedSummary);
 
 // Cache monitoring routes
 router.get('/cache/stats', (req, res) => {

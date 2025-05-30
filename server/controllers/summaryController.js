@@ -1,10 +1,22 @@
 import fetch from 'node-fetch';
 import { getCachedSummary, setCachedSummary } from '../utils/cache.js';
 import crypto from 'crypto';
-import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
+import { buildAssistantSummaryPrompt, buildAssistantDetailedSummaryPrompt } from '../services/promptBuilder.js';
 import { chatCompletion as openAIChatCompletion } from '../services/openaiService.js';
 import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { fetchConversation, fetchConversationContext } from './conversationController.js';
+import { fetchSession } from './sessionController.js';
+import { extractUserId } from '../utils/extractUserId.js';
+import { estimateTokens } from '../utils/tokenEstimator.js';
 
+dotenv.config();
+
+const supabase = createSupabaseClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
+);
 
 // Constants for validation
 const MAX_CONTEXT_LENGTH = 50000; // Maximum context length in characters
@@ -142,5 +154,41 @@ export const generateBatchSummaries = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+// Detailed summary generation at end of session
+export const generateDetailedSummary = async (req, res) => {
+    try {
+        const { session_id, conversation_id } = req.body;
+        if (!session_id || !conversation_id) {
+            return res.status(400).json({ error: 'session_id and conversation_id are required' });
+        }
+        const userId = extractUserId(req);
+        const session = await fetchSession(session_id, userId);
+        const memory = await fetchConversation(conversation_id);
+        const context = await fetchConversationContext(conversation_id);  
+        
+        // Build prompt and generate summary
+        const prompt = buildAssistantDetailedSummaryPrompt(memory, context, session);
+        console.log("Prompt", prompt);
+        const promptTokens = estimateTokens(prompt);
+        console.log("Prompt tokens", promptTokens);
+        if(promptTokens > 20000){
+            return res.status(400).json({ error: 'Context exceeds maximum length of 20000 tokens' });
+        }
+        const summary = await mistralChatCompletion(prompt);
+        // Persist into summaries table
+        const { error: insertErr } = await supabase.from('summaries').insert({
+            session_id,
+            conversation_id,
+            summary_type: 'manual',
+            summary_text: summary
+        });
+        if (insertErr) throw insertErr;
+        res.json({ summary });
+    } catch (error) {
+        console.error('Error generating detailed summary:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 };

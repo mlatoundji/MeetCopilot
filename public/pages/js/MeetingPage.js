@@ -132,12 +132,29 @@ export class MeetingPage {
 
   async finishMeeting() {
     const sessionId = localStorage.getItem('currentSessionId');
-    if (!sessionId) return;
+    const conversationId = this.conversationContextHandler.conversationId;
+    if (!sessionId || !conversationId){
+      console.error('No session or conversation id found');
+      return;
+    }
     try {
       await this.apiHandler.callApi(
         `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
         { method: 'PATCH', body: JSON.stringify({ status: 'completed' }) }
       );
+      // Generate detailed summary for this session
+      try {
+        const summaryResp = await this.apiHandler.callApi(
+          `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/summary/detailed`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId, conversation_id: conversationId })
+          }
+        );
+        console.log('Detailed summary generated:', summaryResp.summary);
+      } catch (summaryErr) {
+        console.error('Error generating detailed summary:', summaryErr);
+      }
     } catch (err) {
       console.error('Error finishing session:', err);
     }
@@ -254,6 +271,7 @@ export class MeetingPage {
     }
 
     this.updateButtonStates();
+
   }
 
   async initialize() {
@@ -631,6 +649,8 @@ export class MeetingPage {
       // Enregistrer la suggestion dans le conversationContextHandler
       if (this.conversationContextHandler) {
         this.conversationContextHandler.conversationContextSuggestions.push({
+          id: `${this.conversationContextHandler.conversationId}-${Date.now()}`,
+          generated_after_dialog_id: this.conversationContextHandler.conversationContextDialogs[this.conversationContextHandler.conversationContextDialogs.length - 1].id,
           text: suggestions,
           time: Date.now(),
           language: this.app.currentLanguage
@@ -641,6 +661,25 @@ export class MeetingPage {
       if (this.backupHandler) {
         this.backupHandler.addSuggestion(suggestions);
       }
+
+      // Save suggestions to backend
+      try {
+        const sessionId = localStorage.getItem('currentSessionId');
+        const conversationId = this.conversationContextHandler.conversationId;
+        await this.apiHandler.callApi(
+          `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/suggestions/save`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              session_id: sessionId,
+              conversation_id: conversationId,
+              suggestions: this.conversationContextHandler.conversationContextSuggestions
+            })
+          }
+        );
+      } catch (e) {
+        console.error('Error saving suggestions:', e);
+      }
     } catch (error) {
       console.error("Error generating suggestion:", error);
       this.uiHandler.updateSuggestions("Erreur lors de la génération des suggestions.");
@@ -650,12 +689,45 @@ export class MeetingPage {
   async startSuggestionsStreaming() {
     if (this.conversationContextHandler) {
       const eventSource = await this.suggestionsHandler.startSuggestionsStreaming(this.conversationContextHandler.conversationId);
-      eventSource.onmessage = (e) => {
+      eventSource.onmessage = async (e) => {
         const data = e.data;
         if (data === '[DONE]') {
-          this.suggestionsHandler.suggestionsMessage = '';
-          console.log("Streaming done");
+
           eventSource.close();
+
+                // Enregistrer la suggestion dans le conversationContextHandler
+          if (this.conversationContextHandler) {
+            this.conversationContextHandler.conversationContextSuggestions.push({
+              id: `${this.conversationContextHandler.conversationId}-${Date.now()}`,
+              generated_after_dialog_id: this.conversationContextHandler.conversationContextDialogs[this.conversationContextHandler.conversationContextDialogs.length - 1].id,
+              text: this.suggestionsHandler.suggestionsMessage,
+              time: Date.now(),
+              language: this.app.currentLanguage
+            });
+          }
+
+      this.suggestionsHandler.suggestionsMessage = '';
+      console.log("Streaming done");
+
+          // Save suggestions to backend
+          try {
+            const sessionId = localStorage.getItem('currentSessionId');
+            const conversationId = this.conversationContextHandler.conversationId;
+            await this.apiHandler.callApi(
+              `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/suggestions/save`,
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  session_id: sessionId,
+                  conversation_id: conversationId,
+                  suggestions: this.conversationContextHandler.conversationContextSuggestions
+                })
+              }
+            );
+          } catch (e) {
+            console.error('Error saving suggestions:', e);
+          }
+          
         } else {
           const jsonData = JSON.parse(data);
           this.suggestionsHandler.suggestionsMessage += jsonData.choices?.[0]?.delta?.content || '';

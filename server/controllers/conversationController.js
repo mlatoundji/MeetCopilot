@@ -2,12 +2,8 @@ import redis from '../utils/redisClient.js';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { estimateTokens } from '../utils/tokenEstimator.js';
-import jwt from 'jsonwebtoken';
-import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
-import { chatCompletion as mistralChatCompletion, streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
+import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
 import { buildAssistantSummaryPrompt } from '../services/promptBuilder.js';
-import fetch from 'node-fetch';
-import crypto from 'crypto';
 
 dotenv.config();
 
@@ -135,13 +131,25 @@ export const addMessages = async (req, res) => {
     if (needSummaryByCount || needSummaryByTokens) {
       // summarise everything except last WINDOW_MAX_TURNS
       const chunkToSummarise = memory.messages.slice(0, -WINDOW_MAX_TURNS);
-      if (chunkToSummarise.length) {
         try {
           console.log("Summarising chunk", chunkToSummarise);
           const prompt = buildAssistantSummaryPrompt(chunkToSummarise);
-          const summary = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
+          console.log("Prompt", prompt);
+          const response = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
+          // Extract text content if the API returned an object
+          const summaryText = (response && typeof response.content === 'string')
+            ? response.content.trim()
+            : String(response);
           // Merge with existing summary (concatenate)
-          memory.summary = (memory.summary ? memory.summary + "\n" : '') + summary;
+          if (chunkToSummarise[0].time && chunkToSummarise[chunkToSummarise.length - 1].time) {
+            const startTime = new Date(chunkToSummarise[0].time).toLocaleString();
+            const endTime   = new Date(chunkToSummarise[chunkToSummarise.length - 1].time).toLocaleString();
+            const timeRange = `${startTime} et ${endTime}`;
+            memory.summary = `${memory.summary ? memory.summary + "\n" : ""}Résumé des messages entre ${timeRange} :\n${summaryText}`;
+          } else {
+            memory.summary = `${memory.summary ? memory.summary + "\n" : ""}${summaryText}`;
+          }
+          console.log("Summary", memory.summary);
         } catch (err) {
           console.warn('Summarisation failed, proceeding without', err.message);
         }
@@ -149,50 +157,12 @@ export const addMessages = async (req, res) => {
         memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
       }
     }
-  }
 
     await persistConversation(cid, memory);
 
-    let lastMessage = memory.messages[memory.messages.length - 1];
-    if (lastMessage.speaker === 'User') {
-      console.log("User message, no assistant reply");
-      return res.json({ assistant: null, cid });
-    }
 
-    // before assistant suggestion block, insert caching for default suggestion flow
-
-    // Build prompt and handle caching
-    if (USE_AUTO_SUGGESTION) {
-      console.log("Building assistant suggestion prompt");
-      if (memory.messages.length >= ASSISTANT_SUGGESTION_TRIGGER_EVERY_MESSAGES) {
-      const promptMessages = buildAssistantSuggestionPrompt(memory);
-        const promptTokens = estimateTokens(promptMessages);
-        let assistantMessage;
-        if (promptTokens < 2000) {
-          const promptHash = crypto.createHash('md5').update(JSON.stringify(promptMessages)).digest('hex');
-          const cacheKey = `cache:${cid}:${promptHash}`;
-          const cached = await redis.get(cacheKey);
-          if (cached) {
-            assistantMessage = JSON.parse(cached);
-            console.log('Returning assistant response from cache');
-          } else {
-            assistantMessage = await mistralChatCompletion(promptMessages);
-            await redis.set(cacheKey, JSON.stringify(assistantMessage), { EX: 1800 });
-          }
-        } else {
-          assistantMessage = await mistralChatCompletion(promptMessages);
-        }
-        // Append and persist
-        memory.messages.push(assistantMessage);
-        await persistConversation(cid, memory);
-
-        return res.json({ assistant: assistantMessage, cid });
-      }
-      console.log("No assistant suggestion prompt");
-      return res.json({ assistant: null, cid });
-    }
     console.log("Add messages done");
-    return res.json({ assistant: null, cid });
+    return res.json({ cid });
   } catch (err) {
     console.error('addMessages error', err);
     res.status(500).json({ error: err.message });

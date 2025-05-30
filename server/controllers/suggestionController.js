@@ -7,7 +7,16 @@ import { chatCompletion as openAIChatCompletion } from '../services/openaiServic
 import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
 import { fetchConversation, fetchConversationContext } from '../controllers/conversationController.js';
 import { streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
+import { estimateTokens } from '../utils/tokenEstimator.js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+const supabase = createSupabaseClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
+);
 
 const TIMEOUT = 30000; // Increased to 30 seconds
 const MAX_RETRIES = 3;
@@ -329,8 +338,15 @@ export const streamSuggestions = async (req, res) => {
     try {
       // Fetch prior conversation + build prompt
       const memory = await fetchConversation(cid);
-      const context = await fetchConversationContext(cid);
-      const messages = buildAssistantSuggestionPrompt(context, memory);
+      const context = await fetchConversationContext(cid);      
+      const messages = buildAssistantSuggestionPrompt(memory, context);
+
+      const promptTokens = estimateTokens(messages);
+      console.log("Prompt tokens", promptTokens);
+
+      if(promptTokens > 20000){
+        return res.status(400).json({ error: 'Context exceeds maximum length of 20000 tokens' });
+      }
   
       // Call Mistral with streaming
       let stream;
@@ -358,4 +374,49 @@ export const streamSuggestions = async (req, res) => {
       res.end();
     }
   };
+  
+export const saveSuggestions = async (req, res) => {
+    try {
+        const { session_id, conversation_id, suggestions } = req.body;
+        if (!session_id || !Array.isArray(suggestions)) {
+            return res.status(400).json({ error: 'session_id and suggestions array are required' });
+        }
+        // Remove existing suggestions for this session and conversation
+        await supabase.from('suggestions').delete().match({ session_id, conversation_id: conversation_id || null });
+        // Insert updated suggestions JSON
+        const { error: insertError } = await supabase.from('suggestions').insert({
+            session_id,
+            conversation_id: conversation_id || null,
+            suggestions_json: suggestions
+        });
+        if (insertError) throw insertError;
+        res.json({ message: 'Suggestions saved successfully' });
+    } catch (error) {
+        console.error('Error saving suggestions:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+};
+
+export const loadSuggestions = async (req, res) => {
+    try {
+        const { session_id, conversation_id } = req.query;
+        if (!session_id) {
+            return res.status(400).json({ error: 'session_id is required' });
+        }
+        let query = supabase.from('suggestions').select('suggestions_json');
+        query = query.eq('session_id', session_id);
+        if (conversation_id) {
+            query = query.eq('conversation_id', conversation_id);
+        }
+        const { data, error } = await query.order('created_at', { ascending: true }).maybeSingle();
+        if (error) throw error;
+        if (!data) {
+            return res.json({ suggestions: [] });
+        }
+        res.json({ suggestions: data.suggestions_json });
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+};
   

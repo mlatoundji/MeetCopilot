@@ -52,16 +52,25 @@ export class SessionHandler {
 
   async resumeSession() {
     const sessionId = localStorage.getItem('currentSessionId');
+    const conversationId = localStorage.getItem('currentConversationId');
     if (!sessionId) {
       throw new Error('No session to resume');
     }
-    // Fetch session details (includes conversation_id)
-    const sessionResp = await this.apiHandler.callApi(
-      `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
-      { method: 'GET' }
-    );
-    const sessData = sessionResp.data || sessionResp;
-    this.onSessionCreated({ session_id: sessData.id || sessData.session_id, conversation_id: sessData.conversation_id });
+    if (conversationId) {
+      this.conversationContextHandler.conversationId = conversationId;
+      this.onSessionCreated({ session_id: sessionId, conversation_id: conversationId });
+    }
+    else {
+      // Fetch session details (includes conversation_id)
+      const sessionResp = await this.apiHandler.callApi(
+        `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
+        { method: 'GET' }
+      );
+      const sessData = sessionResp.data || sessionResp;
+      this.onSessionCreated({ session_id: sessData.id || sessData.session_id, conversation_id: sessData.last_conversation_id });
+    }
+
+
     // Fetch conversation memory
     const memResp = await this.apiHandler.callApi(
       `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/conversation/${this.conversationContextHandler.conversationId}`,

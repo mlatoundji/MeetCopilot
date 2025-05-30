@@ -29,8 +29,6 @@ export class ConversationContextHandler {
         this.summaryIntervalMinutes = 5;
         this.summaryInterval = this.summaryIntervalMinutes * 60 * 1000;
 
-        this.assistantSuggestions = [];
-
         this.SYSTEM_SOURCE = 'system';
         this.MIC_SOURCE = 'mic';
 
@@ -165,12 +163,7 @@ export class ConversationContextHandler {
             delta = this.unsentMessages.splice(0, this.unsentMessages.length);
             console.log("Sending unsent messages", delta);
             const res = await this.apiHandler.sendConversationMessagesCbor(this.conversationId, delta);
-            if(res && res.assistant && res.assistant.content){
-                // Display assistant reply in UI (as suggestion area)
-                const assistantText = res.assistant.content;
-                this.assistantSuggestions.push({ id: `${this.conversationId}-${Date.now()}`, speaker: 'Assistant', text: assistantText, time: Date.now(), language: this.defaultLang, source: 'assistant' });
-
-            }
+            console.log("Conversation delta sent", res.cid);
         } catch(err){
             console.error('Failed to push conversation delta', err);
             // Requeue messages on failure
