@@ -75,6 +75,7 @@ export class UIHandler {
                 ],
                 promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
                 promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
+                sessionContextError: "Erreur lors du chargement du contexte",
             },
             en: {
                 systemButtonStart: "Start System Capture",
@@ -107,6 +108,7 @@ export class UIHandler {
                 ],
                 promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
                 promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
+                sessionContextError: "Error loading session context",
             },
         };
 

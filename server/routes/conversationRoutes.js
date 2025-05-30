@@ -1,5 +1,5 @@
 import express from 'express';
-import { addMessages, getConversation } from '../controllers/conversationController.js';
+import { addMessages, getConversation, getConversationContext } from '../controllers/conversationController.js';
 import bodyParser from 'body-parser';
 import cbor from 'cbor';
 
@@ -7,6 +7,8 @@ const router = express.Router();
 
 // Fetch full conversation memory
 router.get('/:cid', getConversation);
+
+router.get('/:cid/context', getConversationContext);
 
 // Support CBOR-encoded delta payloads
 router.post('/:cid/messages',
@@ -27,6 +29,5 @@ router.post('/:cid/messages',
   },
   addMessages
 );
-
 
 export default router; 

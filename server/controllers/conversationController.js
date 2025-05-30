@@ -193,5 +193,27 @@ export const getConversation = async (req, res) => {
   }
 };
 
+/**
+ * Get stored custom context for a given conversation ID
+ */
+export const getConversationContext = async (req, res) => {
+  try {
+    const { cid } = req.params;
+    if (!cid) {
+      return res.status(400).json({ error: 'conversation_id is required' });
+    }
+    const { data, error } = await supabase
+      .from('conversation_context')
+      .select('context')
+      .eq('conversation_id', cid)
+      .maybeSingle();
+    if (error) throw error;
+    return res.json({ context: data?.context || {} });
+  } catch (err) {
+    console.error('Error fetching conversation context:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 // Export helpers for auto-tuner
 export { fetchConversation, persistConversation, fetchConversationContext, WINDOW_MAX_TURNS }; 

@@ -10,6 +10,7 @@ import { LayoutManager } from '../../modules/layoutManager.js';
 import { ConversationContextHandler } from '../../modules/conversationContextHandler.js';
 import { filterTranscription } from '../../utils.js';
 import { shortcuts } from '../../modules/shortcuts.js';
+import { meetingFieldsConfig } from '../../resources/meetingFieldsConfig.js';
 
 export class MeetingPage {
   constructor(app) {
@@ -298,14 +299,36 @@ export class MeetingPage {
     this.layoutManager.applySidebarState(savedState);
     // Mettre à jour la visibilité et le contenu du bloc de contexte
     const contextHeaderElement = document.getElementById('conversationContextHeader');
-    if (contextHeaderElement && this.conversationContextHandler) {
-      const headerText = this.conversationContextHandler.conversationContextHeaderText;
-      contextHeaderElement.innerHTML = headerText.split('\n').map(line => line.trim()).join('<br>');
-      if (savedState === 'expanded') {
-        contextHeaderElement.classList.remove('hidden');
-      } else {
-        contextHeaderElement.classList.add('hidden');
+    if (contextHeaderElement) {
+      // Extract session_id from URL query
+      const conversationId = localStorage.getItem('currentConversationId');
+      if (conversationId) {
+        try {
+          // Fetch session data (includes context JSON)
+          const resp = await this.apiHandler.callApi(
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/conversation/${conversationId}/context`,
+            { method: 'GET' }
+          );
+          const context = resp.context || {};
+          console.log('context', context);
+          // Build list of fields from config
+          const allFields = meetingFieldsConfig.reduce((acc, cat) => acc.concat(cat.fields), []);
+          let html = '<ul>';
+          Object.entries(context).forEach(([key, val]) => {
+            const fld = allFields.find(f => f.key === key);
+            const label = fld ? fld.label : key;
+            html += `<li><strong>${label}</strong>: ${val}</li>`;
+          });
+          html += '</ul>';
+          contextHeaderElement.innerHTML = html;
+        } catch (err) {
+          console.error('Error fetching session context:', err);
+          contextHeaderElement.innerText = this.uiHandler.selectedTranslations.sessionContextError || 'Erreur chargement contexte';
+        }
       }
+      // Show or hide header based on sidebar state
+      if (savedState === 'expanded') contextHeaderElement.classList.remove('hidden');
+      else contextHeaderElement.classList.add('hidden');
     }
     
     console.log("MeetingPage initialized");

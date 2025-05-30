@@ -154,6 +154,11 @@ export default class HomePageDashboard {
         { method: 'GET' }
       );
       const sessions = res.data || res;
+      if (sessions.length == 0) {
+        console.log('No pending sessions, removing currentSessionId');
+        localStorage.removeItem('currentSessionId');
+        return;
+      }
       if (Array.isArray(sessions) && sessions.length > 0) {
         const session = sessions[0];
         localStorage.setItem('currentSessionId', session.id);
