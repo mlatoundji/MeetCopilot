@@ -203,6 +203,26 @@ export class APIHandler {
   }
 
   /**
+   * Récupère la liste des sessions
+   * @param {string} [status] - Optionally filter by session status
+   * @returns {Promise<Object>} - La liste des sessions
+   */
+  async getSessions(status) {
+    const url = `${this.baseURL}${this.apiPrefix}/sessions${status ? `?status=${encodeURIComponent(status)}` : ''}`;
+    return this.callApi(url, { method: 'GET' });
+  }
+
+  /**
+   * Récupère les détails d'une session
+   * @param {string} sessionId - L'identifiant de la session
+   * @returns {Promise<Object>} - Les données de la session
+   */
+  async getSession(sessionId) {
+    const url = `${this.baseURL}${this.apiPrefix}/sessions/${encodeURIComponent(sessionId)}`;
+    return this.callApi(url, { method: 'GET' });
+  }
+
+  /**
    * Envoie un delta de conversation (nouveaux messages)
    * @param {string} cid - conversation id
    * @param {Array<{role:string,content:string}>} messages - nouveaux messages

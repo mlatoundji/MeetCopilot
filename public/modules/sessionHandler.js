@@ -2,7 +2,6 @@ import { AudioCapture } from './audioCapture.js';
 import { TranscriptionHandler } from './transcriptionHandler.js';
 import { SuggestionsHandler } from './suggestionsHandler.js';
 import { ConversationContextHandler } from './conversationContextHandler.js';
-import { BackupHandler } from './backupHandler.js';
 import { ChatbotHandler } from './chatbotHandler.js';
 import { DataStore } from './dataStore.js';
 import { APIHandler } from './apiHandler.js';
@@ -19,7 +18,6 @@ export class SessionHandler {
     this.transcriptionHandler = new TranscriptionHandler(this.apiHandler);
     this.suggestionsHandler = new SuggestionsHandler(this.apiHandler);
     this.conversationContextHandler = new ConversationContextHandler(this.apiHandler);
-    this.backupHandler = new BackupHandler(app);
     this.chatbotHandler = new ChatbotHandler(this.apiHandler, this.conversationContextHandler);
     this.sessionId = null;
   }

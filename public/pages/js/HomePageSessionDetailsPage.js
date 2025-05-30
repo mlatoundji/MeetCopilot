@@ -1,15 +1,15 @@
-import { callApi } from '../../utils.js';
+// Removed utils.callApi; using APIHandler to fetch session data
 
-export class MeetingDetailsPage {
-    constructor(meetingId, meetingsApiUrl, app) {
-        this.meetingId = meetingId;
-        this.meetingsApiUrl = meetingsApiUrl;
+export class HomePageSessionDetailsPage {
+    constructor(sessionId, sessionsApiUrl, app) {
+        this.sessionId = sessionId;
+        this.sessionsApiUrl = sessionsApiUrl;
         this.meetingData = null;
         this.app = app;
     }
 
     async init() {
-        // Cleanup any previous meeting details styles to prevent duplication
+        // Cleanup any previous session details styles to prevent duplication
         this.cleanupStyles();
         // Show loading indicator
         const container = document.querySelector('.main-content');
@@ -20,21 +20,18 @@ export class MeetingDetailsPage {
             }
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'loading-message';
-            loadingDiv.textContent = 'Loading meeting details...';
+            loadingDiv.textContent = 'Loading session details...';
             container.appendChild(loadingDiv);
         }
         try {
-            console.log(`Fetching meeting details for ID: ${this.meetingId}`);
-            const apiUrl = `${this.meetingsApiUrl}/${this.meetingId}?saveMethod=local`;
-            const response = await callApi(apiUrl, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
-            });
-            if (!response.success) throw new Error(response.error || 'Failed to load meeting data');
-            this.meetingData = response.data;
+            console.log(`Fetching session details for ID: ${this.sessionId}`);
+            // Use APIHandler to include Authorization header
+            const result = await this.app.apiHandler.getSession(this.sessionId);
+            if (!result || result.data == null) throw new Error('Failed to load session data');
+            this.meetingData = result.data;
             this.render();
         } catch (error) {
-            console.error('Error loading meeting details:', error);
+            console.error('Error loading session details:', error);
             this.showError(error.message);
         }
     }
@@ -54,7 +51,7 @@ export class MeetingDetailsPage {
 
         // Create and append title
         const title = document.createElement('h1');
-        title.textContent = this.meetingData?.title || 'Unknown';
+        title.textContent = this.meetingData?.session_title || 'Unknown';
         header.appendChild(title);
 
         // Create and append metadata section
@@ -62,18 +59,19 @@ export class MeetingDetailsPage {
         metaContainer.className = 'meeting-meta';
 
         // Add date if available
-        if (this.meetingData?.metadata?.startTime) {
+        if (this.meetingData?.start_time) {
             const dateSpan = document.createElement('span');
             dateSpan.className = 'date';
-            dateSpan.textContent = new Date(this.meetingData.metadata.startTime).toLocaleString();
+            dateSpan.textContent = new Date(this.meetingData.start_time).toLocaleString();
             metaContainer.appendChild(dateSpan);
         }
 
         // Add duration if available
-        if (this.meetingData?.metadata?.duration) {
+        if (this.meetingData?.end_time) {
+            const durationMs = new Date(this.meetingData.end_time).getTime() - new Date(this.meetingData.start_time).getTime();
             const durationSpan = document.createElement('span');
             durationSpan.className = 'duration';
-            durationSpan.textContent = `Duration: ${this.formatDuration(this.meetingData.metadata.duration)}`;
+            durationSpan.textContent = `Durée: ${this.formatDuration(durationMs)}`;
             metaContainer.appendChild(durationSpan);
         }
 
@@ -178,9 +176,9 @@ export class MeetingDetailsPage {
 
     addStyles() {
         const isDarkTheme = this.app?.ui?.theme === 'dark';
-        if (document.getElementById('meeting-details-styles')) return;
+        if (document.getElementById('session-details-styles')) return;
         const style = document.createElement('style');
-        style.id = 'meeting-details-styles';
+        style.id = 'session-details-styles';
         style.textContent = `
             .meeting-header {
                 padding: 20px;
@@ -223,7 +221,7 @@ export class MeetingDetailsPage {
 
     // Cleanup injected styles to avoid duplication
     cleanupStyles() {
-        const styleEl = document.getElementById('meeting-details-styles');
+        const styleEl = document.getElementById('session-details-styles');
         if (styleEl) {
             styleEl.remove();
         }

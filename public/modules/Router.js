@@ -2,13 +2,13 @@ import { HomePage } from '../pages/js/HomePage.js';
 import { MeetingPage } from '../pages/js/MeetingPage.js';
 import { LandingPage } from '../pages/js/LandingPage.js';
 import AuthPage from '../pages/js/AuthPage.js';
-import { MeetingDetailsPage } from '../pages/js/MeetingDetailsPage.js';
+import { HomePageSessionDetailsPage } from '../pages/js/HomePageSessionDetailsPage.js';
 
 export class Router {
   constructor(app) {
     this.app = app;
     this.apiHandler = this.app?.apiHandler;
-    this.meetings_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
+    this.sessions_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/sessions`;
     this.currentPage = null;
     this.pageModules = {}; // Cache for loaded page modules
     
@@ -74,10 +74,10 @@ export class Router {
         this.navigate('landing', false);
         return;
       }
-      // Meeting details route: /meeting/:id
-      if (hash.startsWith('/meeting/')) {
-        const meetingId = hash.replace('/meeting/', '');
-        this.navigateToMeetingDetails(meetingId);
+      // Meeting details route: /sessions/:id
+      if (hash.startsWith('/sessions/')) {
+        const sessionId = hash.replace('/sessions/', '');
+        this.navigateToMeetingDetails(sessionId);
       } else {
         // Generic page routes (home, login, register, etc.)
         if (this.routes[hash]) {
@@ -88,9 +88,9 @@ export class Router {
     
     // Handle initial hash for meeting details at startup
     const initialHash = window.location.hash.substring(1);
-    if (initialHash.startsWith('/meeting/')) {
-      const meetingId = initialHash.replace('/meeting/', '');
-      this.navigateToMeetingDetails(meetingId);
+    if (initialHash.startsWith('/sessions/')) {
+      const sessionId = initialHash.replace('/sessions/', '');
+      this.navigateToMeetingDetails(sessionId);
     }
   }
   
@@ -111,9 +111,9 @@ export class Router {
     
     try {
       // Créer une nouvelle instance de MeetingDetailsPage
-      const meetingDetailsPage = new MeetingDetailsPage(
-        meetingId, 
-        this.meetings_api_url,
+      const sessionDetailsPage = new HomePageSessionDetailsPage(
+        meetingId,
+        this.sessions_api_url,
         this.app
       );
       
@@ -121,10 +121,10 @@ export class Router {
       mainContent.innerHTML = '';
       
       // Initialiser et rendre la page des détails
-      await meetingDetailsPage.init();
+      await sessionDetailsPage.init();
       
       // Mettre à jour la page courante
-      this.currentPage = meetingDetailsPage;
+      this.currentPage = sessionDetailsPage;
       
       return true;
     } catch (error) {

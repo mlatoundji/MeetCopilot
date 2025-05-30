@@ -1,5 +1,5 @@
-import HomePageHistory from './HomePageHistory.js';
-import HomePageDashboard from './HomePageDashboard.js';
+import HomePageSessionsHistoryPage from './HomePageSessionsHistoryPage.js';
+import HomePageDashboard from './HomePageDashBoard.js';
 
 export class HomePage {
   constructor(app) {
@@ -91,7 +91,6 @@ async startSession() {
   console.log("startSession HomePage");
     this.sessionActive = true;
 
-    this.app.backupHandler.initializeMeeting(this.meetingInfos);
     this.app.router.navigate('meeting');
     if (this.app.router && this.app.router.currentPage && this.app.router.currentPage.updateButtonStates) {
     this.app.router.currentPage.render();
@@ -102,7 +101,7 @@ async startSession() {
   async loadFragment(nav) {
     if (nav === 'home' || nav === 'dashboard') {
       await this.app.router.navigate('home');
-      this.app.highlightSidebarItem('dashboard');
+      this.highlightSidebarItem('dashboard');
       return;
     }
     try {
@@ -110,14 +109,12 @@ async startSession() {
       const html = await response.text();
       const main = document.querySelector('.main-content');
       if (main) main.innerHTML = html;
-      if (nav === 'history') {
-        const historyHandler = new HomePageHistory(this.app);
+      if (nav === 'sessions') {
+        const historyHandler = new HomePageSessionsHistoryPage(this.app);
         await historyHandler.init();
       }
-      // Highlight the History tab in the sidebar
-      if (this.app && typeof this.app.highlightSidebarItem === 'function') {
-        this.app.highlightSidebarItem(nav);
-      }
+        this.highlightSidebarItem(nav);
+      
     } catch (error) {
       const main = document.querySelector('.main-content');
       if (main) main.innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';

@@ -19,7 +19,6 @@ class App {
     this.transcriptionHandler = this.sessionHandler.transcriptionHandler;
     this.suggestionsHandler = this.sessionHandler.suggestionsHandler;
     this.conversationContextHandler = this.sessionHandler.conversationContextHandler;
-    this.backupHandler = this.sessionHandler.backupHandler;
     this.chatbotHandler = this.sessionHandler.chatbotHandler;
     this.ui = new UI();
     

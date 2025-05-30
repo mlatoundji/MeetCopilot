@@ -1,4 +1,3 @@
-import { BackupHandler } from '../../modules/backupHandler.js';
 import { APIHandler } from '../../modules/apiHandler.js';
 import { UIHandler } from '../../modules/uiHandler.js';
 import { TranscriptionHandler } from '../../modules/transcriptionHandler.js';
@@ -189,11 +188,6 @@ export class MeetingPage {
     }
     if (this.audioCapture.isMicRecording) {
       this.toggleMicCapture();
-    }
-    
-    // Nettoyer les données de réunion
-    if (this.app && this.app.backupHandler) {
-      this.app.backupHandler.clearMeetingData();
     }
     
     // Revenir à la page d'accueil

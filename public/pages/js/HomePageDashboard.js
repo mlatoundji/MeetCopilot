@@ -2,7 +2,7 @@ export default class HomePageDashboard {
   constructor(app) {
     this.app = app;
     this.apiHandler = this.app?.apiHandler;
-    this.meetings_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/meetings`;
+    this.sessionsApiUrl = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/sessions`;
     this.dashboardContainer = null;
   }
 
@@ -67,10 +67,11 @@ export default class HomePageDashboard {
       return;
     }
     try {
-      const res = await fetch(`${this.meetings_api_url}?saveMethod=local`);
-      const result = await res.json();
+      // Fetch sessions via APIHandler to include auth header
+      const result = await this.app.apiHandler.getSessions();
+      const sessions = result.data;
       const emptyLabel = list.querySelector('.no-recent-meetings');
-      if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+      if (!Array.isArray(sessions) || sessions.length === 0) {
         if (emptyLabel) emptyLabel.style.display = '';
         return;
       }
@@ -80,21 +81,20 @@ export default class HomePageDashboard {
         if (!el.classList.contains('no-recent-meetings')) list.removeChild(el);
       });
       // Add up to 4 new cards
-      result.data.slice(0, 4).forEach(meeting => {
-        const card = this.createMeetingCard(meeting);
+      sessions.slice(0, 4).forEach(session => {
+        const card = this.createMeetingCard(session);
         list.appendChild(card);
       });
-      // Add "Voir plus" link to full history (load fragment)
+      // Add "Voir plus" link to full sessions list
       const moreLink = document.createElement('div');
       moreLink.className = 'recent-meetings-more';
       const link = document.createElement('a');
       link.href = 'javascript:void(0)';
       link.textContent = 'Voir plus';
       link.addEventListener('click', async () => {
-        // Navigate to full history fragment via HomePage
         const homePage = this.app.router.getCurrentPage();
         if (homePage && typeof homePage.loadFragment === 'function') {
-          await homePage.loadFragment('history');
+          await homePage.loadFragment('sessions');
         }
       });
       moreLink.appendChild(link);
@@ -108,7 +108,7 @@ export default class HomePageDashboard {
     const card = document.createElement('div');
     card.className = 'meeting-card';
     card.addEventListener('click', () => {
-      window.location.hash = `/meeting/${meeting.id}`;
+      window.location.hash = `/sessions/${meeting.id}`;
     });
     const dateStr = meeting.metadata?.startTime
       ? new Date(meeting.metadata.startTime).toLocaleString()
