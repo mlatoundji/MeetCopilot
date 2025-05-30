@@ -1,14 +1,7 @@
-import { AudioCapture } from './modules/audioCapture.js';
-import { TranscriptionHandler } from './modules/transcriptionHandler.js';
 import { UIHandler } from './modules/uiHandler.js';
-import { SuggestionsHandler } from './modules/suggestionsHandler.js';
-import { ConversationContextHandler } from './modules/conversationContextHandler.js';
 import { Router } from './modules/Router.js';
 import { UI } from './modules/ui.js';
-import { BackupHandler } from './modules/backupHandler.js';
 import { APIHandler } from './modules/apiHandler.js';
-import { DataStore } from './modules/dataStore.js';
-import { ChatbotHandler } from './modules/chatbotHandler.js';
 import { SessionHandler } from './modules/sessionHandler.js';
 
 class App {

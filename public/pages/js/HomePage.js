@@ -60,39 +60,7 @@ export class HomePage {
     console.log('[HomePage] init() called');
     await this.render();
   }
-
-  // Functions to handle meeting info modals
-  handleCloseMeetingInfos() {
-    console.log("close meeting")
-    this.app.uiHandler.closeMeetingModal();
-  }
-
-  async handleSaveMeetingInfos() {
-    const values = this.app.uiHandler.meetingsInfosLabels.map(key => {
-      const input = document.getElementById(`input-${key}`);
-      return input.value.trim();
-    });
-    
-    // Construct meetingInfos as a single object with key-value pairs
-    this.meetingInfos = this.app.uiHandler.meetingsInfosLabels.reduce((acc, key, index) => {
-      acc[key] = values[index];
-      return acc;
-    }, {});
-    
-    let details = Object.entries(this.meetingInfos)
-      .map(([key, value]) => `* ${key} : ${value}`)
-      .join("\n");
-    
-    this.app.conversationContextHandler.updateMeetingInfosText(details);
-    this.app.conversationContextHandler.updateConversationContextHeadersText();
-    console.log("Meetings details :\n", this.app.conversationContextHandler.conversationContextMeetingInfosText);
-    
-    // Fermer la modale
-    this.app.uiHandler.closeMeetingModal();
-    
-    // Démarrer la session
-    await this.startSession();
-  }
+ 
 
   async handleStartSession() {
     if (this.app.uiHandler.mode === 'assiste') {

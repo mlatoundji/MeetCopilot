@@ -38,7 +38,6 @@ export class MeetingPage {
     this.micCapture = null;
     this.selectedTranslations = this.uiHandler.getTranslations();
 
-    this.useSilenceMode = this.app?.useSilenceMode ?? true;
     // Silence-mode auto-flush timeout: duration in ms (0 to disable)
     this.silenceTimeoutDuration = this.app?.silenceTimeoutDuration ?? 20000;
     this.enableSilenceTimeout = this.silenceTimeoutDuration > 0;
@@ -49,7 +48,7 @@ export class MeetingPage {
       [this.SYSTEM_SOURCE]: false,
       [this.MIC_SOURCE]: false
     };
-    this.maxDurationSec = (this.app?.maxDurationSec)  || (this.silenceTimeoutDuration / 1000) || 30;
+    this.maxSamplesDurationSec = (this.silenceTimeoutDuration / 1000) || 30;
   }
 
   async loadFragment() {
@@ -412,23 +411,17 @@ export class MeetingPage {
         }
         
         // If using silence-mode, disable periodic buffer cleanup (we'll flush manually)
-        if (this.useSilenceMode) {
-          console.log("Silence mode active: disabling periodic buffer cleanup");
-          this.audioCapture.stopBufferCleanup();
-        }
+        this.audioCapture.stopBufferCleanup();
         
         // Mettre à jour l'interface
         this.uiHandler.toggleCaptureButton(this.SYSTEM_SOURCE, true);
         this.uiHandler.populateVideoElement(this.audioCapture.systemMediaStream);
         
         // Transcription : silence-mode ou polling
-        if (this.useSilenceMode) {
           // use consolidated silence-mode handlers for system source
           this.setupSilenceModeHandlers(this.SYSTEM_SOURCE);
    
-        } else {
-          await this.startTranscriptionWithInterval(this.SYSTEM_SOURCE);
-        }
+        
         
         // Mettre à jour l'état des boutons
         this.updateButtonStates();
@@ -467,8 +460,7 @@ export class MeetingPage {
         this.audioCapture.utteranceInProgress.system = false;
         // Limit to last N seconds
         const sampleRate = this.audioCapture.systemAudioContext?.sampleRate || 44100;
-        const maxDurationSec = 30;
-        const maxSamples = sampleRate * maxDurationSec;
+        const maxSamples = sampleRate * this.maxSamplesDurationSec;
         const finalSamples = allSamples.length > maxSamples
           ? allSamples.subarray(allSamples.length - maxSamples)
           : allSamples;
@@ -489,13 +481,6 @@ export class MeetingPage {
   }
 
   async startMicCapture() {
-
-    
-        // if (this.app && this.app.conversationContextHandler) {
-        //   //this.app.conversationContextHandler.resetConversationContext();
-        //   this.app.conversationContextHandler.lastSummaryTime = Date.now();
-        // }
-
         
     console.log("Starting mic capture");
     try {
@@ -506,20 +491,15 @@ export class MeetingPage {
           return;
         }
         // If using silence-mode, disable periodic buffer cleanup for mic as well
-        if (this.useSilenceMode) {
-          console.log("Silence mode active: disabling periodic buffer cleanup for mic");
           this.audioCapture.stopBufferCleanup();
-        }
+
         this.uiHandler.toggleCaptureButton(this.MIC_SOURCE, true);
         // Transcription : silence-mode ou polling
-        if (this.useSilenceMode) {
           console.log("Using Silence Mode : Mic")
           // use consolidated silence-mode handlers for mic source
           this.setupSilenceModeHandlers(this.MIC_SOURCE);
    
-        } else {
-          await this.startTranscriptionWithInterval(this.MIC_SOURCE);
-        }
+        
         this.updateButtonStates();
       }
     } catch (error) {
@@ -554,8 +534,7 @@ export class MeetingPage {
         this.audioCapture.utteranceInProgress.mic = false;
         // Limit to last N seconds
         const sampleRate = this.audioCapture.micAudioContext?.sampleRate || 44100;
-        const maxDurationSec = 30;
-        const maxSamples = sampleRate * maxDurationSec;
+        const maxSamples = sampleRate * this.maxSamplesDurationSec;
         const finalSamples = allSamples.length > maxSamples
           ? allSamples.subarray(allSamples.length - maxSamples)
           : allSamples;
@@ -571,141 +550,6 @@ export class MeetingPage {
       this.audioCapture.onUtteranceStart = null;
       this.audioCapture.onUtteranceEnd = null;
       this.updateButtonStates();
-    }
-  }
-
-  async startTranscriptionWithInterval(source) {
-    console.log("Starting transcription for source in MeetingPage", source);
-    let isTranscribing = false;
-    const intervalId = setInterval(async () => {
-      if (isTranscribing) return;
-      const buffer = source === this.SYSTEM_SOURCE ? this.audioCapture.systemBuffer : this.audioCapture.micBuffer;
-      const speakerLabel = source === this.SYSTEM_SOURCE ? 
-        this.conversationContextHandler.systemLabel : 
-        this.conversationContextHandler.micLabel;
-
-      if (buffer.length > 0) {
-        isTranscribing = true;
-        try {
-          // Calculate total length of all buffers
-          const totalLength = buffer.reduce((sum, chunk) => sum + chunk.length, 0);
-
-          // Create a single Float32Array of the total length
-          const audioBuffer = new Float32Array(totalLength);
-
-          // Copy each buffer chunk sequentially
-          let offset = 0;
-          for (const chunk of buffer) {
-            audioBuffer.set(chunk, offset);
-            offset += chunk.length;
-          }
-
-          // Clear the original buffer
-          buffer.length = 0;
-
-          // Determine correct sample rate from audio context
-          const sampleRate = (source === this.SYSTEM_SOURCE
-            ? this.audioCapture.systemAudioContext?.sampleRate
-            : this.audioCapture.micAudioContext?.sampleRate) || 44100;
-          const wavBlob = this.transcriptionHandler.bufferToWaveBlob(audioBuffer, sampleRate);
-
-          const transcription = await this.transcriptionHandler.transcribeAudio(wavBlob);
-          if (transcription) {
-            console.log(`Transcription (${speakerLabel}):`, transcription);
-            const filteredText = filterTranscription(transcription, this.app.currentLanguage) || transcription;
-            if (filteredText === "") return;
-
-            const dialog = {
-              id: `${this.conversationContextHandler.conversationId}-${Date.now()}`,
-              speaker: speakerLabel,
-              text: filteredText,
-              time: Date.now(),
-              language: this.app.currentLanguage,
-              source: source
-            };
-            this.conversationContextHandler.conversationContextDialogs.push(dialog);
-            if (this.conversationContextHandler.unsentMessages) {
-              this.conversationContextHandler.unsentMessages.push(dialog);
-            }
-            const updated = await this.conversationContextHandler.updateConversationContext();
-            this.conversationContextHandler.sendConversationMessage();
-            this.uiHandler.renderTranscription(
-              this.conversationContextHandler.conversationContextDialogs,
-              this.conversationContextHandler.startTime,
-              this.conversationContextHandler.useRelativeTime
-            );
-          }
-        } catch (error) {
-          console.error('Error in transcription loop:', error.message || error);
-        } finally {
-          isTranscribing = false;
-        }
-      }
-    }, this.audioCapture.timeslice);
-
-    if (source === this.SYSTEM_SOURCE) {
-      this.audioCapture.systemTranscriptionInterval = intervalId;
-    } else {
-      this.audioCapture.micTranscriptionInterval = intervalId;
-    }
-  }
-
-  async generateSuggestion() {
-    try {
-      let context;
-      if (this.conversationContextHandler) {
-        context = this.conversationContextHandler.conversationContextText;
-        console.log("Conversation context handler text loaded");
-      } else {
-        context = document.getElementById('transcription').innerText;
-        console.log("Transcription box text loaded");
-      }
-      
-      if (!context || context.trim() === '') {
-        this.uiHandler.updateSuggestions("Pas de contexte de conversation suffisant pour générer des suggestions.");
-        return;
-      }
-
-      const suggestions = await this.suggestionsHandler.generateSuggestions(context);
-      this.uiHandler.updateSuggestions(suggestions);
-      
-      // Enregistrer la suggestion dans le conversationContextHandler
-      if (this.conversationContextHandler) {
-        this.conversationContextHandler.conversationContextSuggestions.push({
-          id: `${this.conversationContextHandler.conversationId}-${Date.now()}`,
-          generated_after_dialog_id: this.conversationContextHandler.conversationContextDialogs[this.conversationContextHandler.conversationContextDialogs.length - 1].id,
-          text: suggestions,
-          time: Date.now(),
-          language: this.app.currentLanguage
-        });
-      }
-      
-      // Enregistrer la suggestion dans le backupHandler si disponible
-      if (this.backupHandler) {
-        this.backupHandler.addSuggestion(suggestions);
-      }
-
-      // Save suggestions to backend
-      try {
-        const sessionId = localStorage.getItem('currentSessionId');
-        const conversationId = this.conversationContextHandler.conversationId;
-        await this.apiHandler.callApi(
-          `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/suggestions/save`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              session_id: sessionId,
-              conversation_id: conversationId,
-              suggestions: this.conversationContextHandler.conversationContextSuggestions
-            })
-          }
-        );
-      } catch (e) {
-        console.error('Error saving suggestions:', e);
-      }
-    } catch (error) {
-      console.error("Error generating suggestion:", error);
-      this.uiHandler.updateSuggestions("Erreur lors de la génération des suggestions.");
     }
   }
 
@@ -791,7 +635,6 @@ export class MeetingPage {
           if (this.conversationContextHandler.unsentMessages) {
             this.conversationContextHandler.unsentMessages.push(dialog);
           }
-          const updated = await this.conversationContextHandler.updateConversationContext();
           this.conversationContextHandler.sendConversationMessage();
           this.uiHandler.renderTranscription(
             this.conversationContextHandler.conversationContextDialogs,
@@ -844,7 +687,7 @@ export class MeetingPage {
             const sampleRate = (src === this.SYSTEM_SOURCE
               ? this.audioCapture.systemAudioContext?.sampleRate
               : this.audioCapture.micAudioContext?.sampleRate) || 44100;
-            const maxSamples = sampleRate * this.maxDurationSec;
+            const maxSamples = sampleRate * this.maxSamplesDurationSec;
             const finalSamples = allSamples.length > maxSamples
               ? allSamples.subarray(allSamples.length - maxSamples)
               : allSamples;
