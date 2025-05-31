@@ -246,9 +246,37 @@ export class HomePageSessionDetailsPage {
         sumSection.appendChild(sumContent);
         container.appendChild(sumSection);
         // Navigation section
-        const nav = document.createElement('div'); nav.className = 'meeting-navigation';
-        const backButton = document.createElement('button'); backButton.className = 'back-button'; backButton.textContent = 'Return Home';
-        backButton.addEventListener('click', () => { window.location.hash = 'home'; }); nav.appendChild(backButton);
+        const nav = document.createElement('div');
+        nav.className = 'meeting-navigation';
+
+        // Return Home button
+        const backButton = document.createElement('button');
+        backButton.className = 'back-button';
+        backButton.textContent = 'Return Home';
+        backButton.addEventListener('click', () => { window.location.hash = 'home'; });
+        nav.appendChild(backButton);
+
+        // Delete Session button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-session-button';
+        deleteButton.textContent = 'Supprimer la session';
+        deleteButton.addEventListener('click', async () => {
+            if (!confirm('Voulez-vous vraiment supprimer cette session ? Cette opération est irréversible.')) return;
+            try {
+                // Delete session via API directly
+                await this.app.apiHandler.callApi(
+                    `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions/${encodeURIComponent(this.sessionId)}`,
+                    { method: 'DELETE' }
+                );
+                // Redirect to home after deletion
+                window.location.hash = 'home';
+            } catch (err) {
+                console.error('Error deleting session:', err);
+                alert('Erreur lors de la suppression de la session');
+            }
+        });
+        nav.appendChild(deleteButton);
+
         container.appendChild(nav);
 
         this.addStyles();
@@ -357,6 +385,20 @@ export class HomePageSessionDetailsPage {
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 color: ${isDarkTheme ? '#ddd' : '#333'};
                 line-height: 1.5;
+            }
+            /* Delete Session Button Styles */
+            .delete-session-button {
+                margin-left: 10px;
+                background: ${isDarkTheme ? '#c62828' : '#f44336'};
+                color: #fff;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.9em;
+            }
+            .delete-session-button:hover {
+                opacity: 0.9;
             }
         `;
         document.head.appendChild(style);
