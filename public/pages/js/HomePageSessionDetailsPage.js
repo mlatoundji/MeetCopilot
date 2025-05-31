@@ -226,7 +226,23 @@ export class HomePageSessionDetailsPage {
         sumSection.className = 'session-full-summary-section';
         const sumTitle = document.createElement('h2'); sumTitle.textContent = 'Résumé complet'; sumSection.appendChild(sumTitle);
         const sumContent = document.createElement('div'); sumContent.className = 'full-summary';
-        sumContent.textContent = (this.fullSummaries || []).join('\n\n');
+        const summaryTexts = (this.fullSummaries || []).map(item => {
+            // If the summary is a JSON string, parse it
+            if (typeof item === 'string') {
+                try {
+                    const parsed = JSON.parse(item);
+                    return parsed.content || parsed.summary_text || item;
+                } catch (e) {
+                    return item;
+                }
+            }
+            // If it's an object, extract known fields
+            if (item && typeof item === 'object') {
+                return item.content || item.summary_text || '';
+            }
+            return '';
+        }).join('\n\n');
+        sumContent.textContent = summaryTexts;
         sumSection.appendChild(sumContent);
         container.appendChild(sumSection);
         // Navigation section
