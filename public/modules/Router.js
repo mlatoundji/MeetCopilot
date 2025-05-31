@@ -40,6 +40,16 @@ export class Router {
         jsPath: 'pages/js/AuthPage.js',
         hasSidebar: false
       },
+      'settings': {
+        htmlPath: 'pages/html/settings.html',
+        jsPath: 'pages/js/HomePageSettingsPage.js',
+        hasSidebar: true
+      },
+      'profile': {
+        htmlPath: 'pages/html/profile.html',
+        jsPath: 'pages/js/HomePageProfile.js',
+        hasSidebar: true
+      }
     };
     
     // Initialiser la gestion du hash pour les routes dynamiques

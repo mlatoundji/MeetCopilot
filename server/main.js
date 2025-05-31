@@ -24,6 +24,8 @@ import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
 import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
 import sessionsRoutes from './routes/sessionsRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 let __dirname;
@@ -115,6 +117,8 @@ app.use(apiPrefix + '/sessions', sessionsRoutes);
 app.use(apiPrefix + '/conversation', conversationRouter);
 app.use(apiPrefix + '/auth', authRoutes);
 app.use(apiPrefix + '/chatbot', chatbotRoutes);
+app.use(apiPrefix + '/settings', settingsRoutes);
+app.use(apiPrefix + '/profile', profileRoutes);
 
 // Prometheus metrics endpoint (moved above error handler)
 app.get('/metrics', async (req, res) => {
