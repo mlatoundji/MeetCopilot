@@ -125,6 +125,16 @@ export const getSession = async (req, res) => {
     const { id } = req.params;
 
     const session = await fetchSession(id, userId);
+    // Fetch the associated conversation ID
+    const { data: conv, error: convError } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('session_id', session.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (convError) throw convError;
+    session.conversation_id = conv?.id || null;
 
     return res.json({ data: session });
   } catch (error) {

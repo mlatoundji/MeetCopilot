@@ -1,10 +1,13 @@
-// Removed utils.callApi; using APIHandler to fetch session data
+import { meetingFieldsConfig } from '../../resources/meetingFieldsConfig.js';
 
 export class HomePageSessionDetailsPage {
     constructor(sessionId, sessionsApiUrl, app) {
         this.sessionId = sessionId;
         this.sessionsApiUrl = sessionsApiUrl;
         this.meetingData = null;
+        this.dialogs = [];
+        this.suggestions = [];
+        this.fullSummaries = [];
         this.app = app;
     }
 
@@ -28,7 +31,69 @@ export class HomePageSessionDetailsPage {
             // Use APIHandler to include Authorization header
             const result = await this.app.apiHandler.getSession(this.sessionId);
             if (!result || result.data == null) throw new Error('Failed to load session data');
+            // Store session data
             this.meetingData = result.data;
+            // Fetch conversation messages
+            const sessionId = this.meetingData.id;
+            const convId = this.meetingData.conversation_id;
+            if (convId) {
+                try {
+                    const convResp = await this.app.apiHandler.callApi(
+                        `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/conversation/${convId}`,
+                        { method: 'GET' }
+                    );
+                    // Normalize response envelope for conversation
+                    let convPayload = convResp;
+                    if (convResp.data) convPayload = convResp.data;
+                    const mem = convPayload.memory_json || convPayload;
+                    this.dialogs = Array.isArray(mem.messages)
+                        ? mem.messages
+                        : Array.isArray(mem)
+                            ? mem
+                            : [];
+                } catch (e) {
+                    console.error('Error fetching conversation messages:', e);
+                    this.dialogs = [];
+                }
+                // Fetch suggestions
+                try {
+                    const sugResp = await this.app.apiHandler.callApi(
+                        `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/suggestions/load?session_id=${sessionId}&conversation_id=${convId}`,
+                        { method: 'GET' }
+                    );
+                    // Normalize response envelope for suggestions
+                    let sugPayload = sugResp;
+                    if (sugResp.data) sugPayload = sugResp.data;
+                    this.suggestions = Array.isArray(sugPayload.suggestions)
+                        ? sugPayload.suggestions
+                        : [];
+                } catch (e) {
+                    console.error('Error fetching suggestions:', e);
+                    this.suggestions = [];
+                }
+                // Fetch detailed summary
+                try {
+                    const detResp = await this.app.apiHandler.callApi(
+                        `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/summary/detailed?session_id=${sessionId}&conversation_id=${convId}`,
+                        { method: 'GET' }
+                    );
+                    // Normalize response envelope and formats for detailed summaries
+                    let detPayload = detResp;
+                    if (detResp.data) detPayload = detResp.data;
+                    if (Array.isArray(detPayload.summaries)) {
+                        this.fullSummaries = detPayload.summaries;
+                    } else if (Array.isArray(detPayload.summary)) {
+                        this.fullSummaries = detPayload.summary;
+                    } else if (typeof detPayload.summary === 'string') {
+                        this.fullSummaries = [detPayload.summary];
+                    } else {
+                        this.fullSummaries = [];
+                    }
+                } catch (e) {
+                    console.error('Error fetching detailed summary:', e);
+                    this.fullSummaries = [];
+                }
+            }
             this.render();
         } catch (error) {
             console.error('Error loading session details:', error);
@@ -85,62 +150,89 @@ export class HomePageSessionDetailsPage {
 
         header.appendChild(metaContainer);
 
-        // Create timeline section
-        const timeline = document.createElement('div');
-        timeline.className = 'meeting-timeline';
-
-        // Prepare arrays safely
-        const dialogsArr = Array.isArray(this.meetingData?.dialogs) ? this.meetingData.dialogs : [];
-        const summariesArr = Array.isArray(this.meetingData?.summaries) ? this.meetingData.summaries : [];
-        const suggestionsArr = Array.isArray(this.meetingData?.suggestions) ? this.meetingData.suggestions : [];
-
-        // Create and sort events
-        const events = [
-            ...dialogsArr.map(d => ({ type: 'dialog', time: d.time, data: d })),
-            ...summariesArr.map(s => ({ type: 'summary', time: s.time, data: s })),
-            ...suggestionsArr.map(su => ({ type: 'suggestion', time: su.time, data: su }))
-        ].sort((a, b) => new Date(a.time) - new Date(b.time));
-
-        // Create timeline events
-        events.forEach(event => {
-            const eventEl = document.createElement('div');
-            eventEl.className = `timeline-event ${event.type}`;
-
-            if (event.type === 'dialog') {
-                const speakerEl = document.createElement('div');
-                speakerEl.className = 'speaker';
-                speakerEl.textContent = event.data.speaker || 'Unknown Speaker';
-                eventEl.appendChild(speakerEl);
-            }
-
-            const contentEl = document.createElement('div');
-            contentEl.className = 'content';
-            contentEl.textContent = event.data.text || '';
-            eventEl.appendChild(contentEl);
-
-            const timeEl = document.createElement('div');
-            timeEl.className = 'time';
-            timeEl.textContent = new Date(event.time).toLocaleTimeString();
-            eventEl.appendChild(timeEl);
-
-            timeline.appendChild(eventEl);
-        });
-
-        // Create navigation section
-        const nav = document.createElement('div');
-        nav.className = 'meeting-navigation';
-
-        const backButton = document.createElement('button');
-        backButton.className = 'back-button';
-        backButton.textContent = 'Return Home';
-        backButton.addEventListener('click', () => {
-            window.location.hash = 'home';
-        });
-        nav.appendChild(backButton);
-
-        // Append all sections to container
+        // Append header to container
         container.appendChild(header);
-        container.appendChild(timeline);
+        // Add session description if available
+        if (this.meetingData.description) {
+            const descEl = document.createElement('div');
+            descEl.className = 'session-description';
+            descEl.textContent = this.meetingData.description;
+            container.appendChild(descEl);
+        }
+        // Add custom context fields
+        const contextData = this.meetingData.custom_context || {};
+        meetingFieldsConfig.forEach(category => {
+            const section = document.createElement('div');
+            section.className = 'session-context-section';
+            const secTitle = document.createElement('h2');
+            secTitle.textContent = category.title;
+            section.appendChild(secTitle);
+            category.fields.forEach(field => {
+                const val = contextData[field.key];
+                if (val) {
+                    const p = document.createElement('p');
+                    p.innerHTML = `<strong>${field.label}:</strong> ${val}`;
+                    section.appendChild(p);
+                }
+            });
+            container.appendChild(section);
+        });
+        // Transcription section: display conversation messages and suggestions as styled cards
+        const transSection = document.createElement('div');
+        transSection.className = 'session-transcription-section';
+        const transTitle = document.createElement('h2');
+        transTitle.textContent = 'Transcription';
+        transSection.appendChild(transTitle);
+        const transContainer = document.createElement('div');
+        transContainer.className = 'transcription-cards';
+        // Merge dialogs and suggestions chronologically
+        const combined = [];
+        let remainingSugs = [...this.suggestions];
+        this.dialogs.forEach(dialog => {
+            combined.push({ type: 'dialog', data: dialog });
+            const afterId = dialog.id;
+            const matched = remainingSugs.filter(su => su.generated_after_dialog_id === afterId);
+            matched.forEach(su => combined.push({ type: 'suggestion', data: su }));
+            remainingSugs = remainingSugs.filter(su => su.generated_after_dialog_id !== afterId);
+        });
+        // Append any suggestions without matching dialog
+        remainingSugs.forEach(su => combined.push({ type: 'suggestion', data: su }));
+        // Render combined items
+        combined.forEach(item => {
+            if (item.type === 'dialog') {
+                const msg = item.data;
+                const card = document.createElement('div');
+                card.className = 'transcription-card';
+                const speaker = document.createElement('div'); speaker.className = 'speaker'; speaker.textContent = msg.speaker || '';
+                const content = document.createElement('div'); content.className = 'content'; content.textContent = msg.text || '';
+                const time = document.createElement('div'); time.className = 'time'; time.textContent = new Date(msg.time).toLocaleTimeString();
+                card.appendChild(speaker); card.appendChild(content); card.appendChild(time);
+                transContainer.appendChild(card);
+            } else {
+                const su = item.data;
+                const card = document.createElement('div');
+                card.className = 'suggestion-card';
+                const content = document.createElement('div'); content.className = 'content'; content.textContent = su.suggestion_text || su.text || '';
+                const time = document.createElement('div'); time.className = 'time';
+                if (su.created_at) time.textContent = new Date(su.created_at).toLocaleTimeString();
+                card.appendChild(content); card.appendChild(time);
+                transContainer.appendChild(card);
+            }
+        });
+        transSection.appendChild(transContainer);
+        container.appendChild(transSection);
+        // Summary section: display full summaries
+        const sumSection = document.createElement('div');
+        sumSection.className = 'session-full-summary-section';
+        const sumTitle = document.createElement('h2'); sumTitle.textContent = 'Résumé complet'; sumSection.appendChild(sumTitle);
+        const sumContent = document.createElement('div'); sumContent.className = 'full-summary';
+        sumContent.textContent = (this.fullSummaries || []).join('\n\n');
+        sumSection.appendChild(sumContent);
+        container.appendChild(sumSection);
+        // Navigation section
+        const nav = document.createElement('div'); nav.className = 'meeting-navigation';
+        const backButton = document.createElement('button'); backButton.className = 'back-button'; backButton.textContent = 'Return Home';
+        backButton.addEventListener('click', () => { window.location.hash = 'home'; }); nav.appendChild(backButton);
         container.appendChild(nav);
 
         this.addStyles();
@@ -215,6 +307,41 @@ export class HomePageSessionDetailsPage {
             .timeline-event.suggestion {border-left:4px solid ${isDarkTheme ? '#fbbc04':'#ff9800'};}
             .timeline-event .speaker {font-weight:bold;margin-bottom:5px;}
             .timeline-event .time {position:absolute;top:8px;right:10px;font-size:0.75em;color:#888;}
+            /* Transcription Section Styles */
+            .session-transcription-section { margin: 20px 0; }
+            .session-transcription-section h2 { margin-left: 20px; color: ${isDarkTheme ? '#fff' : '#000'}; }
+            .transcription-cards { display: flex; flex-direction: column; gap: 15px; padding: 0 20px; }
+            .transcription-card, .suggestion-card {
+                position: relative;
+                padding: 15px;
+                border-radius: 8px;
+                background: ${isDarkTheme ? '#2d2d2d' : '#fafafa'};
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .transcription-card { border-left: 4px solid ${isDarkTheme ? '#4a9eff' : '#2196f3'}; }
+            .suggestion-card { border-left: 4px solid ${isDarkTheme ? '#fbbc04' : '#ff9800'}; }
+            .transcription-card .speaker { font-weight: bold; margin-bottom: 5px; color: ${isDarkTheme ? '#fff' : '#000'}; }
+            .transcription-card .content, .suggestion-card .content { margin-bottom: 8px; color: ${isDarkTheme ? '#ddd' : '#333'}; }
+            .transcription-card .time, .suggestion-card .time {
+                position: absolute;
+                top: 8px;
+                right: 10px;
+                font-size: 0.8em;
+                color: ${isDarkTheme ? '#bbb' : '#666'};
+            }
+            /* Full Summary Styles */
+            .session-full-summary-section { margin: 20px 0; padding: 0 20px; }
+            .session-full-summary-section h2 { margin-bottom: 10px; color: ${isDarkTheme ? '#fff' : '#000'}; }
+            .full-summary {
+                white-space: pre-wrap;
+                background: ${isDarkTheme ? '#2d2d2d' : '#ffffff'};
+                border-left: 4px solid ${isDarkTheme ? '#34a853' : '#4caf50'};
+                border-radius: 8px;
+                padding: 15px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                color: ${isDarkTheme ? '#ddd' : '#333'};
+                line-height: 1.5;
+            }
         `;
         document.head.appendChild(style);
     }

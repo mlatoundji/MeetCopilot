@@ -94,13 +94,21 @@ export class HomePageSessionsHistoryPage {
         card.setAttribute('data-session-id', session.id);
         card.addEventListener('click', () => this.showSessionDetails(session));
 
-        let dateStr = session.metadata?.startTime ? new Date(session.metadata.startTime).toLocaleDateString() + ', ' + new Date(session.metadata.startTime).toLocaleTimeString() : 'Date inconnue';
+        // Start date/time
+        const dateStr = session.start_time
+            ? new Date(session.start_time).toLocaleString()
+            : 'Date inconnue';
+        // Duration since start (or until end)
         let durationStr = 'Durée inconnue';
-        if (session.metadata?.duration != null) {
-            const d = session.metadata.duration;
-            const h = Math.floor(d/3600).toString().padStart(2,'0');
-            const m = Math.floor((d%3600)/60).toString().padStart(2,'0');
-            const s = Math.floor(d%60).toString().padStart(2,'0');
+        if (session.start_time) {
+            const startMs = new Date(session.start_time).getTime();
+            const endMs = session.end_time
+                ? new Date(session.end_time).getTime()
+                : Date.now();
+            const totalSec = Math.floor((endMs - startMs) / 1000);
+            const h = Math.floor(totalSec/3600).toString().padStart(2,'0');
+            const m = Math.floor((totalSec%3600)/60).toString().padStart(2,'0');
+            const s = (totalSec%60).toString().padStart(2,'0');
             durationStr = `${h}:${m}:${s}`;
         }
 
@@ -108,12 +116,15 @@ export class HomePageSessionsHistoryPage {
         if (session.summaries?.length) {
             summaryText = session.summaries[0].text.substring(0,150) + '...';
         }
+        // Description if available
+        const desc = session.description || session.custom_context?.description || '';
 
         card.innerHTML = `
             <div class="meeting-card-header"><h3>${session.session_title || 'Sans titre'}</h3></div>
             <div class="meeting-card-body">
                 <div class="meeting-date">${dateStr}</div>
                 <div class="meeting-duration">Durée: ${durationStr}</div>
+                ${desc ? `<div class="meeting-description">${desc}</div>` : ''}
                 <div class="meeting-summary">${summaryText}</div>
             </div>
             <div class="meeting-footer">

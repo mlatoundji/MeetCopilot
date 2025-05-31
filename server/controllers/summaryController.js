@@ -192,3 +192,31 @@ export const generateDetailedSummary = async (req, res) => {
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 };
+
+/**
+ * Load a previously generated detailed summary.
+ */
+export const loadDetailedSummary = async (req, res) => {
+  try {
+    const { session_id, conversation_id } = req.query;
+    if (!session_id) {
+      return res.status(400).json({ error: 'session_id is required' });
+    }
+    // Fetch manual/detailed summaries for this session (and conversation if provided)
+    let query = supabase
+      .from('summaries')
+      .select('summary_text')
+      .eq('session_id', session_id)
+      .eq('summary_type', 'manual');
+    if (conversation_id) {
+      query = query.eq('conversation_id', conversation_id);
+    }
+    const { data, error } = await query.order('created_at', { ascending: true });
+    if (error) throw error;
+    const summaries = data.map(row => row.summary_text);
+    return res.json({ summaries });
+  } catch (err) {
+    console.error('Error loading detailed summary:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};

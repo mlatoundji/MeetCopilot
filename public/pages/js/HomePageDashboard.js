@@ -110,20 +110,32 @@ export default class HomePageDashboard {
     card.addEventListener('click', () => {
       window.location.hash = `/sessions/${meeting.id}`;
     });
-    const dateStr = meeting.metadata?.startTime
-      ? new Date(meeting.metadata.startTime).toLocaleString()
-      : '';
-    const dur = meeting.metadata?.duration || 0;
-    const durationStr = this.formatDuration(dur);
-    const saveMethod = meeting.metadata?.saveMethod === 'local' ? 'Local' : 'Cloud';
+    // Title
+    const title = meeting.session_title || meeting.custom_context?.session_title || 'Sans titre';
+    // Start date/time
+    const dateStr = meeting.start_time
+      ? new Date(meeting.start_time).toLocaleString()
+      : 'Date inconnue';
+    // Duration: use end_time if present, else since start
+    let durMs = 0;
+    if (meeting.start_time) {
+      const startMs = new Date(meeting.start_time).getTime();
+      const endMs = meeting.end_time
+        ? new Date(meeting.end_time).getTime()
+        : Date.now();
+      durMs = endMs - startMs;
+    }
+    const durationStr = this.formatDuration(Math.floor(durMs / 1000));
+    // Description if available
+    const desc = meeting.description || meeting.custom_context?.description || '';
     card.innerHTML = `
       <div class="meeting-info">
-        <h3 class="meeting-title">${meeting.title || 'Sans titre'}</h3>
+        <h3 class="meeting-title">${title}</h3>
         <div class="meeting-meta">
           <span class="meeting-date">${dateStr}</span>
           <span class="meeting-duration">${durationStr}</span>
-          <span class="save-method">${saveMethod}</span>
         </div>
+        ${desc ? `<div class="meeting-description">${desc}</div>` : ''}
       </div>
     `;
     return card;
