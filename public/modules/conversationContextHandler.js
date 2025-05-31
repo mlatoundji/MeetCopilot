@@ -8,7 +8,6 @@ export class ConversationContextHandler {
         this.apiHandler = apiHandler;
       
         
-        this.conversationContextSummaries = [];
         this.conversationContextDialogs = [];
         this.conversationContextSuggestions = [];
 
@@ -19,7 +18,6 @@ export class ConversationContextHandler {
         this.systemLabel = "Guest";
         this.micLabel = "User";
 
-        this.conversationContextDialogsIndexStart = 0;
         this.startTime = Date.now();
         this.useRelativeTime = false;
         
@@ -30,10 +28,8 @@ export class ConversationContextHandler {
     }
 
       resetConversationContext() {
-        this.conversationContextSummaries = [];
         this.conversationContextDialogs = [];
         this.conversationContextSuggestions = [];
-        this.conversationContextDialogsIndexStart = 0;
       }
 
     async sendConversationMessage() {

@@ -63,28 +63,12 @@ export class HomePage {
  
 
   async handleStartSession() {
-    if (this.app.uiHandler.mode === 'assiste') {
-      // Basculer vers l'onglet réunion si en mode assisté
-      const tabs = this.app.uiHandler.dynamicFields.querySelectorAll('.modal-tab');
-      tabs.forEach(t => t.classList.remove('active'));
-      this.app.uiHandler.dynamicFields.querySelector('[data-tab-modal="meeting"]').classList.add('active');
-      
-      this.app.uiHandler.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
-          content.classList.remove('active');
-      });
-      document.getElementById('meeting-tab').classList.add('active');
-      
-      // Afficher le bouton de sauvegarde
-      if (this.saveMeetingInfosButton) {
-          this.saveMeetingInfosButton.style.display = 'block';
-      }
-  } else {
     // Fermer la modale
     this.app.uiHandler.closeMeetingModal();
     
     // Démarrer la session
     await this.startSession();
-  }
+  
 }
 
 async startSession() {

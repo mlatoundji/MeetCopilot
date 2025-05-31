@@ -183,6 +183,11 @@ export class UIHandler {
         if (this.transcriptionDiv) {
             this.transcriptionDiv.classList.add('no-auto-scroll');
         }
+
+        // Close modal when clicking the Close button
+        if (this.closeMeetingInfosButton) {
+            this.closeMeetingInfosButton.addEventListener('click', () => this.closeMeetingModal());
+        }
     }
   
     /**
@@ -355,6 +360,8 @@ export class UIHandler {
         // Afficher la modale
         this.meetingModal.style.display = "block";
         this.modalOverlay.style.display = "block";
+        // Prevent body scrolling when modal is open
+        document.body.classList.add('modal-open');
     }
 
     setupModalEventListeners() {
@@ -437,6 +444,8 @@ export class UIHandler {
     closeMeetingModal() {
         this.meetingModal.style.display = "none";
         this.modalOverlay.style.display = "none";
+        // Restore body scrolling when modal is closed
+        document.body.classList.remove('modal-open');
     }
     
     /**

@@ -448,7 +448,8 @@ body {
   max-height: 80vh;
   display: none;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Quand la modale est affichée */
@@ -466,8 +467,8 @@ body {
 }
 
 #dynamicFields {
-  flex: 1;
-  overflow-y: auto;
+  flex: initial;
+  overflow: visible;
   padding: 0 20px;
   margin: 0 -20px;
   display: flex;
@@ -989,8 +990,9 @@ body {
 }
 
 .meeting-info-fields {
-  max-height: 60vh;
-  overflow-y: auto;
+  /* Remove inner scroll to use only the modal scrollbar */
+  max-height: none;
+  overflow: visible;
   padding-right: 1rem;
 }
 
@@ -1833,4 +1835,39 @@ body.no-global-ui #main-sidebar {
   flex: 0 0 auto !important;
   width: 100% !important;
   flex-shrink: 0 !important;
+}
+
+/* Navigation buttons in modal */
+.modal-nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 1.5rem;
+}
+
+/* Primary button styling for Next action */
+.button-primary {
+  padding: 10px 20px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.button-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Optionally adjust Prev button spacing */
+#prevStepButton {
+  /* Inherit button-secondary styles */
+}
+
+/* Ensure Start Session button aligns with navigation */
+#startSessionButton {
+  /* mode-start-session already styled */
 }
