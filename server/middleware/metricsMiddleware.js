@@ -31,7 +31,15 @@ export const metricsMiddleware = (req, res, next) => {
     const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
     const approxTokens = Math.round(wordCount / 0.75);
 
+    // Determine conversation_id for metrics; support params, query, and body
+    const conversationId = req.params?.cid || req.body?.conversation_id || req.query?.conversation_id;
+    if (!conversationId) {
+      console.warn('Skipping metric insertion: conversation_id is missing for path', url);
+      return;
+    }
+
     const metric = {
+      conversation_id: conversationId,
       path: url,
       method: req.method,
       latency_ms: durationMs,
