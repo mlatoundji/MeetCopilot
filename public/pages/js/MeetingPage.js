@@ -10,6 +10,7 @@ import { ConversationContextHandler } from '../../modules/conversationContextHan
 import { filterTranscription } from '../../utils.js';
 import { shortcuts } from '../../modules/shortcuts.js';
 import { meetingFieldsConfig } from '../../resources/meetingFieldsConfig.js';
+import SettingsPage from './HomePageSettingsPage.js';
 
 export class MeetingPage {
   constructor(app) {
@@ -71,6 +72,7 @@ export class MeetingPage {
     this.quitButton = document.getElementById('quitButton');
     this.finishButton = document.getElementById('finishButton');
     this.finishNoSaveButton = document.getElementById('finishNoSaveButton');
+    this.meetingSettingsButton = document.getElementById('meetingSettingsButton');
     this.meetingContentGrid = document.getElementById('meetingContentGrid');
     this.meetingSidebar = document.getElementById('meetingSidebar');
     this.captureButton = document.getElementById('captureButton');
@@ -99,16 +101,14 @@ export class MeetingPage {
     if (this.finishNoSaveButton) {
       this.finishNoSaveButton.addEventListener('click', () => this.finishNoSaveMeeting());
     }
+    if (this.meetingSettingsButton) {
+      this.meetingSettingsButton.addEventListener('click', () => this.showSettingsModal());
+    }
     
     // Eléments d'agencement flexible
     const toggleSidebar = document.getElementById('toggleSidebar');
     if (toggleSidebar) {
       toggleSidebar.addEventListener('click', () => this.toggleSidebar());
-    }
-    
-    const toggleLayoutPresets = document.getElementById('toggleLayoutPresets');
-    if (toggleLayoutPresets) {
-      toggleLayoutPresets.addEventListener('click', () => this.layoutManager.toggleLayoutPresetsPanel());
     }
     
     // Boutons de préréglage d'agencement
@@ -195,20 +195,22 @@ export class MeetingPage {
   }
 
   updateButtonStates() {
+    // Update capture button labels using current translations
+    const t = this.uiHandler.getTranslations();
     if (this.systemCaptureButton) {
       const label = this.systemCaptureButton.querySelector('.meeting-label');
       if (label) {
-        label.textContent = this.audioCapture.isSystemRecording ? 
-          this.uiHandler.selectedTranslations.systemButtonStop : 
-          this.uiHandler.selectedTranslations.systemButtonStart;
+        label.textContent = this.audioCapture.isSystemRecording
+          ? (t.systemButtonStop || '')
+          : (t.systemButtonStart || '');
       }
     }
     if (this.micCaptureButton) {
       const label = this.micCaptureButton.querySelector('.meeting-label');
       if (label) {
-        label.textContent = this.audioCapture.isMicRecording ? 
-          this.uiHandler.selectedTranslations.micButtonStop : 
-          this.uiHandler.selectedTranslations.micButtonStart;
+        label.textContent = this.audioCapture.isMicRecording
+          ? (t.micButtonStop || '')
+          : (t.micButtonStart || '');
       }
     }
   }
@@ -267,7 +269,8 @@ export class MeetingPage {
     }
 
     this.updateButtonStates();
-
+    // Initialize layout manager (ensures presets button works)
+    this.layoutManager.initialize();
   }
 
   async initialize() {
@@ -318,35 +321,13 @@ export class MeetingPage {
           contextHeaderElement.innerHTML = html;
         } catch (err) {
           console.error('Error fetching session context:', err);
-          contextHeaderElement.innerText = this.uiHandler.selectedTranslations.sessionContextError || 'Erreur chargement contexte';
+          const t = this.uiHandler.getTranslations();
+          contextHeaderElement.innerText = t.sessionContextError || 'Erreur chargement contexte';
         }
       }
       // Show or hide header based on sidebar state
       if (savedState === 'expanded') contextHeaderElement.classList.remove('hidden');
       else contextHeaderElement.classList.add('hidden');
-    }
-    
-    // Conversation language selector
-    const convLangSelect = document.getElementById('conversationLangSelect');
-    if (convLangSelect) {
-      // Populate options from UIHandler.supportedLangs
-      const langs = this.app.uiHandler.supportedLangs;
-      convLangSelect.innerHTML = '';
-      langs.forEach(l => {
-        const opt = document.createElement('option'); opt.value = l.code; opt.textContent = l.label;
-        convLangSelect.appendChild(opt);
-      });
-      // Default selection
-      const savedLang = localStorage.getItem('conversationLanguage') || this.transcriptionHandler.language;
-      convLangSelect.value = savedLang;
-      // Apply saved conversation language to handler
-      await this.transcriptionHandler.applyTranslation(savedLang);
-      // Apply on change
-      convLangSelect.addEventListener('change', e => {
-        const newLang = e.target.value;
-        this.transcriptionHandler.applyTranslation(newLang);
-        localStorage.setItem('conversationLanguage', newLang);
-      });
     }
     
     console.log("MeetingPage initialized");
@@ -831,7 +812,38 @@ export class MeetingPage {
    * Toggle the layout presets panel
    */
   toggleLayoutPresets() {
-    this.layoutManager.toggleLayoutPresetsPanel();
+    this.layoutManager.toggleLayoutPresets();
+  }
+
+  /**
+   * Show settings page in a modal overlay
+   */
+  async showSettingsModal() {
+    try {
+      const response = await fetch('pages/html/settings.html');
+      const html = await response.text();
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      // Display overlay
+      overlay.style.display = 'block';
+      const modal = document.createElement('div');
+      modal.className = 'meeting-modal';
+      // Display modal
+      modal.style.display = 'block';
+      // Wrap settings HTML in main-content for proper scope
+      modal.innerHTML = `<div class="main-content">${html}</div>`;
+      overlay.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        document.body.removeChild(modal);
+      });
+      document.body.appendChild(overlay);
+      document.body.appendChild(modal);
+      // Initialize settings logic
+      const settingsPage = new SettingsPage(this.app);
+      await settingsPage.init();
+    } catch (err) {
+      console.error('Error loading settings modal:', err);
+    }
   }
 
   /**

@@ -181,7 +181,8 @@ export default class HomePageDashboard {
           resumeBtn.id = 'resumeSessionButton';
           resumeBtn.className = 'button session-resume-btn';
           resumeBtn.style.marginBottom = '1rem';
-          resumeBtn.textContent = this.app.uiHandler.selectedTranslations.sessionResume || 'Reprendre la session en cours';
+          const t = this.app.uiHandler.getTranslations();
+          resumeBtn.textContent = t.sessionResume || 'Reprendre la session en cours';
           resumeBtn.addEventListener('click', () => {
             // Save pending session ID for resume logic
             window.location.hash = 'meeting';

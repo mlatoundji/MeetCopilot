@@ -43,6 +43,12 @@
               <span class="meeting-label">Terminer sans sauvegarder</span>
             </button>
           </li>
+          <li>
+            <button id="meetingSettingsButton" class="meeting-control-btn" title="Settings" aria-label="Settings">
+              <span class="meeting-icon">⚙️</span>
+              <span class="meeting-label">Settings</span>
+            </button>
+          </li>
         </ul>
       </nav>
       <div id="conversationContextHeader" class="conversation-context-header hidden"></div>
@@ -51,11 +57,6 @@
 
   <!-- Main content grid: suggestions, screen capture and transcription -->
   <main class="meeting-content-grid" id="meetingContentGrid">
-    <!-- Conversation language selector -->
-    <div class="conversation-lang-select" style="margin: 8px;">
-      <label for="conversationLangSelect" data-i18n="conversationLanguageLabel">Conversation Language</label>
-      <select id="conversationLangSelect" class="setting-select"></select>
-    </div>
     <!-- Full-extend toggle on content side -->
     <button id="toggleSidebarFull" class="toggle-sidebar-full-btn" title="Toggle full sidebar">
       <span class="toggle-icon-full">▶</span>
@@ -124,7 +125,7 @@
 </div>
 
 <!-- Layout presets selector -->
-<div class="layout-presets-container">
+<div class="layout-presets-container" style="position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); right: auto; z-index: 100;">
   <button id="toggleLayoutPresets" class="toggle-presets-btn">Agencements</button>
   <div id="layoutPresetsPanel" class="layout-presets-panel">
     <h4>Préréglages d'agencement</h4>

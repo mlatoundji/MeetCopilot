@@ -37,12 +37,13 @@ export class UIHandler {
 
         // Initialize internationalization loader
         this.i18n = new I18nLoader();
+        this.currentTranslations = {};
         this.videoElement = document.getElementById("screen-capture");
     }
 
     async translateUI(lang) {
-        // Load translations for selected UI language
         const translations = await this.i18n.load(lang);
+        this.currentTranslations = translations;
         const uiElements = {
             suggestionButton: this.suggestionButton,
             sessionControlButton: this.sessionControlButton,
@@ -66,7 +67,6 @@ export class UIHandler {
         if (this.suggestionsDiv) {
             this.updateSuggestions(translations.suggestionsPlaceholder || '');
         }
-        this.meetingsInfosLabels = translations.meetingsInfosLabels || this.meetingsInfosLabels;
     }
   
     /**
@@ -95,9 +95,10 @@ export class UIHandler {
         
         // Renommer le bouton pour "Démarrer une session"
         if (this.sessionControlButton) {
+            const label = this.currentTranslations.sessionControlButton || '';
             this.sessionControlButton.innerHTML = `
                 <span class="button-icon">🚀</span>
-                ${this.meetingsInfosLabels[0]}
+                ${label}
             `;
         }
         
@@ -175,12 +176,13 @@ export class UIHandler {
                 button.textContent = this.isRecording ? stopText : startText;
             }
         };
+        const t = this.currentTranslations || {};
         switch (type) {
-        case SYSTEM_SOURCE:
-            updateLabel(this.systemCaptureButton, this.meetingsInfosLabels[0], this.meetingsInfosLabels[1]);
+          case SYSTEM_SOURCE:
+            updateLabel(this.systemCaptureButton, t.systemButtonStart || '', t.systemButtonStop || '');
             break;
-        default:
-            updateLabel(this.micCaptureButton, this.meetingsInfosLabels[2], this.meetingsInfosLabels[3]);
+          default:
+            updateLabel(this.micCaptureButton, t.micButtonStart || '', t.micButtonStop || '');
             break;
         }
     }
@@ -214,10 +216,11 @@ export class UIHandler {
     }
 
     async populateMeetingModal() {
-        // Mise à jour du titre de la modale
+        const translations = await this.i18n.load(this.app.currentLanguage || this.defaultLang);
+        // Update modal title
         const modalTitle = document.querySelector('.meeting-modal h2');
         if (modalTitle) {
-            modalTitle.textContent = this.meetingsInfosLabels[0];
+            modalTitle.textContent = translations.modalTitle || modalTitle.textContent;
         }
         
         // Ensure references exist
@@ -265,21 +268,21 @@ export class UIHandler {
             <div id="session-tab" class="tab-content-modal">
                 <div class="session-modes">
                     <div class="session-mode ${this.mode === 'libre' ? 'selected' : ''}" data-mode="libre">
-                        <h3>${this.meetingsInfosLabels[5]}</h3>
-                        <p>${this.meetingsInfosLabels[6]}</p>
+                        <h3>${translations.modeLibre || ''}</h3>
+                        <p>${translations.modeLibreDesc || ''}</p>
                     </div>
                     <div class="session-mode ${this.mode === 'assiste' ? 'selected' : ''}" data-mode="assiste">
-                        <h3>${this.meetingsInfosLabels[7]}</h3>
-                        <p>${this.meetingsInfosLabels[8]}</p>
+                        <h3>${translations.modeAssiste || ''}</h3>
+                        <p>${translations.modeAssisteDesc || ''}</p>
                     </div>
                 </div>
             </div>
 
 
             <div class="modal-nav">
-                <button id="prevStepButton" class="button-secondary">${this.meetingsInfosLabels[9] || 'Précédent'}</button>
-                <button id="nextStepButton" class="button-primary">${this.meetingsInfosLabels[10] || 'Suivant'}</button>
-                <button id="startSessionButton" class="button mode-start-session">${this.meetingsInfosLabels[11]}</button>
+                <button id="prevStepButton" class="button-secondary">${translations.prevStepButton || 'Précédent'}</button>
+                <button id="nextStepButton" class="button-primary">${translations.nextStepButton || 'Suivant'}</button>
+                <button id="startSessionButton" class="button mode-start-session">${translations.startSession || ''}</button>
             </div>
         `;
 
@@ -296,6 +299,9 @@ export class UIHandler {
         this.modalOverlay.style.display = "block";
         // Prevent body scrolling when modal is open
         document.body.classList.add('modal-open');
+
+        // Store config for event listeners
+        this.meetingFieldsConfig = meetingFieldsConfig;
     }
 
     setupModalEventListeners() {
@@ -351,7 +357,7 @@ export class UIHandler {
             startBtn.addEventListener('click', async () => {
                 // Gather metadata from all fields
                 const metadata = {};
-                meetingFieldsConfig.forEach(cat => {
+                (this.meetingFieldsConfig || []).forEach(cat => {
                     cat.fields.forEach(field => {
                         const input = document.getElementById(`input-${field.key}`);
                         metadata[field.key] = input ? input.value : '';
@@ -369,7 +375,7 @@ export class UIHandler {
                     window.location.hash = 'meeting';
                 } catch (err) {
                     console.error('Error creating session:', err);
-                    alert(this.meetingsInfosLabels[12] || 'Erreur lors de la création de la session.');
+                    alert(this.currentTranslations[12] || 'Erreur lors de la création de la session.');
                 }
             });
         }
@@ -428,7 +434,7 @@ export class UIHandler {
      * @returns {Object} - The current translations object.
      */
     getTranslations() {
-        return this.meetingsInfosLabels;
+        return this.currentTranslations || {};
     }
 
     // Add new method to render transcription messages as styled cards

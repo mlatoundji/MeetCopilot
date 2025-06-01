@@ -19,5 +19,13 @@
   "transcriptionPlaceholder": "Transcription will appear here...",
   "suggestionsPlaceholder": "Suggestions will appear here.",
   "sessionTabTitle": "Mode",
-  "meetingTabTitle": "Meeting"
+  "meetingTabTitle": "Meeting",
+  "modalTitle": "Session Configuration",
+  "modeLibre": "Free Mode",
+  "modeAssiste": "Assisted Mode",
+  "modeLibreDesc": "Simple transcription without additional context information",
+  "modeAssisteDesc": "Transcription with additional context information for better understanding",
+  "prevStepButton": "Previous",
+  "nextStepButton": "Next",
+  "startSession": "Start Session"
 } 

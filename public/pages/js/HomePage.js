@@ -7,15 +7,8 @@ export class HomePage {
     this.homePageDashboard = new HomePageDashboard(this.app);
     // Meeting info and language controls moved from App
     this.meetingInfos = {};
-    this.saveMeetingInfosButton = document.getElementById('saveMeetingInfosButton');
-    this.closeMeetingInfosButton = document.getElementById('closeMeetingInfosButton');
     this.langSelect = document.getElementById('langSelect');
-    if (this.saveMeetingInfosButton) {
-      this.saveMeetingInfosButton.addEventListener('click', () => this.handleSaveMeetingInfos());
-    }
-    if (this.closeMeetingInfosButton) {
-      this.closeMeetingInfosButton.addEventListener('click', () => this.handleCloseMeetingInfos());
-    }
+
     if (this.langSelect) {
       this.langSelect.addEventListener('change', (e) => this.app.handleLanguageChange(e.target.value));
     }
