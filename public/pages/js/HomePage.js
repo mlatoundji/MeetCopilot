@@ -12,12 +12,6 @@ export class HomePage {
     if (this.langSelect) {
       this.langSelect.addEventListener('change', (e) => this.app.handleLanguageChange(e.target.value));
     }
-    // Delegation for modal start session button
-    document.addEventListener('click', async (e) => {
-        if (e.target && e.target.id === 'startSessionButton') {
-            await this.handleStartSession();
-        }
-    });
   }
 
   async render() {

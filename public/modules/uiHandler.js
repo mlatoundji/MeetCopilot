@@ -215,7 +215,7 @@ export class UIHandler {
         this.videoElement.srcObject = null;
     }
 
-    async populateMeetingModal() {
+    async populateMeetingModal(isEdit = false) {
         const translations = await this.i18n.load(this.app.currentLanguage || this.defaultLang);
         // Update modal title
         const modalTitle = document.querySelector('.meeting-modal h2');
@@ -227,6 +227,10 @@ export class UIHandler {
         if (!this.meetingModal) this.meetingModal = document.getElementById("meetingModal");
         if (!this.modalOverlay) this.modalOverlay = document.getElementById("modalOverlay");
         if (!this.dynamicFields) this.dynamicFields = document.getElementById("dynamicFields");
+        // Re-fetch modal action buttons after injecting modal HTML
+        this.saveMeetingInfosButton = document.getElementById("saveMeetingInfosButton");
+        this.startSessionButton = document.getElementById("startSessionButton");
+        this.closeMeetingInfosButton = document.getElementById("closeMeetingInfosButton");
 
         if (!this.dynamicFields) return; // safety
 
@@ -278,22 +282,77 @@ export class UIHandler {
                 </div>
             </div>
 
-
             <div class="modal-nav">
                 <button id="prevStepButton" class="button-secondary">${translations.prevStepButton || 'Précédent'}</button>
                 <button id="nextStepButton" class="button-primary">${translations.nextStepButton || 'Suivant'}</button>
-                <button id="startSessionButton" class="button mode-start-session">${translations.startSession || ''}</button>
             </div>
         `;
 
-        // Masquer le bouton de sauvegarde par défaut
-        if (this.saveMeetingInfosButton) {
-            this.saveMeetingInfosButton.style.display = 'none';
+        // Prefill inputs with existing session context
+        const existing = this.app.conversationContextHandler.sessionContext || {};
+        meetingFieldsConfig.forEach(cat => {
+          cat.fields.forEach(field => {
+            const el = this.dynamicFields.querySelector(`#input-${field.key}`) || this.dynamicFields.querySelector(`#input-${field.key}`);
+            if (el && existing[field.key] != null) el.value = existing[field.key];
+          });
+        });
+
+        // Button logic: show Start when creating, Save when editing
+        const saveBtn = this.saveMeetingInfosButton;
+        const startBtn = document.getElementById('startSessionButton');
+        if (isEdit) {
+          if (saveBtn) saveBtn.style.display = 'inline-block';
+          if (startBtn) startBtn.style.display = 'none';
+          saveBtn?.addEventListener('click', async () => {
+            const metadata = {};
+            meetingFieldsConfig.forEach(cat => cat.fields.forEach(field => {
+              const input = document.getElementById(`input-${field.key}`);
+              metadata[field.key] = input?.value || '';
+            }));
+            try {
+              const sessionId = localStorage.getItem('currentSessionId');
+              await this.app.apiHandler.callApi(
+                `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions/${sessionId}`,
+                { method: 'PATCH', body: JSON.stringify({
+                  status: 'pending',
+                  session_title: metadata.session_title,
+                  description: metadata.description,
+                  host_name: metadata.host_name,
+                  custom_context: metadata
+                }) }
+              );
+              this.app.conversationContextHandler.sessionContext = metadata;
+              this.closeMeetingModal();
+              window.location.reload();
+            } catch (err) {
+              console.error('Error saving session context:', err);
+              alert("Échec de l'enregistrement");
+            }
+          });
+        } else {
+          if (startBtn) startBtn.style.display = 'inline-block';
+          if (saveBtn) saveBtn.style.display = 'none';
+          startBtn?.addEventListener('click', async () => {
+            const metadata = {};
+            meetingFieldsConfig.forEach(cat => cat.fields.forEach(field => {
+              const input = document.getElementById(`input-${field.key}`);
+              metadata[field.key] = input?.value || '';
+            }));
+            const mode = this.getMode();
+            try {
+              const resp = await this.app.sessionHandler.createSession(mode, metadata);
+              localStorage.setItem('currentSessionId', resp.session_id);
+              localStorage.setItem('currentConversationId', resp.conversation_id);
+              this.closeMeetingModal();
+              window.location.hash = 'meeting';
+            } catch (err) {
+              console.error('Error creating session:', err);
+              alert('Erreur création de session');
+            }
+          });
         }
-        
-        // Configuration des écouteurs d'événements de la modale
         this.setupModalEventListeners();
-        
+
         // Afficher la modale
         this.meetingModal.style.display = "block";
         this.modalOverlay.style.display = "block";
@@ -350,35 +409,6 @@ export class UIHandler {
                 this.mode = mode.getAttribute('data-mode');
             });
         });
-
-        // Start session API call
-        const startBtn = this.dynamicFields.querySelector('#startSessionButton');
-        if (startBtn) {
-            startBtn.addEventListener('click', async () => {
-                // Gather metadata from all fields
-                const metadata = {};
-                (this.meetingFieldsConfig || []).forEach(cat => {
-                    cat.fields.forEach(field => {
-                        const input = document.getElementById(`input-${field.key}`);
-                        metadata[field.key] = input ? input.value : '';
-                    });
-                });
-                const mode = this.getMode();
-                try {
-                    // Use SessionHandler to create session and set conversationId
-                    const resp = await this.app.sessionHandler.createSession(mode, metadata);
-                    const sessionId = resp.session_id;
-                    const conversationId = resp.conversation_id;
-                    localStorage.setItem('currentSessionId', sessionId);
-                    localStorage.setItem('currentConversationId', conversationId);
-                    this.closeMeetingModal();
-                    window.location.hash = 'meeting';
-                } catch (err) {
-                    console.error('Error creating session:', err);
-                    alert(this.currentTranslations[12] || 'Erreur lors de la création de la session.');
-                }
-            });
-        }
     }
 
     closeMeetingModal() {

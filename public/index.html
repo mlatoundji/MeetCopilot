@@ -63,12 +63,13 @@
       <main class="main-content" id="main-content"></main>
     </div>
     <!-- MODAL + OVERLAY -->
-    <div id="modalOverlay" class="modal-overlay"></div>
-    <div id="meetingModal" class="meeting-modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true" tabindex="-1">
+    <div id="modalOverlay" class="modal-overlay" style="display: none;"></div>
+    <div id="meetingModal" class="meeting-modal" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-modal="true" tabindex="-1">
       <h2 id="modalTitle">Add Meeting Infos</h2>
       <div id="dynamicFields"></div>
-      <div class="modal-buttons">
-        <button id="saveMeetingInfosButton" class="button">Validate</button>
+      <div class="modal-nav">
+        <button id="saveMeetingInfosButton" class="button-primary">Validate</button>
+        <button id="startSessionButton" class="button-primary" style="display: none;">Start</button>
         <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
       </div>
     </div>

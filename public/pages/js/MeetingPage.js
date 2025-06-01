@@ -269,18 +269,17 @@ export class MeetingPage {
     }
 
     this.updateButtonStates();
-    // Initialize layout manager (ensures presets button works)
-    this.layoutManager.initialize();
+    // // Initialize layout manager (ensures presets button works)
+    // this.layoutManager.initialize();
   }
 
   async initialize() {
+    console.log("MeetingPage initializing");
     // Hide global header and main sidebar on meeting page
     const header = document.querySelector('.header-horizontal');
     if (header) header.style.display = 'none';
     const mainSidebar = document.querySelector('.sidebar');
     if (mainSidebar) mainSidebar.style.display = 'none';
-
-    console.log("MeetingPage initializing");
     
     // Initialiser les éléments UI
     this.initializeElements();
@@ -298,36 +297,50 @@ export class MeetingPage {
     // Mettre à jour la visibilité et le contenu du bloc de contexte
     const contextHeaderElement = document.getElementById('conversationContextHeader');
     if (contextHeaderElement) {
-      // Extract session_id from URL query
-      const conversationId = localStorage.getItem('currentConversationId');
-      if (conversationId) {
+      console.log("contextHeaderElement", contextHeaderElement);  
+      // Get current session ID
+      const sessionId = localStorage.getItem('currentSessionId');
+      console.log("sessionId found", sessionId);
+      if (sessionId) {
         try {
-          // Fetch session data (includes context JSON)
-          const resp = await this.apiHandler.callApi(
-            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/conversation/${conversationId}/context`,
+          // Fetch session metadata (includes custom_context)
+          const sessionResp = await this.apiHandler.callApi(
+            `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
             { method: 'GET' }
           );
-          const context = resp.context || {};
+          const sessionData = sessionResp.data || sessionResp;
+          const context = sessionData.custom_context || {};
+          // Store context for editing
+          this.conversationContextHandler.sessionContext = context;
           console.log('context', context);
           // Build list of fields from config
           const allFields = meetingFieldsConfig.reduce((acc, cat) => acc.concat(cat.fields), []);
+          // Truncate preview to first 3 entries
+          const entries = Object.entries(context);
+          const previewEntries = entries; // show all entries in preview
           let html = '<ul>';
-          Object.entries(context).forEach(([key, val]) => {
+          previewEntries.forEach(([key, val]) => {
             const fld = allFields.find(f => f.key === key);
             const label = fld ? fld.label : key;
             html += `<li><strong>${label}</strong>: ${val}</li>`;
           });
           html += '</ul>';
+          // Add edit button
+          html += '<button id="editContextButton" class="button-secondary">Modifier le contexte</button>';
           contextHeaderElement.innerHTML = html;
+          // Bind edit button to open context editor
+          const editBtn = document.getElementById('editContextButton');
+          if (editBtn) {
+            editBtn.addEventListener('click', () => this.uiHandler.populateMeetingModal(true));
+          }
         } catch (err) {
           console.error('Error fetching session context:', err);
           const t = this.uiHandler.getTranslations();
           contextHeaderElement.innerText = t.sessionContextError || 'Erreur chargement contexte';
         }
       }
-      // Show or hide header based on sidebar state
-      if (savedState === 'expanded') contextHeaderElement.classList.remove('hidden');
-      else contextHeaderElement.classList.add('hidden');
+      // Always show the context header
+      // contextHeaderElement.classList.remove('hidden');
     }
     
     console.log("MeetingPage initialized");

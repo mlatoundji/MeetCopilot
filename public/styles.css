@@ -1061,11 +1061,6 @@ body {
     padding: 1rem;
     font-size: 1.1rem;
 }
-
-#saveMethodModal .modal-buttons {
-    margin-top: 1rem;
-}
-
 /* History Page Styles */
 .meetings-list {
     padding: 20px;
@@ -1263,6 +1258,9 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: flex-start;
+}
+.meeting-sidebar-menu li.sidebar-spacer {
+  flex: 1;
 }
 .meeting-control-btn {
   width: 100%;
@@ -1870,4 +1868,24 @@ body.no-global-ui #main-sidebar {
 /* Ensure Start Session button aligns with navigation */
 #startSessionButton {
   /* mode-start-session already styled */
+}
+
+/* Ensure meeting-modal uses flex column and buttons stay visible */
+.meeting-modal {
+  display: flex;
+  flex-direction: column;
+}
+.meeting-modal .dynamic-fields {
+  flex: 1;
+  overflow-y: auto;
+}
+.meeting-modal .modal-buttons {
+  position: sticky;
+  bottom: 0;
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  z-index: 10;
 }

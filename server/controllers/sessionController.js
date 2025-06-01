@@ -167,17 +167,28 @@ export const updateSession = async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { id } = req.params;
-    const { status } = req.body;
-    if (!status) {
-      return res.status(400).json({ error: 'Status is required' });
+    const { status, custom_context, session_title, description, host_name } = req.body;
+    if (!status && custom_context === undefined) {
+      return res.status(400).json({ error: 'Status or custom_context is required' });
     }
     const updates = {};
-    if (status === 'completed') {
-      updates.status = 'completed';
-      updates.end_time = new Date().toISOString();
-    } else {
-      updates.status = status;
+    // Update status if provided
+    if (status) {
+      if (status === 'completed') {
+        updates.status = 'completed';
+        updates.end_time = new Date().toISOString();
+      } else {
+        updates.status = status;
+      }
     }
+    // Update custom_context if provided
+    if (custom_context !== undefined) {
+      updates.custom_context = custom_context;
+    }
+    // Update session_title, description, host_name if provided
+    if (session_title !== undefined) updates.session_title = session_title;
+    if (description !== undefined) updates.description = description;
+    if (host_name !== undefined) updates.host_name = host_name;
     const { data, error } = await supabase
       .from('sessions')
       .update(updates)
