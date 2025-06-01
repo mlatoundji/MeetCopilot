@@ -1,4 +1,13 @@
 export const meetingFieldsConfig = [
+  {
+    id: 'sessionInfo',
+    title: 'Session Info',
+    fields: [
+      { key: 'session_title', label: 'Session Title', type: 'text', required: true },
+      { key: 'description', label: 'Description', type: 'textarea', required: false },
+      { key: 'host_name', label: 'Host Name', type: 'text', required: false },
+    ]
+  },
   // Example category for contextual information fields
   {
     id: 'meeting',

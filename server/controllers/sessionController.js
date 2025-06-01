@@ -36,6 +36,7 @@ export const createSession = async (req, res) => {
       user_id: userId,
       host_name: metadata?.host_name || 'User',
       session_title: metadata?.session_title || 'Meeting',
+      description: metadata?.description || '',
       custom_context: metadata || {},
       start_time: new Date().toISOString(),
       status: 'pending',

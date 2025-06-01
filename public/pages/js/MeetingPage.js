@@ -237,12 +237,14 @@ export class MeetingPage {
         try {
           const memoryResp = await this.app.sessionHandler.resumeSession();
           const messages = memoryResp.memory_json?.messages || [];
+          if(messages.length > 0){
           this.conversationContextHandler.conversationContextDialogs = messages;
-          this.uiHandler.renderTranscription(
-            messages,
-            this.conversationContextHandler.startTime,
-            this.conversationContextHandler.useRelativeTime
-          );
+            this.uiHandler.renderTranscription(
+              this.conversationContextHandler.conversationContextDialogs,
+              this.conversationContextHandler.startTime,
+              this.conversationContextHandler.useRelativeTime
+            );
+          }
         } catch (err) {
           console.error('Error resuming session conversation:', err);
         }

@@ -28,8 +28,10 @@ export class SessionHandler {
    */
   onSessionCreated(resp) {
     this.sessionId = resp.session_id;
+    localStorage.setItem('currentSessionId', this.sessionId);
     // Use the server-generated conversation ID
     this.conversationContextHandler.conversationId = resp.conversation_id;
+    localStorage.setItem('currentConversationId', this.conversationContextHandler.conversationId);
     console.log('Session and conversation set:', this.sessionId, resp.conversation_id);
   }
 
@@ -54,20 +56,16 @@ export class SessionHandler {
     if (!sessionId) {
       throw new Error('No session to resume');
     }
-    if (conversationId) {
-      this.conversationContextHandler.conversationId = conversationId;
-      this.onSessionCreated({ session_id: sessionId, conversation_id: conversationId });
-    }
-    else {
-      // Fetch session details (includes conversation_id)
-      const sessionResp = await this.apiHandler.callApi(
-        `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
-        { method: 'GET' }
-      );
-      const sessData = sessionResp.data || sessionResp;
-      this.onSessionCreated({ session_id: sessData.id || sessData.session_id, conversation_id: sessData.last_conversation_id });
-    }
-
+    // Fetch session details (always) to get start_time and conversation_id
+    const sessionResp = await this.apiHandler.callApi(
+      `${this.apiHandler.baseURL}${this.apiHandler.apiPrefix}/sessions/${sessionId}`,
+      { method: 'GET' }
+    );
+    const sessData = sessionResp.data || sessionResp;
+    // Determine conversation ID: prefer stored, else from session data
+    const convId = conversationId || sessData.conversation_id || sessData.last_conversation_id;
+    this.conversationContextHandler.conversationId = convId;
+    this.onSessionCreated({ session_id: sessData.id || sessData.session_id, conversation_id: convId });
 
     // Fetch conversation memory
     const memResp = await this.apiHandler.callApi(

@@ -126,6 +126,7 @@ export const addMessages = async (req, res) => {
     if (USE_AUTO_SUMMARIZATION) {
     const updatedTokenCount = estimateTokens(memory.messages);
     console.log("Token count :", updatedTokenCount);
+    console.log("memory messages length:", memory.messages.length);
     const needSummaryByCount = memory.messages.length >= WINDOW_MAX_TURNS + SUMMARY_TRIGGER_EVERY;
     const needSummaryByTokens = updatedTokenCount > SUMMARY_TOKEN_THRESHOLD;
     if (needSummaryByCount || needSummaryByTokens) {

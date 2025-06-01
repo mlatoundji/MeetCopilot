@@ -18,6 +18,8 @@ const supabase = createSupabaseClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
 );
 
+const SUGGESTION_MAX_TOKENS = 100000;
+
 const TIMEOUT = 30000; // Increased to 30 seconds
 const MAX_RETRIES = 3;
 const CONCURRENT_REQUESTS = 2;
@@ -344,8 +346,8 @@ export const streamSuggestions = async (req, res) => {
       const promptTokens = estimateTokens(messages);
       console.log("Prompt tokens", promptTokens);
 
-      if(promptTokens > 20000){
-        return res.status(400).json({ error: 'Context exceeds maximum length of 20000 tokens' });
+      if(promptTokens > SUGGESTION_MAX_TOKENS){
+        return res.status(400).json({ error: 'Context exceeds maximum length of ' + SUGGESTION_MAX_TOKENS + ' tokens' });
       }
   
       // Call Mistral with streaming

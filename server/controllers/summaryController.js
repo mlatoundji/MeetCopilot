@@ -18,6 +18,8 @@ const supabase = createSupabaseClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
 );
 
+const SUMMARY_MAX_TOKENS = 100000;
+
 // Constants for validation
 const MAX_CONTEXT_LENGTH = 50000; // Maximum context length in characters
 const MIN_CONTEXT_LENGTH = 10;    // Minimum context length in characters
@@ -174,8 +176,8 @@ export const generateDetailedSummary = async (req, res) => {
         console.log("Prompt", prompt);
         const promptTokens = estimateTokens(prompt);
         console.log("Prompt tokens", promptTokens);
-        if(promptTokens > 20000){
-            return res.status(400).json({ error: 'Context exceeds maximum length of 20000 tokens' });
+        if(promptTokens > SUMMARY_MAX_TOKENS){
+            return res.status(400).json({ error: 'Context exceeds maximum length of ' + SUMMARY_MAX_TOKENS + ' tokens' });
         }
         const summary = await mistralChatCompletion(prompt);
         // Persist into summaries table
