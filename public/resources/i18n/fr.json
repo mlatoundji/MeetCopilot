@@ -1,0 +1,23 @@
+{
+  "appearanceTitle": "Apparence",
+  "themeLabel": "Thème",
+  "languageSettingsTitle": "Paramètres de langue",
+  "interfaceLanguageLabel": "Langue d'interface",
+  "conversationSettingsTitle": "Paramètres de conversation",
+  "conversationLanguageLabel": "Langue de conversation",
+  "audioSettingsTitle": "Paramètres audio",
+  "inputDeviceLabel": "Périphérique d'entrée",
+  "saveSettingsButton": "Enregistrer les paramètres",
+  "suggestionButton": "Générer des suggestions",
+  "sessionControlButton": "Démarrer une session",
+  "saveMeetingInfosButton": "Enregistrer les infos",
+  "closeMeetingInfosButton": "Fermer",
+  "systemButtonStart": "Démarrer la capture système",
+  "systemButtonStop": "Arrêter la capture système",
+  "micButtonStart": "Démarrer la capture micro",
+  "micButtonStop": "Arrêter la capture micro",
+  "transcriptionPlaceholder": "La transcription apparaîtra ici...",
+  "suggestionsPlaceholder": "Les suggestions apparaîtront ici.",
+  "sessionTabTitle": "Mode",
+  "meetingTabTitle": "Réunion"
+} 

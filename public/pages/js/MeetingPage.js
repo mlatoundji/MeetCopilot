@@ -326,6 +326,29 @@ export class MeetingPage {
       else contextHeaderElement.classList.add('hidden');
     }
     
+    // Conversation language selector
+    const convLangSelect = document.getElementById('conversationLangSelect');
+    if (convLangSelect) {
+      // Populate options from UIHandler.supportedLangs
+      const langs = this.app.uiHandler.supportedLangs;
+      convLangSelect.innerHTML = '';
+      langs.forEach(l => {
+        const opt = document.createElement('option'); opt.value = l.code; opt.textContent = l.label;
+        convLangSelect.appendChild(opt);
+      });
+      // Default selection
+      const savedLang = localStorage.getItem('conversationLanguage') || this.transcriptionHandler.language;
+      convLangSelect.value = savedLang;
+      // Apply saved conversation language to handler
+      await this.transcriptionHandler.applyTranslation(savedLang);
+      // Apply on change
+      convLangSelect.addEventListener('change', e => {
+        const newLang = e.target.value;
+        this.transcriptionHandler.applyTranslation(newLang);
+        localStorage.setItem('conversationLanguage', newLang);
+      });
+    }
+    
     console.log("MeetingPage initialized");
   }
 

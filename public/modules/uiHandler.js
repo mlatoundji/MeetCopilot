@@ -4,7 +4,7 @@
  */
 
 const SYSTEM_SOURCE = 'system';
-import { meetingFieldsConfig } from '../resources/meetingFieldsConfig.js';
+import { I18nLoader } from './i18nLoader.js';
 
 export class UIHandler {
 
@@ -26,14 +26,6 @@ export class UIHandler {
         
         // Mode d'utilisation (libre ou assisté)
         this.mode = 'libre'; // Par défaut : mode libre
-        
-        this.meetingsInfosLabels = [
-            "Titre du poste", 
-            "Missions", 
-            "Informations sur l'entreprise",
-            "Informations sur le candidat (utilisateur)", 
-            "Informations complémentaires"
-        ];
 
         this.langSelect = document.getElementById("langSelect");
         this.defaultLang = "fr";
@@ -43,109 +35,38 @@ export class UIHandler {
             { code: "en", label: "English" },
         ];
 
-        this.translations = {
-            fr: {
-                systemButtonStart: "Démarrer la capture système",
-                systemButtonStop: "Arrêter la capture système",
-                micButtonStart: "Démarrer la capture micro",
-                micButtonStop: "Arrêter la capture micro",
-                suggestionButton: "Générer des suggestions",
-                sessionControlButton: "Démarrer une session",
-                sessionButtonStop: "Arrêter la session",
-                saveMeetingInfosButton: "Enregistrer les infos",
-                closeMeetingInfosButton: "Fermer",
-                transcriptionPlaceholder: "La transcription apparaîtra ici...",
-                suggestionsPlaceholder: "Les suggestions apparaîtront ici.",
-                modalTitle: "Configuration de la session",
-                sessionTabTitle: "Mode",
-                meetingTabTitle: "Réunion",
-                modeLibre: "Mode Libre",
-                modeAssiste: "Mode Assisté",
-                modeLibreDesc: "Transcription simple sans ajout d'informations contextuel",
-                modeAssisteDesc: "Transcription avec ajout d'informations pour un meilleur contexte",
-                startSession: "Démarrer la session",
-                sessionResume: "Reprendre la session en cours",
-                sessionInProgressPrompt: "Une session est déjà en cours. Entrez 1 pour terminer et sauvegarder, 2 pour terminer sans sauvegarder, ou autre pour annuler.",
-                meetingsInfosLabels : [
-                    "Titre du poste", 
-                    "Missions", 
-                    "Informations sur l'entreprise",
-                    "Informations sur le candidat (utilisateur)", 
-                    "Informations complémentaires"
-                ],
-                promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
-                promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
-                sessionContextError: "Erreur lors du chargement du contexte",
-            },
-            en: {
-                systemButtonStart: "Start System Capture",
-                systemButtonStop: "Stop System Capture",
-                micButtonStart: "Start Mic Capture",
-                micButtonStop: "Stop Mic Capture",
-                suggestionButton: "Generate Suggestions",
-                sessionControlButton: "Start a session",
-                sessionButtonStop: "Stop Session",
-                saveMeetingInfosButton: "Save Meeting Info",
-                closeMeetingInfosButton: "Close",
-                transcriptionPlaceholder: "Transcription will appear here...",
-                suggestionsPlaceholder: "Suggestions will appear here.",
-                modalTitle: "Session Configuration",
-                sessionTabTitle: "Mode",
-                meetingTabTitle: "Meeting",
-                modeLibre: "Free Mode",
-                modeAssiste: "Assisted Mode",
-                modeLibreDesc: "Simple transcription without additional context information",
-                modeAssisteDesc: "Transcription with additional context information for better understanding",
-                startSession: "Start Session",
-                sessionResume: "Resume pending session",
-                sessionInProgressPrompt: "A session is already in progress. Enter 1 to complete and save, 2 to complete without saving, or any other key to cancel.",
-                meetingsInfosLabels : [
-                    "Job Title", 
-                    "Missions", 
-                    "Company Information",
-                    "Candidate Information (User)", 
-                    "Additional Information"
-                ],
-                promptCompleteSave: "Terminer et sauvegarder la session en cours ?",
-                promptDeleteNoSave: "Terminer sans sauvegarder la session en cours ?",
-                sessionContextError: "Error loading session context",
-            },
-        };
-
-        this.selectedTranslations = this.translations[this.defaultLang];
+        // Initialize internationalization loader
+        this.i18n = new I18nLoader();
         this.videoElement = document.getElementById("screen-capture");
     }
 
-    translateUI(lang) {
+    async translateUI(lang) {
+        // Load translations for selected UI language
+        const translations = await this.i18n.load(lang);
         const uiElements = {
             suggestionButton: this.suggestionButton,
             sessionControlButton: this.sessionControlButton,
             saveMeetingInfosButton: this.saveMeetingInfosButton,
             closeMeetingInfosButton: this.closeMeetingInfosButton,
         };
-
-        this.selectedTranslations = this.translations[lang];
-            
         Object.keys(uiElements).forEach((key) => {
-            if (uiElements[key]) {
-                uiElements[key].textContent = this.selectedTranslations[key];
-            }
+            const el = uiElements[key];
+            if (el) el.textContent = translations[key] || key;
         });
         
-        // Only update button text if the elements exist
         if (this.systemCaptureButton) {
-            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+            this.systemCaptureButton.textContent = this.isRecording ? (translations.systemButtonStop || '') : (translations.systemButtonStart || '');
         }
         if (this.micCaptureButton) {
-            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+            this.micCaptureButton.textContent = this.isRecording ? (translations.micButtonStop || '') : (translations.micButtonStart || '');
         }
         if (this.transcriptionDiv) {
-            this.updateTranscription(this.selectedTranslations.transcriptionPlaceholder);
+            this.updateTranscription(translations.transcriptionPlaceholder || '');
         }
         if (this.suggestionsDiv) {
-            this.updateSuggestions(this.selectedTranslations.suggestionsPlaceholder);
+            this.updateSuggestions(translations.suggestionsPlaceholder || '');
         }
-        this.meetingsInfosLabels = this.selectedTranslations.meetingsInfosLabels;
+        this.meetingsInfosLabels = translations.meetingsInfosLabels || this.meetingsInfosLabels;
     }
   
     /**
@@ -161,6 +82,7 @@ export class UIHandler {
                 onLangChange(selectedLang);
             });
         }
+        // Initial load of UI translations
         this.translateUI(this.defaultLang);
         
         // S'assurer que la fenêtre modale est cachée par défaut
@@ -175,7 +97,7 @@ export class UIHandler {
         if (this.sessionControlButton) {
             this.sessionControlButton.innerHTML = `
                 <span class="button-icon">🚀</span>
-                ${this.selectedTranslations.sessionControlButton}
+                ${this.meetingsInfosLabels[0]}
             `;
         }
         
@@ -255,10 +177,10 @@ export class UIHandler {
         };
         switch (type) {
         case SYSTEM_SOURCE:
-            updateLabel(this.systemCaptureButton, this.selectedTranslations.systemButtonStart, this.selectedTranslations.systemButtonStop);
+            updateLabel(this.systemCaptureButton, this.meetingsInfosLabels[0], this.meetingsInfosLabels[1]);
             break;
         default:
-            updateLabel(this.micCaptureButton, this.selectedTranslations.micButtonStart, this.selectedTranslations.micButtonStop);
+            updateLabel(this.micCaptureButton, this.meetingsInfosLabels[2], this.meetingsInfosLabels[3]);
             break;
         }
     }
@@ -291,11 +213,11 @@ export class UIHandler {
         this.videoElement.srcObject = null;
     }
 
-    populateMeetingModal() {
+    async populateMeetingModal() {
         // Mise à jour du titre de la modale
         const modalTitle = document.querySelector('.meeting-modal h2');
         if (modalTitle) {
-            modalTitle.textContent = this.selectedTranslations.modalTitle;
+            modalTitle.textContent = this.meetingsInfosLabels[0];
         }
         
         // Ensure references exist
@@ -305,11 +227,23 @@ export class UIHandler {
 
         if (!this.dynamicFields) return; // safety
 
+        // Dynamically load localized meetingFieldsConfig
+        const lang = this.app.currentLanguage || this.defaultLang;
+        let meetingFieldsConfig;
+        try {
+          const module = await import(`../resources/meetingFieldsConfig.${lang}.js`);
+          meetingFieldsConfig = module.meetingFieldsConfig;
+        } catch {
+          // Fallback to French default
+          const module = await import(`../resources/meetingFieldsConfig.fr.js`);
+          meetingFieldsConfig = module.meetingFieldsConfig;
+        }
+
         // Build multi-step wizard
         this.dynamicFields.innerHTML = `
             <div class="modal-tabs">
                 ${meetingFieldsConfig.map((cat, idx) => `<div class="modal-tab${idx === 0 ? ' active' : ''}" data-tab-modal="${cat.id}">${cat.title}</div>`).join('')}
-                <div class="modal-tab" data-tab-modal="session">${this.selectedTranslations.sessionTabTitle}</div>
+                <div class="modal-tab" data-tab-modal="session">${await this.i18n.get('sessionTabTitle', lang)}</div>
             </div>
 
             ${meetingFieldsConfig.map((cat, idx) => `
@@ -331,21 +265,21 @@ export class UIHandler {
             <div id="session-tab" class="tab-content-modal">
                 <div class="session-modes">
                     <div class="session-mode ${this.mode === 'libre' ? 'selected' : ''}" data-mode="libre">
-                        <h3>${this.selectedTranslations.modeLibre}</h3>
-                        <p>${this.selectedTranslations.modeLibreDesc}</p>
+                        <h3>${this.meetingsInfosLabels[5]}</h3>
+                        <p>${this.meetingsInfosLabels[6]}</p>
                     </div>
                     <div class="session-mode ${this.mode === 'assiste' ? 'selected' : ''}" data-mode="assiste">
-                        <h3>${this.selectedTranslations.modeAssiste}</h3>
-                        <p>${this.selectedTranslations.modeAssisteDesc}</p>
+                        <h3>${this.meetingsInfosLabels[7]}</h3>
+                        <p>${this.meetingsInfosLabels[8]}</p>
                     </div>
                 </div>
             </div>
 
 
             <div class="modal-nav">
-                <button id="prevStepButton" class="button-secondary">${this.selectedTranslations.prev || 'Précédent'}</button>
-                <button id="nextStepButton" class="button-primary">${this.selectedTranslations.next || 'Suivant'}</button>
-                <button id="startSessionButton" class="button mode-start-session">${this.selectedTranslations.startSession}</button>
+                <button id="prevStepButton" class="button-secondary">${this.meetingsInfosLabels[9] || 'Précédent'}</button>
+                <button id="nextStepButton" class="button-primary">${this.meetingsInfosLabels[10] || 'Suivant'}</button>
+                <button id="startSessionButton" class="button mode-start-session">${this.meetingsInfosLabels[11]}</button>
             </div>
         `;
 
@@ -435,7 +369,7 @@ export class UIHandler {
                     window.location.hash = 'meeting';
                 } catch (err) {
                     console.error('Error creating session:', err);
-                    alert(this.selectedTranslations.errorSessionCreate || 'Erreur lors de la création de la session.');
+                    alert(this.meetingsInfosLabels[12] || 'Erreur lors de la création de la session.');
                 }
             });
         }
@@ -494,7 +428,7 @@ export class UIHandler {
      * @returns {Object} - The current translations object.
      */
     getTranslations() {
-        return this.selectedTranslations || this.translations[this.defaultLang];
+        return this.meetingsInfosLabels;
     }
 
     // Add new method to render transcription messages as styled cards

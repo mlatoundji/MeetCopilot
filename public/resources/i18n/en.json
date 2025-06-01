@@ -1,0 +1,23 @@
+{
+  "appearanceTitle": "Appearance",
+  "themeLabel": "Theme",
+  "languageSettingsTitle": "Language Settings",
+  "interfaceLanguageLabel": "Interface Language",
+  "conversationSettingsTitle": "Conversation Settings",
+  "conversationLanguageLabel": "Conversation Language",
+  "audioSettingsTitle": "Audio Settings",
+  "inputDeviceLabel": "Input Device",
+  "saveSettingsButton": "Save Settings",
+  "suggestionButton": "Generate Suggestions",
+  "sessionControlButton": "Start a session",
+  "saveMeetingInfosButton": "Save Meeting Info",
+  "closeMeetingInfosButton": "Close",
+  "systemButtonStart": "Start System Capture",
+  "systemButtonStop": "Stop System Capture",
+  "micButtonStart": "Start Mic Capture",
+  "micButtonStop": "Stop Mic Capture",
+  "transcriptionPlaceholder": "Transcription will appear here...",
+  "suggestionsPlaceholder": "Suggestions will appear here.",
+  "sessionTabTitle": "Mode",
+  "meetingTabTitle": "Meeting"
+} 

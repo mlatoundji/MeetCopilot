@@ -42,22 +42,36 @@ class App {
 
   applyTranslations(lang) {
     this.uiHandler.translateUI(lang);
+    // Update header language select to the new language
+    if (this.uiHandler.langSelect) {
+      this.uiHandler.langSelect.value = lang;
+    }
     this.conversationContextHandler.translateContext(lang);
     this.transcriptionHandler.applyTranslation(lang);
     
     // Mettre à jour l'interface utilisateur via le router si nécessaire
     if (this.router && this.router.currentPage) {
       this.router.currentPage.render();
+      // If the page has static content translation, invoke it
+      if (typeof this.router.currentPage.translateStatic === 'function') {
+        this.router.currentPage.translateStatic();
+      }
     }
   }
 
   async initializeLanguage() {
     try {
-      // Initialize UI with language selection
+      // Fetch saved interface language from backend
+      const settingsUrl = `${this.apiHandler.baseURL}/api/settings`;
+      const settings = await this.apiHandler.callApi(settingsUrl, { method: 'GET' });
+      // Use saved language or default
+      this.currentLanguage = settings.language || this.currentLanguage;
+      // Ensure UIHandler uses this as default
+      this.uiHandler.defaultLang = this.currentLanguage;
+      // Initialize UI with language selection using saved language
       this.uiHandler.initialize((newLang) => {
         this.handleLanguageChange(newLang);
       });
-      
     } catch (error) {
       console.error('Error initializing language:', error);
       // Show error notification if available
@@ -69,6 +83,8 @@ class App {
 
   async init() {
     console.log("App initializing");
+    // Load saved language before setting up switcher
+    await this.initializeLanguage();
     this.uiHandler.setupLanguageSwitcher();
     // Delegate sidebar behavior to UI
     this.ui.setupSidebar();
