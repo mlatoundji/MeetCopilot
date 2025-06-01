@@ -1,26 +1,26 @@
 <!-- Meeting controls sidebar -->
 <div class="meeting-page-container">
   <aside class="meeting-sidebar" id="meetingSidebar">
-    <button id="toggleSidebar" class="toggle-sidebar-btn" title="Toggle sidebar">
+    <button id="toggleSidebar" class="toggle-sidebar-btn" title="Toggle sidebar" data-i18n-title="toggleSidebar" data-i18n-aria="toggleSidebar">
       <span class="toggle-icon">◀</span>
     </button>
     <div class="sidebar-content-container">
       <nav class="meeting-sidebar-nav">
         <ul class="meeting-sidebar-menu">
           <li>
-            <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture">
+            <button id="systemCaptureButton" class="meeting-control-btn" title="Démarrer la capture système" aria-label="System Capture" data-i18n-title="systemButtonStart" data-i18n-aria="systemButtonStart">
               <span class="meeting-icon">🎥</span>
               <span class="meeting-label">Capture Système</span>
             </button>
           </li>
           <li>
-            <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture">
+            <button id="micCaptureButton" class="meeting-control-btn" title="Démarrer la capture micro" aria-label="Mic Capture" data-i18n-title="micButtonStart" data-i18n-aria="micButtonStart">
               <span class="meeting-icon">🎙️</span>
               <span class="meeting-label">Capture Micro</span>
             </button>
           </li>
           <li>
-            <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions">
+            <button id="suggestionButton" class="meeting-control-btn" title="Générer des suggestions" aria-label="Suggestions" data-i18n-title="suggestionButton" data-i18n-aria="suggestionButton">
               <span class="meeting-icon">💡</span>
               <span class="meeting-label">Suggestions</span>
             </button>
@@ -59,13 +59,13 @@
   <!-- Main content grid: suggestions, screen capture and transcription -->
   <main class="meeting-content-grid" id="meetingContentGrid">
     <!-- Full-extend toggle on content side -->
-    <button id="toggleSidebarFull" class="toggle-sidebar-full-btn" title="Toggle full sidebar">
+    <button id="toggleSidebarFull" class="toggle-sidebar-full-btn" title="Toggle full sidebar" data-i18n-title="toggleFullSidebar" data-i18n-aria="toggleFullSidebar">
       <span class="toggle-icon-full">▶</span>
     </button>
     <!-- Suggestions area with resize/move controls -->
     <section id="suggestionsArea" class="content-area suggestions-area" data-area="suggestions">
       <div class="area-header">
-        <h3>Suggestions</h3>
+        <h3 data-i18n="areaHeaderSuggestions">Suggestions</h3>
         <div class="area-controls">
           <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
           <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
@@ -73,7 +73,7 @@
           <button class="area-control hide-toggle" title="Masquer"><span>✕</span></button>
         </div>
       </div>
-      <div id="suggestions" class="area-content">
+      <div id="suggestions" class="area-content" data-i18n="suggestionsPlaceholder">
         Suggestions will appear here...
       </div>
     </section>
@@ -81,7 +81,7 @@
     <!-- Screen capture area with resize/fullscreen controls -->
     <section id="screenCaptureArea" class="content-area screen-capture-area" data-area="screenCapture">
       <div class="area-header">
-        <h3>Screen Capture</h3>
+        <h3 data-i18n="areaHeaderScreenCapture">Screen Capture</h3>
         <div class="area-controls">
           <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
           <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
@@ -97,7 +97,7 @@
     <!-- Transcription area with resize/move controls -->
     <section id="transcriptionArea" class="content-area transcription-area" data-area="transcription">
       <div class="area-header">
-        <h3>Transcription</h3>
+        <h3 data-i18n="areaHeaderTranscription">Transcription</h3>
         <div class="area-controls">
           <button class="area-control move-handle" title="Déplacer"><span>↔</span></button>
           <button class="area-control resize-handle" title="Redimensionner"><span>⤡</span></button>
@@ -105,7 +105,7 @@
           <button class="area-control hide-toggle" title="Masquer"><span>✕</span></button>
         </div>
       </div>
-      <div id="transcription" class="area-content transcription-box">
+      <div id="transcription" class="area-content transcription-box" data-i18n="transcriptionPlaceholder">
         Transcription will appear here...
       </div>
     </section>

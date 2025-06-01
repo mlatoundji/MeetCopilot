@@ -225,6 +225,12 @@ export class Router {
         if (this.currentPage && typeof this.currentPage.init === 'function') {
           await this.currentPage.init();
         }
+        // Apply UI translations for newly loaded page content
+        this.app.uiHandler.translateUI(this.app.currentLanguage);
+        // Apply static translations if provided by the page
+        if (this.currentPage && typeof this.currentPage.translateStatic === 'function') {
+          this.currentPage.translateStatic();
+        }
       }
 
       if (pushState) {

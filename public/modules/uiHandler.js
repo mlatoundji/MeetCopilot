@@ -67,6 +67,26 @@ export class UIHandler {
         if (this.suggestionsDiv) {
             this.updateSuggestions(translations.suggestionsPlaceholder || '');
         }
+        // Apply translations for elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = translations[key] || key;
+            if (el.hasAttribute('placeholder')) {
+                el.placeholder = text;
+            } else {
+                el.textContent = text;
+            }
+        });
+        // Apply translations for title attributes
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            el.title = translations[key] || key;
+        });
+        // Apply translations for aria-label attributes
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            const key = el.getAttribute('data-i18n-aria');
+            el.setAttribute('aria-label', translations[key] || key);
+        });
     }
   
     /**

@@ -85,20 +85,20 @@
     <div class="form-section">
       <!-- Login form -->
       <form class="form-box" id="login-form">
-        <h2>Bienvenue !</h2>
-        <input id="login-email" type="email" placeholder="Email" required />
-        <input id="login-password" type="password" placeholder="Mot de passe" required />
-        <div class="form-extra"><a href="#">Mot de passe oublié ?</a></div>
-        <button class="submit-btn" id="login-submit">Se connecter</button>
+        <h2 data-i18n="welcomeLoginTitle">Bienvenue !</h2>
+        <input id="login-email" type="email" placeholder="Email" required data-i18n="placeholderEmail" />
+        <input id="login-password" type="password" placeholder="Mot de passe" required data-i18n="placeholderPassword" />
+        <div class="form-extra"><a href="#" data-i18n="linkForgotPassword">Mot de passe oublié ?</a></div>
+        <button class="submit-btn" id="login-submit" data-i18n="authLoginSubmit">Se connecter</button>
       </form>
       <!-- Signup form -->
       <form class="form-box" id="register-form">
-        <h2>Créer un compte</h2>
-        <input type="text" placeholder="Nom complet" required />
-        <input type="email" placeholder="Email" required />
-        <input type="password" placeholder="Mot de passe" required />
-        <input type="password" placeholder="Confirmer le mot de passe" required />
-        <button class="submit-btn" id="register-submit">S'inscrire</button>
+        <h2 data-i18n="authSignupTitle">Créer un compte</h2>
+        <input type="text" placeholder="Nom complet" required data-i18n="placeholderFullName" />
+        <input type="email" placeholder="Email" required data-i18n="placeholderEmail" />
+        <input type="password" placeholder="Mot de passe" required data-i18n="placeholderPassword" />
+        <input type="password" placeholder="Confirmer le mot de passe" required data-i18n="placeholderConfirmPassword" />
+        <button class="submit-btn" id="register-submit" data-i18n="authSignupSubmit">S'inscrire</button>
       </form>
     </div>
   </div>

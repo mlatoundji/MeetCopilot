@@ -52,6 +52,8 @@ class App {
     // Mettre à jour l'interface utilisateur via le router si nécessaire
     if (this.router && this.router.currentPage) {
       this.router.currentPage.render();
+      // Re-apply UI translations for newly rendered content
+      this.uiHandler.translateUI(lang);
       // If the page has static content translation, invoke it
       if (typeof this.router.currentPage.translateStatic === 'function') {
         this.router.currentPage.translateStatic();
