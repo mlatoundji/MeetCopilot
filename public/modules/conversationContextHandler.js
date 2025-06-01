@@ -49,4 +49,12 @@ export class ConversationContextHandler {
     }
   }
 
+    /**
+     * No-op translation hook for conversation context.
+     * @param {string} langCode
+     */
+    translateContext(langCode) {
+        // Intentionally empty: conversation context does not require UI translations for now.
+    }
+
 }

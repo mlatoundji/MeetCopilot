@@ -15,6 +15,17 @@ export default class SettingsPage {
 
   async loadSettings() {
     try {
+      // Populate the settings page language dropdown
+      const langSelect = document.querySelector('.main-content #langSelect');
+      if (langSelect && this.app.uiHandler && Array.isArray(this.app.uiHandler.supportedLangs)) {
+        langSelect.innerHTML = '';
+        this.app.uiHandler.supportedLangs.forEach(lang => {
+          const opt = document.createElement('option');
+          opt.value = lang.code;
+          opt.textContent = lang.label;
+          langSelect.appendChild(opt);
+        });
+      }
       const url = `${this.apiHandler.baseURL}/api/settings`;
       const settings = await this.apiHandler.callApi(url, { method: 'GET' });
 
@@ -22,8 +33,7 @@ export default class SettingsPage {
       const themeSelect = document.getElementById('themeSelect');
       if (themeSelect && settings.theme) themeSelect.value = settings.theme;
 
-      // Interface Language (header dropdown)
-      const langSelect = document.getElementById('langSelect');
+      // Interface Language (settings dropdown)
       if (langSelect && settings.language) langSelect.value = settings.language;
 
       // Audio Input Devices
@@ -49,9 +59,19 @@ export default class SettingsPage {
   setupEventListeners() {
     const saveBtn = document.getElementById('saveSettingsButton');
     if (saveBtn) {
+      // Immediate language change on selection
+      const langSelectEl = document.querySelector('.main-content #langSelect');
+      if (langSelectEl) {
+        langSelectEl.addEventListener('change', (e) => {
+          const newLang = e.target.value;
+          if (this.app && this.app.handleLanguageChange) {
+            this.app.handleLanguageChange(newLang);
+          }
+        });
+      }
       saveBtn.addEventListener('click', async () => {
         const themeSelect = document.getElementById('themeSelect');
-        const languageSelect = document.getElementById('langSelect');
+        const languageSelect = document.querySelector('.main-content #langSelect');
         const audioSelect = document.getElementById('audioInputSelect');
 
         const theme = themeSelect ? themeSelect.value : null;
@@ -65,6 +85,19 @@ export default class SettingsPage {
             method: 'PATCH',
             body: JSON.stringify({ theme, language, notifications })
           });
+          // Apply theme change immediately
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (this.app.ui) {
+              this.app.ui.theme = theme;
+              this.app.ui.updateThemeIcon();
+            }
+          }
+          // Apply language change immediately
+          if (language && this.app.handleLanguageChange) {
+            this.app.handleLanguageChange(language);
+          }
           alert('Settings updated successfully');
         } catch (error) {
           console.error('Error saving settings:', error);

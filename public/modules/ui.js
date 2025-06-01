@@ -4,6 +4,7 @@ export class UI {
     this.setupTheme();
     this.setupSidebar();
     this.setupMeetingSidebar();
+    this.setupProfileNavigation();
   }
 
   setupTheme() {
@@ -141,5 +142,17 @@ export class UI {
     // run now and whenever hash changes (home→meeting etc.)
     initToggle();
     window.addEventListener('hashchange', initToggle);
+  }
+
+  /**
+   * Adds click listener on the profile icon to redirect to the profile page
+   */
+  setupProfileNavigation() {
+    const profileBtn = document.getElementById('userProfile');
+    if (profileBtn) {
+      profileBtn.addEventListener('click', () => {
+        window.location.hash = 'profile';
+      });
+    }
   }
 } 
