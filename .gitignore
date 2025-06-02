@@ -49,3 +49,4 @@ scripts/
 server/vercel.json
 
 .vercel
+.vercelignore
