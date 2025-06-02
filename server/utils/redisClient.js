@@ -1,6 +1,15 @@
 import { createClient } from 'redis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+import dotenv from 'dotenv';
+dotenv.config();
+
+let REDIS_URL;
+if (process.env.PROD !== 'true' || !process.env.REDIS_URL) {
+  REDIS_URL = 'redis://127.0.0.1:6379';
+}
+else {
+  REDIS_URL = process.env.REDIS_URL;
+}
 const MAX_REDIS_RETRIES = Number(process.env.REDIS_MAX_RETRIES) || 5;
 
 const redis = createClient({

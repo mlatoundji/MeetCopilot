@@ -42,7 +42,15 @@ const PORT = process.env.PORT || 3000;
 
 // CORS Configuration
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:8000', 'http://localhost:3000', 'http://localhost:5173', 'http://[::]:8000', 'http://[::]:5173'],
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
+        'http://localhost:8000',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://[::]:8000',
+        'http://[::]:5173',
+        'https://meet-copilot-git-develop-mourad-latoundjis-projects.vercel.app',
+        'https://meet-copilot-mourad-latoundjis-projects.vercel.app'
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true
@@ -109,6 +117,12 @@ app.get('/', (req, res) => {
 
 // API Routes with and without /api prefix for backward compatibility
 const apiPrefix = '/api';
+
+// Route de test
+app.get(apiPrefix + '/ping', (req, res) => {
+    res.json({ status: 'ok', version: process.env.npm_package_version || 'dev' });
+});
+
 app.use(apiPrefix + '/suggestions', suggestionRoutes);
 app.use(apiPrefix + '/summary', summaryRoutes);
 app.use(apiPrefix + '/transcribe', transcriptionRoutes);
