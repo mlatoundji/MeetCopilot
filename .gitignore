@@ -47,3 +47,5 @@ scripts/
 .taskmasterconfig
 .windsurfrules
 server/vercel.json
+
+.vercel
