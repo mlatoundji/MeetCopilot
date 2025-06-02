@@ -2,10 +2,9 @@ export class UI {
   constructor() {
     this.theme = localStorage.getItem('theme') || 'light';
     this.setupTheme();
-    this.setupTabs();
     this.setupSidebar();
-    this.setupTranscription();
-    this.setupResponsive();
+    this.setupMeetingSidebar();
+    this.setupProfileNavigation();
   }
 
   setupTheme() {
@@ -49,104 +48,54 @@ export class UI {
     }
   }
 
-  setupTabs() {
-    const tabs = document.querySelectorAll('.tab');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        // Remove active class from all tabs and panes
-        tabs.forEach(t => t.classList.remove('active'));
-        tabPanes.forEach(p => p.classList.remove('active'));
-
-        // Add active class to clicked tab and corresponding pane
-        tab.classList.add('active');
-        const tabId = tab.getAttribute('data-tab');
-        document.getElementById(tabId).classList.add('active');
-      });
-    });
-  }
-
   setupSidebar() {
     const collapseButton = document.getElementById('collapseSidebar');
     const sidebar = document.querySelector('.sidebar');
-
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    
+    // Collapse/expand logic with mobile open and outside-click closing
     if (collapseButton && sidebar) {
-      collapseButton.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        // Update button icon
-        collapseButton.textContent = sidebar.classList.contains('collapsed') ? '☰' : '✕';
-      });
-    }
-  }
-
-  setupTranscription() {
-    const moveButton = document.getElementById('moveTranscription');
-    const transcription = document.querySelector('.transcription');
-    const mainContent = document.querySelector('.main-content');
-
-    if (moveButton && transcription && mainContent) {
-      let isMoved = false;
-      moveButton.addEventListener('click', () => {
-        isMoved = !isMoved;
-        if (isMoved) {
-          mainContent.appendChild(transcription);
-          transcription.style.position = 'absolute';
-          transcription.style.top = '50%';
-          transcription.style.left = '50%';
-          transcription.style.transform = 'translate(-50%, -50%)';
-          transcription.style.width = '80%';
-          transcription.style.height = '80%';
-          transcription.style.zIndex = '1000';
+      const onCollapseClick = (e) => {
+        e.stopPropagation();
+        if (window.innerWidth <= 600) {
+          sidebar.classList.toggle('open');
         } else {
-          document.querySelector('.container').appendChild(transcription);
-          transcription.style.position = '';
-          transcription.style.top = '';
-          transcription.style.left = '';
-          transcription.style.transform = '';
-          transcription.style.width = '';
-          transcription.style.height = '';
-          transcription.style.zIndex = '';
+          sidebar.classList.toggle('collapsed');
+        }
+      };
+      collapseButton.addEventListener('click', onCollapseClick);
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 600 && sidebar.classList.contains('open')) {
+          if (!sidebar.contains(e.target) && e.target !== collapseButton) {
+            sidebar.classList.remove('open');
+          }
         }
       });
     }
-  }
 
-  setupResponsive() {
-    const handleResize = () => {
-      const container = document.querySelector('.container');
-      const sidebar = document.querySelector('.sidebar');
-      const transcription = document.querySelector('.transcription');
+    // Active state and navigation
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        sidebarItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const hash = item.getAttribute('data-hash');
+        if (hash) {
+          window.location.hash = hash;
+        }
+      });
+    });
 
-      if (window.innerWidth <= 900) {
-        if (transcription) {
-          transcription.style.display = 'none';
+    // Highlight active item on hash change
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      sidebarItems.forEach(item => {
+        if (item.getAttribute('data-hash') === hash) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
         }
-        if (sidebar) {
-          sidebar.classList.add('collapsed');
-        }
-      } else {
-        if (transcription) {
-          transcription.style.display = '';
-        }
-        if (sidebar) {
-          sidebar.classList.remove('collapsed');
-        }
-      }
-
-      if (window.innerWidth <= 600) {
-        if (sidebar) {
-          sidebar.style.display = 'none';
-        }
-      } else {
-        if (sidebar) {
-          sidebar.style.display = '';
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
+      });
+    });
   }
 
   // Utility method to show notifications
@@ -169,5 +118,41 @@ export class UI {
         document.body.removeChild(notification);
       }, 300);
     }, 3000);
+  }
+
+  hideSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if(sidebar) sidebar.style.display='none';
+  }
+  showSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if(sidebar) sidebar.style.display='';
+  }
+
+  setupMeetingSidebar() {
+    const initToggle = () => {
+      const collapseBtn = document.getElementById('collapseMeetingSidebar');
+      const meetingSidebar = document.querySelector('.meeting-sidebar');
+      if (!collapseBtn || !meetingSidebar) return;
+      // Avoid multiple listeners
+      collapseBtn.onclick = () => {
+        meetingSidebar.classList.toggle('collapsed');
+      };
+    };
+    // run now and whenever hash changes (home→meeting etc.)
+    initToggle();
+    window.addEventListener('hashchange', initToggle);
+  }
+
+  /**
+   * Adds click listener on the profile icon to redirect to the profile page
+   */
+  setupProfileNavigation() {
+    const profileBtn = document.getElementById('userProfile');
+    if (profileBtn) {
+      profileBtn.addEventListener('click', () => {
+        window.location.hash = 'profile';
+      });
+    }
   }
 } 

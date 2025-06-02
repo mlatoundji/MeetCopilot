@@ -4,9 +4,12 @@
  */
 
 const SYSTEM_SOURCE = 'system';
+import { I18nLoader } from './i18nLoader.js';
+
 export class UIHandler {
 
-    constructor() {
+    constructor(app) {
+        this.app = app;
         this.isRecording = false;
         this.systemCaptureButton = document.getElementById("systemCaptureButton");
         this.micCaptureButton = document.getElementById("micCaptureButton");
@@ -23,14 +26,6 @@ export class UIHandler {
         
         // Mode d'utilisation (libre ou assisté)
         this.mode = 'libre'; // Par défaut : mode libre
-        
-        this.meetingsInfosLabels = [
-            "Titre du poste", 
-            "Missions", 
-            "Informations sur l'entreprise",
-            "Informations sur le candidat (utilisateur)", 
-            "Informations complémentaires"
-        ];
 
         this.langSelect = document.getElementById("langSelect");
         this.defaultLang = "fr";
@@ -40,99 +35,58 @@ export class UIHandler {
             { code: "en", label: "English" },
         ];
 
-        this.translations = {
-            fr: {
-                systemButtonStart: "Démarrer la capture système",
-                systemButtonStop: "Arrêter la capture système",
-                micButtonStart: "Démarrer la capture micro",
-                micButtonStop: "Arrêter la capture micro",
-                suggestionButton: "Générer des suggestions",
-                startSessionButton: "Démarrer une session",
-                sessionButtonStop: "Arrêter la session",
-                saveMeetingInfosButton: "Enregistrer les infos",
-                closeMeetingInfosButton: "Fermer",
-                transcriptionPlaceholder: "La transcription apparaîtra ici...",
-                suggestionsPlaceholder: "Les suggestions apparaîtront ici.",
-                modalTitle: "Configuration de la session",
-                sessionTabTitle: "Session",
-                meetingTabTitle: "Réunion",
-                modeLibre: "Mode Libre",
-                modeAssiste: "Mode Assisté",
-                modeLibreDesc: "Transcription simple sans ajout d'informations contextuel",
-                modeAssisteDesc: "Transcription avec ajout d'informations pour un meilleur contexte",
-                startSession: "Démarrer la session",
-                meetingsInfosLabels : [
-                    "Titre du poste", 
-                    "Missions", 
-                    "Informations sur l'entreprise",
-                    "Informations sur le candidat (utilisateur)", 
-                    "Informations complémentaires"
-                ]
-            },
-            en: {
-                systemButtonStart: "Start System Capture",
-                systemButtonStop: "Stop System Capture",
-                micButtonStart: "Start Mic Capture",
-                micButtonStop: "Stop Mic Capture",
-                suggestionButton: "Generate Suggestions",
-                startSessionButton: "Start Session",
-                sessionButtonStop: "Stop Session",
-                saveMeetingInfosButton: "Save Meeting Info",
-                closeMeetingInfosButton: "Close",
-                transcriptionPlaceholder: "Transcription will appear here...",
-                suggestionsPlaceholder: "Suggestions will appear here.",
-                modalTitle: "Session Configuration",
-                sessionTabTitle: "Session",
-                meetingTabTitle: "Meeting",
-                modeLibre: "Free Mode",
-                modeAssiste: "Assisted Mode",
-                modeLibreDesc: "Simple transcription without additional context information",
-                modeAssisteDesc: "Transcription with additional context information for better understanding",
-                startSession: "Start Session",
-                meetingsInfosLabels : [
-                    "Job Title", 
-                    "Missions", 
-                    "Company Information",
-                    "Candidate Information (User)", 
-                    "Additional Information"
-                ]
-            },
-        };
-
-        this.selectedTranslations = this.translations[this.defaultLang];
+        // Initialize internationalization loader
+        this.i18n = new I18nLoader();
+        this.currentTranslations = {};
         this.videoElement = document.getElementById("screen-capture");
     }
 
-    translateUI(lang) {
+    async translateUI(lang) {
+        const translations = await this.i18n.load(lang);
+        this.currentTranslations = translations;
         const uiElements = {
             suggestionButton: this.suggestionButton,
-            startSessionButton: this.sessionControlButton,
+            sessionControlButton: this.sessionControlButton,
             saveMeetingInfosButton: this.saveMeetingInfosButton,
             closeMeetingInfosButton: this.closeMeetingInfosButton,
         };
-
-        this.selectedTranslations = this.translations[lang];
-            
         Object.keys(uiElements).forEach((key) => {
-            if (uiElements[key]) {
-                uiElements[key].textContent = this.selectedTranslations[key];
-            }
+            const el = uiElements[key];
+            if (el) el.textContent = translations[key] || key;
         });
         
-        // Only update button text if the elements exist
         if (this.systemCaptureButton) {
-            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+            this.systemCaptureButton.textContent = this.isRecording ? (translations.systemButtonStop || '') : (translations.systemButtonStart || '');
         }
         if (this.micCaptureButton) {
-            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+            this.micCaptureButton.textContent = this.isRecording ? (translations.micButtonStop || '') : (translations.micButtonStart || '');
         }
         if (this.transcriptionDiv) {
-            this.updateTranscription(this.selectedTranslations.transcriptionPlaceholder);
+            this.updateTranscription(translations.transcriptionPlaceholder || '');
         }
         if (this.suggestionsDiv) {
-            this.updateSuggestions(this.selectedTranslations.suggestionsPlaceholder);
+            this.updateSuggestions(translations.suggestionsPlaceholder || '');
         }
-        this.meetingsInfosLabels = this.selectedTranslations.meetingsInfosLabels;
+        // Apply translations for elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = translations[key] || key;
+            if (el.hasAttribute('placeholder')) {
+                el.placeholder = text;
+            } else {
+                el.textContent = text;
+            }
+        });
+        // Apply translations for title attributes
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            el.title = translations[key] || key;
+        });
+        // Apply translations for aria-label attributes
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            const key = el.getAttribute('data-i18n-aria');
+            el.setAttribute('aria-label', translations[key] || key);
+        });
     }
   
     /**
@@ -140,13 +94,15 @@ export class UIHandler {
      * @param {Function} onLangChange - Callback for language change.
      */
     initialize(onLangChange) {
-        this.populateLangOptions();
+        // Populate language dropdown only if element exists
         if (this.langSelect) {
+            this.populateLangOptions();
             this.langSelect.addEventListener("change", () => {
                 const selectedLang = this.langSelect.value;
                 onLangChange(selectedLang);
             });
         }
+        // Initial load of UI translations
         this.translateUI(this.defaultLang);
         
         // S'assurer que la fenêtre modale est cachée par défaut
@@ -159,9 +115,10 @@ export class UIHandler {
         
         // Renommer le bouton pour "Démarrer une session"
         if (this.sessionControlButton) {
+            const label = this.currentTranslations.sessionControlButton || '';
             this.sessionControlButton.innerHTML = `
                 <span class="button-icon">🚀</span>
-                ${this.selectedTranslations.startSessionButton}
+                ${label}
             `;
         }
         
@@ -169,12 +126,18 @@ export class UIHandler {
         if (this.transcriptionDiv) {
             this.transcriptionDiv.classList.add('no-auto-scroll');
         }
+
+        // Close modal when clicking the Close button
+        if (this.closeMeetingInfosButton) {
+            this.closeMeetingInfosButton.addEventListener('click', () => this.closeMeetingModal());
+        }
     }
   
     /**
      * Populates the language selection dropdown.
      */
     populateLangOptions() {
+        if (!this.langSelect) return;
         this.supportedLangs.forEach((lang) => {
             const option = document.createElement("option");
             option.value = lang.code;
@@ -189,7 +152,15 @@ export class UIHandler {
      * @param {string} transcription - The transcription text to display.
      */
     updateTranscription(transcription) {
-        this.transcriptionDiv.innerText = transcription;
+        // Ensure transcriptionDiv reference is current
+        if (!this.transcriptionDiv) {
+            this.transcriptionDiv = document.getElementById("transcription");
+        }
+        if (!this.transcriptionDiv) {
+            console.warn("UIHandler: Transcription element '#transcription' not found");
+            return;
+        }
+        this.transcriptionDiv.innerText = transcription || "No transcription available.";
     }
   
     /**
@@ -197,6 +168,14 @@ export class UIHandler {
      * @param {string} suggestions - The suggestions text to display.
      */
     updateSuggestions(suggestions) {
+        // Ensure suggestionsDiv reference is current
+        if (!this.suggestionsDiv) {
+            this.suggestionsDiv = document.getElementById("suggestions");
+        }
+        if (!this.suggestionsDiv) {
+            console.warn("UIHandler: Suggestions element '#suggestions' not found");
+            return;
+        }
         this.suggestionsDiv.innerText = suggestions || "No suggestions generated.";
     }
   
@@ -207,17 +186,36 @@ export class UIHandler {
      */
     toggleCaptureButton(type, isRecording) {
         this.isRecording = isRecording;
+        const updateLabel = (button, startText, stopText) => {
+            if (!button) return;
+            const labelSpan = button.querySelector('.meeting-label');
+            if (labelSpan) {
+                labelSpan.textContent = this.isRecording ? stopText : startText;
+            } else {
+                // Fallback: update full button text
+                button.textContent = this.isRecording ? stopText : startText;
+            }
+        };
+        const t = this.currentTranslations || {};
         switch (type) {
-        case SYSTEM_SOURCE:
-            this.systemCaptureButton.textContent = this.isRecording ? this.selectedTranslations.systemButtonStop : this.selectedTranslations.systemButtonStart;
+          case SYSTEM_SOURCE:
+            updateLabel(this.systemCaptureButton, t.systemButtonStart || '', t.systemButtonStop || '');
             break;
-        default:
-            this.micCaptureButton.textContent = this.isRecording ? this.selectedTranslations.micButtonStop : this.selectedTranslations.micButtonStart;
+          default:
+            updateLabel(this.micCaptureButton, t.micButtonStart || '', t.micButtonStop || '');
             break;
         }
     }
 
     populateVideoElement(stream) {
+        // Ensure videoElement reference is current
+        if (!this.videoElement) {
+            this.videoElement = document.getElementById("screen-capture");
+        }
+        if (!this.videoElement) {
+            console.warn("UIHandler: Video element '#screen-capture' not found");
+            return;
+        }
         this.videoElement.srcObject = stream;
         this.videoElement.onloadedmetadata = () => {
             this.videoElement.play();
@@ -225,84 +223,203 @@ export class UIHandler {
     }
 
     closeVideoElement() {
+        // Ensure videoElement reference is current
+        if (!this.videoElement) {
+            this.videoElement = document.getElementById("screen-capture");
+        }
+        if (!this.videoElement) {
+            console.warn("UIHandler: Video element '#screen-capture' not found");
+            return;
+        }
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
 
-    populateMeetingModal() {
-        // Mise à jour du titre de la modale
+    async populateMeetingModal(isEdit = false) {
+        const translations = await this.i18n.load(this.app.currentLanguage || this.defaultLang);
+        // Update modal title
         const modalTitle = document.querySelector('.meeting-modal h2');
         if (modalTitle) {
-            modalTitle.textContent = this.selectedTranslations.modalTitle;
+            modalTitle.textContent = translations.modalTitle || modalTitle.textContent;
         }
         
-        // Création du contenu de la modale avec onglets
+        // Ensure references exist
+        if (!this.meetingModal) this.meetingModal = document.getElementById("meetingModal");
+        if (!this.modalOverlay) this.modalOverlay = document.getElementById("modalOverlay");
+        if (!this.dynamicFields) this.dynamicFields = document.getElementById("dynamicFields");
+        // Re-fetch modal action buttons after injecting modal HTML
+        this.saveMeetingInfosButton = document.getElementById("saveMeetingInfosButton");
+        this.startSessionButton = document.getElementById("startSessionButton");
+        this.closeMeetingInfosButton = document.getElementById("closeMeetingInfosButton");
+
+        if (!this.dynamicFields) return; // safety
+
+        // Dynamically load localized meetingFieldsConfig
+        const lang = this.app.currentLanguage || this.defaultLang;
+        let meetingFieldsConfig;
+        try {
+          const module = await import(`../resources/meetingFieldsConfig.${lang}.js`);
+          meetingFieldsConfig = module.meetingFieldsConfig;
+        } catch {
+          // Fallback to French default
+          const module = await import(`../resources/meetingFieldsConfig.fr.js`);
+          meetingFieldsConfig = module.meetingFieldsConfig;
+        }
+
+        // Build multi-step wizard
         this.dynamicFields.innerHTML = `
             <div class="modal-tabs">
-                <div class="modal-tab active" data-tab-modal="session">${this.selectedTranslations.sessionTabTitle}</div>
-                <div class="modal-tab" data-tab-modal="meeting">${this.selectedTranslations.meetingTabTitle}</div>
+                ${meetingFieldsConfig.map((cat, idx) => `<div class="modal-tab${idx === 0 ? ' active' : ''}" data-tab-modal="${cat.id}">${cat.title}</div>`).join('')}
+                <div class="modal-tab" data-tab-modal="session">${await this.i18n.get('sessionTabTitle', lang)}</div>
             </div>
-            
-            <div id="session-tab" class="tab-content-modal active">
+
+            ${meetingFieldsConfig.map((cat, idx) => `
+                <div id="${cat.id}-tab" class="tab-content-modal${idx === 0 ? ' active' : ''}">
+                    <div class="meeting-info-fields">
+                        ${cat.fields.map(field => `
+                            <div class="field-group">
+                                <label for="input-${field.key}">${field.label}</label>
+                                ${field.type === 'textarea'
+                                    ? `<textarea id="input-${field.key}" placeholder="${field.label}"></textarea>`
+                                    : `<input type="text" id="input-${field.key}" placeholder="${field.label}" />`
+                                }
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+
+            <div id="session-tab" class="tab-content-modal">
                 <div class="session-modes">
                     <div class="session-mode ${this.mode === 'libre' ? 'selected' : ''}" data-mode="libre">
-                        <h3>${this.selectedTranslations.modeLibre}</h3>
-                        <p>${this.selectedTranslations.modeLibreDesc}</p>
+                        <h3>${translations.modeLibre || ''}</h3>
+                        <p>${translations.modeLibreDesc || ''}</p>
                     </div>
                     <div class="session-mode ${this.mode === 'assiste' ? 'selected' : ''}" data-mode="assiste">
-                        <h3>${this.selectedTranslations.modeAssiste}</h3>
-                        <p>${this.selectedTranslations.modeAssisteDesc}</p>
+                        <h3>${translations.modeAssiste || ''}</h3>
+                        <p>${translations.modeAssisteDesc || ''}</p>
                     </div>
                 </div>
-                <button id="startSessionButton" class="button mode-start-session">${this.selectedTranslations.startSession}</button>
             </div>
-            
-            <div id="meeting-tab" class="tab-content-modal">
-                <div class="meeting-info-fields">
-                    ${this.meetingsInfosLabels.map(key => `
-                        <div class="field-group">
-                            <label for="input-${key}">${key}</label>
-                            <input type="text" id="input-${key}" placeholder="${key}">
-                        </div>
-                    `).join('')}
-                </div>
+
+            <div class="modal-nav">
+                <button id="prevStepButton" class="button-secondary">${translations.prevStepButton || 'Précédent'}</button>
+                <button id="nextStepButton" class="button-primary">${translations.nextStepButton || 'Suivant'}</button>
             </div>
         `;
 
-        // Masquer le bouton de sauvegarde par défaut
-        if (this.saveMeetingInfosButton) {
-            this.saveMeetingInfosButton.style.display = 'none';
+        // Prefill inputs with existing session context
+        const existing = this.app.conversationContextHandler.sessionContext || {};
+        meetingFieldsConfig.forEach(cat => {
+          cat.fields.forEach(field => {
+            const el = this.dynamicFields.querySelector(`#input-${field.key}`) || this.dynamicFields.querySelector(`#input-${field.key}`);
+            if (el && existing[field.key] != null) el.value = existing[field.key];
+          });
+        });
+
+        // Button logic: show Start when creating, Save when editing
+        const saveBtn = this.saveMeetingInfosButton;
+        const startBtn = document.getElementById('startSessionButton');
+        if (isEdit) {
+          if (saveBtn) saveBtn.style.display = 'inline-block';
+          if (startBtn) startBtn.style.display = 'none';
+          saveBtn?.addEventListener('click', async () => {
+            const metadata = {};
+            meetingFieldsConfig.forEach(cat => cat.fields.forEach(field => {
+              const input = document.getElementById(`input-${field.key}`);
+              metadata[field.key] = input?.value || '';
+            }));
+            try {
+              const sessionId = localStorage.getItem('currentSessionId');
+              await this.app.apiHandler.callApi(
+                `${this.app.apiHandler.baseURL}${this.app.apiHandler.apiPrefix}/sessions/${sessionId}`,
+                { method: 'PATCH', body: JSON.stringify({
+                  status: 'pending',
+                  session_title: metadata.session_title,
+                  description: metadata.description,
+                  host_name: metadata.host_name,
+                  custom_context: metadata
+                }) }
+              );
+              this.app.conversationContextHandler.sessionContext = metadata;
+              this.closeMeetingModal();
+              window.location.reload();
+            } catch (err) {
+              console.error('Error saving session context:', err);
+              alert("Échec de l'enregistrement");
+            }
+          });
+        } else {
+          if (startBtn) startBtn.style.display = 'inline-block';
+          if (saveBtn) saveBtn.style.display = 'none';
+          startBtn?.addEventListener('click', async () => {
+            const metadata = {};
+            meetingFieldsConfig.forEach(cat => cat.fields.forEach(field => {
+              const input = document.getElementById(`input-${field.key}`);
+              metadata[field.key] = input?.value || '';
+            }));
+            const mode = this.getMode();
+            try {
+              const resp = await this.app.sessionHandler.createSession(mode, metadata);
+              localStorage.setItem('currentSessionId', resp.session_id);
+              localStorage.setItem('currentConversationId', resp.conversation_id);
+              this.closeMeetingModal();
+              window.location.hash = 'meeting';
+            } catch (err) {
+              console.error('Error creating session:', err);
+              alert('Erreur création de session');
+            }
+          });
         }
-        
-        // Configuration des écouteurs d'événements de la modale
         this.setupModalEventListeners();
-        
+
         // Afficher la modale
         this.meetingModal.style.display = "block";
         this.modalOverlay.style.display = "block";
+        // Prevent body scrolling when modal is open
+        document.body.classList.add('modal-open');
+
+        // Store config for event listeners
+        this.meetingFieldsConfig = meetingFieldsConfig;
     }
 
     setupModalEventListeners() {
-        // Gestionnaires d'événements pour les onglets
-        const tabs = this.dynamicFields.querySelectorAll('.modal-tab');
-        tabs.forEach(tab => {
+        const tabs = Array.from(this.dynamicFields.querySelectorAll('.modal-tab'));
+        const contents = Array.from(this.dynamicFields.querySelectorAll('.tab-content-modal'));
+        const prevBtn = this.dynamicFields.querySelector('#prevStepButton');
+        const nextBtn = this.dynamicFields.querySelector('#nextStepButton');
+
+        const updateNavButtons = () => {
+            const activeIdx = tabs.findIndex(t => t.classList.contains('active'));
+            if (prevBtn) prevBtn.style.display = activeIdx <= 0 ? 'none' : 'inline-block';
+            if (nextBtn) nextBtn.style.display = activeIdx >= tabs.length - 1 ? 'none' : 'inline-block';
+        };
+
+        tabs.forEach((tab, idx) => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
-                const tabId = tab.getAttribute('data-tab-modal');
-                this.dynamicFields.querySelectorAll('.tab-content-modal').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(`${tabId}-tab`).classList.add('active');
-
-                // Afficher/masquer le bouton de sauvegarde selon l'onglet actif
-                if (this.saveMeetingInfosButton) {
-                    this.saveMeetingInfosButton.style.display = tabId === 'meeting' ? 'block' : 'none';
-                }
+                contents.forEach(c => c.classList.remove('active'));
+                const id = tab.getAttribute('data-tab-modal');
+                const pane = document.getElementById(`${id}-tab`);
+                if (pane) pane.classList.add('active');
+                updateNavButtons();
             });
         });
-        
+
+        if (prevBtn) prevBtn.addEventListener('click', () => {
+            const active = tabs.find(t => t.classList.contains('active'));
+            const idx = tabs.indexOf(active);
+            if (idx > 0) tabs[idx - 1].click();
+        });
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+            const active = tabs.find(t => t.classList.contains('active'));
+            const idx = tabs.indexOf(active);
+            if (idx < tabs.length - 1) tabs[idx + 1].click();
+        });
+
+        updateNavButtons();
+
         // Gestionnaires d'événements pour les modes de session
         const sessionModes = this.dynamicFields.querySelectorAll('.session-mode');
         sessionModes.forEach(mode => {
@@ -317,17 +434,10 @@ export class UIHandler {
     closeMeetingModal() {
         this.meetingModal.style.display = "none";
         this.modalOverlay.style.display = "none";
+        // Restore body scrolling when modal is closed
+        document.body.classList.remove('modal-open');
     }
     
-    initializeKeydownEventListeners() {        
-        document.addEventListener("keydown", (event) => {
-            if (event.code === "Space" && this.meetingModal.style.display === "none") {
-                event.preventDefault();
-                this.suggestionButton.click();
-            }
-        });
-    }
-
     /**
      * Obtient le mode d'utilisation actuel.
      * @returns {string} - Mode d'utilisation ('libre' ou 'assiste').
@@ -340,6 +450,89 @@ export class UIHandler {
         this.videoElement = document.getElementById("screen-capture");
         this.suggestionsDiv = document.getElementById("suggestions");
         this.transcriptionDiv = document.getElementById("transcription");
+        // Refresh buttons that are only available on the meeting page
+        this.systemCaptureButton = document.getElementById("systemCaptureButton");
+        this.micCaptureButton = document.getElementById("micCaptureButton");
+        this.suggestionButton = document.getElementById("suggestionButton");
+        // Refresh other UI elements
+        this.langSelect = document.getElementById("langSelect");
+    }
+    
+    /**
+     * Sets up the language switcher in the UI.
+     * This is a wrapper around populateLangOptions to ensure language switcher is properly initialized.
+     */
+    setupLanguageSwitcher() {
+        // Make sure we have the latest reference to the language select element
+        this.langSelect = document.getElementById("langSelect");
+        
+        if (this.langSelect) {
+            // Clear existing options to avoid duplicates
+            this.langSelect.innerHTML = '';
+            
+            // Populate language options
+            this.populateLangOptions();
+            
+            console.log("Language switcher set up successfully");
+        } else {
+            console.warn("Language select element not found in the DOM");
+        }
+    }
+    
+    /**
+     * Returns the currently selected translations object.
+     * @returns {Object} - The current translations object.
+     */
+    getTranslations() {
+        return this.currentTranslations || {};
+    }
+
+    // Add new method to render transcription messages as styled cards
+    renderTranscription(messages, startTime, useRelativeTime) {
+        if (!this.transcriptionDiv) {
+            this.transcriptionDiv = document.getElementById("transcription");
+        }
+        if (!this.transcriptionDiv) return;
+        // Clear existing content
+        this.transcriptionDiv.innerHTML = "";
+        if (!Array.isArray(messages) || messages.length === 0) {
+            this.transcriptionDiv.innerText = "No transcription available.";
+            return;
+        }
+        // Ensure container styling
+        this.transcriptionDiv.classList.add("transcription-cards-container");
+        // Render each message as a card
+        messages.forEach(msg => {
+            const card = document.createElement("div");
+            card.className = "transcription-card";
+            // Speaker name
+            const speakerEl = document.createElement("div");
+            speakerEl.className = "speaker-name";
+            speakerEl.innerText = msg.speaker;
+            card.appendChild(speakerEl);
+            // Timestamp
+            const timeEl = document.createElement("div");
+            timeEl.className = "message-timestamp";
+            let timeText = "";
+            if (useRelativeTime) {
+                const diff = msg.time - startTime;
+                const hrs = String(Math.floor(diff / 3600000)).padStart(2, "0");
+                const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+                const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+                timeText = `+${hrs}:${mins}:${secs}`;
+            } else {
+                timeText = new Date(msg.time).toLocaleTimeString();
+            }
+            timeEl.innerText = timeText;
+            card.appendChild(timeEl);
+            // Message text
+            const textEl = document.createElement("div");
+            textEl.className = "message-text";
+            textEl.innerText = msg.text;
+            card.appendChild(textEl);
+            // Append card
+            this.transcriptionDiv.appendChild(card);
+        });
     }
 }
   

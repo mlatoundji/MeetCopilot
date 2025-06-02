@@ -1,122 +1,96 @@
-import { BackupHandler } from '../../modules/backupHandler.js';
-import { HomePageHistory } from './HomePageHistory.js';
-import { MeetingDetailsPage } from './MeetingDetailsPage.js';
+import HomePageSessionsHistoryPage from './HomePageSessionsHistoryPage.js';
+import HomePageDashboard from './HomePageDashBoard.js';
 
 export class HomePage {
   constructor(app) {
     this.app = app;
-    this.initializeElements();
-    this.bindEvents();
-    this.homePageHistory = new HomePageHistory(this.app);
-  }
+    this.homePageDashboard = new HomePageDashboard(this.app);
+    // Meeting info and language controls moved from App
+    this.meetingInfos = {};
+    this.langSelect = document.getElementById('langSelect');
 
-  initializeElements() {
-    this.dashboardContainer = document.querySelector('.dashboard-grid');
-    this.sessionControlButton = document.getElementById('sessionControlButton');
-    this.homeControls = document.getElementById('home-controls');
-    this.meetingControls = document.getElementById('meeting-controls');
-    this.transcriptionSection = document.querySelector('.transcription');
-    this.container = document.querySelector('.container');
-    this.mainContent = document.querySelector('.main-content');
-  }
-
-  bindEvents() {
-    if (this.sessionControlButton) {
-      this.sessionControlButton.addEventListener('click', () => this.app.handleSessionControl());
+    if (this.langSelect) {
+      this.langSelect.addEventListener('change', (e) => this.app.handleLanguageChange(e.target.value));
     }
-
-    // Listen for hash changes to handle meeting details navigation
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#/meeting/')) {
-        const meetingId = hash.replace('#/meeting/', '');
-        this.showMeetingDetails(meetingId);
-      }
-    });
-  }
-
-  async showMeetingDetails(meetingId) {
-    try {
-      // Clear main content area
-      if (this.mainContent) {
-        this.mainContent.innerHTML = '<div class="loading">Chargement des détails de la réunion...</div>';
-      }
-
-      // Create and initialize meeting details page
-      const meetingDetailsPage = new MeetingDetailsPage(
-        meetingId, 
-        this.app.MEETINGS_API_URL.replace(/\/$/, ''), // Remove trailing slash if present
-        this.app
-      );
-      await meetingDetailsPage.init();
-
-    } catch (error) {
-      console.error('Error showing meeting details:', error);
-      if (this.mainContent) {
-        this.mainContent.innerHTML = `
-          <div class="error-message">
-            <h2>Erreur</h2>
-            <p>Impossible de charger les détails de la réunion: ${error.message}</p>
-            <button onclick="window.location.hash = '#/history'">Retour à l'historique</button>
-          </div>
-        `;
-      }
-    }
-  }
-
-  handleSessionControl() {
-    this.app.handleSessionControl();
-  }
-
-  async loadDashboard() {
-    const response = await fetch('pages/html/dashboard.html');
-    const html = await response.text();
-    if (this.mainContent) this.mainContent.innerHTML = html;
-    document.body.style.overflow = '';
-  }
-
-  async loadHistory() {
-    const response = await fetch('pages/html/history.html');
-    const html = await response.text();
-    if (this.mainContent) this.mainContent.innerHTML = html;
-    if (this.homePageHistory) {
-      await this.homePageHistory.init();
-      this.homePageHistory.render();
-    }
-    document.body.style.overflow = 'hidden';
-  }
-
-  async loadSettings() {
-    const response = await fetch('pages/html/settings.html');
-    const html = await response.text();
-    if (this.mainContent) this.mainContent.innerHTML = html;
-    document.body.style.overflow = '';
   }
 
   async render() {
-    if (this.homeControls) this.homeControls.style.display = 'block';
-    if (this.meetingControls) this.meetingControls.style.display = 'none';
+    console.log('[HomePage] render()');
+    // Show global header and main sidebar on home page
+    const header = document.querySelector('.header-horizontal');
+    if (header) header.style.display = '';
+    const mainSidebar = document.querySelector('.sidebar');
+    if (mainSidebar) mainSidebar.style.display = '';
+    // Initialize the home page and show dashboard fragment by default
+    await this.homePageDashboard.init();
+    // Sidebar navigation for static fragments
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const nav = item.getAttribute('data-nav');
+        this.loadFragment(nav);
+      });
+    });
+    this.highlightSidebarItem('dashboard');
 
-    // Show sidebar navigation links
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav) sidebarNav.style.display = 'block';
+  }
 
-    if (this.transcriptionSection) {
-      this.transcriptionSection.style.display = 'none';
-      if (this.container) this.container.classList.add('no-transcription');
+  highlightSidebarItem(navKey) {
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-nav') === navKey);
+    });
+  }
+
+  /**
+   * Initialize the home page when navigated to.
+   */
+  async init() {
+    console.log('[HomePage] init() called');
+    await this.render();
+  }
+ 
+
+  async handleStartSession() {
+    // Fermer la modale
+    this.app.uiHandler.closeMeetingModal();
+    
+    // Démarrer la session
+    await this.startSession();
+  
+}
+
+async startSession() {
+  console.log("startSession HomePage");
+    this.sessionActive = true;
+
+    this.app.router.navigate('meeting');
+    if (this.app.router && this.app.router.currentPage && this.app.router.currentPage.updateButtonStates) {
+    this.app.router.currentPage.render();
+    this.app.router.currentPage.updateButtonStates();}
+  
+}
+
+  async loadFragment(nav) {
+    if (nav === 'home' || nav === 'dashboard') {
+      await this.app.router.navigate('home');
+      this.highlightSidebarItem('dashboard');
+      return;
     }
-    if (this.sessionControlButton) {
-      this.sessionControlButton.textContent = this.app.uiHandler.selectedTranslations.startSessionButton;
-    }
-
-    // decide which fragment based on hash
-    const hash = window.location.hash.replace('#','');
-    if (hash === 'history') {
-      await this.loadHistory();
-    } else if (hash === 'settings') {
-      await this.loadSettings();
-    } else {
-      await this.loadDashboard();
+    try {
+      const response = await fetch(`pages/html/${nav}.html`);
+      const html = await response.text();
+      const main = document.querySelector('.main-content');
+      if (main) main.innerHTML = html;
+      if (nav === 'sessions') {
+        const historyHandler = new HomePageSessionsHistoryPage(this.app);
+        await historyHandler.init();
+      }
+        this.highlightSidebarItem(nav);
+      
+    } catch (error) {
+      const main = document.querySelector('.main-content');
+      if (main) main.innerHTML = '<div style="padding:2rem;color:red;">Erreur : page non trouvée.</div>';
     }
   }
-} 
+}
+
+export default HomePage; 

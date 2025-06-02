@@ -2,14 +2,53 @@ import fetch from 'node-fetch';
 import { getCachedSuggestions, setCachedSuggestions } from '../utils/cache.js';
 import { generateLocalSuggestions } from '../services/localLLMService.js';
 import crypto from 'crypto';
-//import { generateSuggestionsViaMistral as generateMistralSuggestions } from './mistralController.js';
+import { chatCompletion as mistralChatCompletion } from '../services/mistralService.js';
+import { chatCompletion as openAIChatCompletion } from '../services/openaiService.js';
+import { buildAssistantSuggestionPrompt } from '../services/promptBuilder.js';
+import { fetchConversation, fetchConversationContext } from '../controllers/conversationController.js';
+import { streamChatCompletion as mistralStreamChatCompletion } from '../services/mistralService.js';
+import { estimateTokens } from '../utils/tokenEstimator.js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const supabase = createSupabaseClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
+);
+
+const SUGGESTION_MAX_TOKENS = 100000;
 
 const TIMEOUT = 30000; // Increased to 30 seconds
 const MAX_RETRIES = 3;
 const CONCURRENT_REQUESTS = 2;
 
+const MAX_CONTEXT_LENGTH = 50000; // Maximum context length in characters
+const MIN_CONTEXT_LENGTH = 10;    // Minimum context length in characters
+
 const generateContextHash = (context) => {
     return crypto.createHash('md5').update(context).digest('hex');
+};
+
+const validateContext = (context) => {
+    if (typeof context !== 'string') {
+        return { valid: false, error: 'Context must be a string' };
+    }
+    
+    if (!context.trim()) {
+        return { valid: false, error: 'Context cannot be empty' };
+    }
+    
+    if (context.length > MAX_CONTEXT_LENGTH) {
+        return { valid: false, error: `Context exceeds maximum length of ${MAX_CONTEXT_LENGTH} characters` };
+    }
+    
+    if (context.length < MIN_CONTEXT_LENGTH) {
+        return { valid: false, error: `Context must be at least ${MIN_CONTEXT_LENGTH} characters long` };
+    }
+    
+    return { valid: true };
 };
 
 const retryWithExponentialBackoff = async (fn, retries = MAX_RETRIES, delay = 1000) => {
@@ -28,60 +67,21 @@ const retryWithExponentialBackoff = async (fn, retries = MAX_RETRIES, delay = 10
     throw lastError;
 };
 
-const makeAPIRequest = async (apiEndpoint, apiKey, systemPrompt, context) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
-    try {
-        console.log(`Making API request to ${apiEndpoint}`);
-        const response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                model: apiEndpoint.includes('mistral') ? 'mistral-large-latest' : 'gpt-4',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: context },
-                ],
-                max_tokens: 500,
-                temperature: 0.7,
-            }),
-            signal: controller.signal,
-            timeout: TIMEOUT
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+export const generateSuggestionsViaMistralFromConversation = async (req, res) => {
+        console.log("Generate Suggestions via Mistral AI from Conversation...");
+        try {
+            const { cid } = req.params;
+            const memory = await fetchConversation(cid);
+            const prompt = buildAssistantSuggestionPrompt(memory);
+            const suggestions = await retryWithExponentialBackoff(async () => {
+                return await mistralChatCompletion(prompt);
+            });
+            res.json({ suggestions });
+        } catch (err) {
+            console.error('conversation error', err);
+            res.status(500).json({ error: err.message });
         }
-
-        const data = await response.json();
-        if (!data.choices?.[0]?.message?.content) {
-            throw new Error('Invalid response format from API');
-        }
-
-        return data.choices[0].message.content;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error('Request timed out after ' + (TIMEOUT / 1000) + ' seconds');
-        }
-        throw error;
-    }
 };
-
-const systemPrompt = `
-    Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
-    suggestions de réponses d'utilisateurs dans une conversation.
-    Fournissez 2 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
-    Basez vos suggestions sur le contexte ci-dessous :
-`;
 
 export const generateSuggestionsViaMistral = async (req, res) => {
     try {
@@ -90,6 +90,11 @@ export const generateSuggestionsViaMistral = async (req, res) => {
 
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
+        }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
 
         // Generate hash for caching
@@ -102,14 +107,11 @@ export const generateSuggestionsViaMistral = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making request to Mistral API...");
         const suggestions = await retryWithExponentialBackoff(async () => {
-            return await makeAPIRequest(
-                'https://api.mistral.ai/v1/chat/completions',
-                process.env.MISTRAL_API_KEY,
-                systemPrompt,
-                context
-            );
+            return await mistralChatCompletion(prompt);
         });
 
         // Cache the suggestions
@@ -134,6 +136,11 @@ export const generateSuggestionsViaOpenAI = async (req, res) => {
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
         }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
         
         const contextHash = generateContextHash(context);
         const cachedSuggestions = getCachedSuggestions(contextHash);
@@ -142,14 +149,11 @@ export const generateSuggestionsViaOpenAI = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making request to OpenAI API...");
         const suggestions = await retryWithExponentialBackoff(async () => {
-            return await makeAPIRequest(
-                'https://api.openai.com/v1/chat/completions',
-                process.env.OPENAI_API_KEY,
-                systemPrompt,
-                context
-            );
+            return await openAIChatCompletion(prompt);
         });
 
         setCachedSuggestions(contextHash, suggestions);
@@ -172,6 +176,11 @@ export const generateParallelSuggestions = async (req, res) => {
         if (!context) {
             return res.status(400).json({ error: 'Context is required' });
         }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
         
         const contextHash = generateContextHash(context);
         const cachedSuggestions = getCachedSuggestions(contextHash);
@@ -180,24 +189,16 @@ export const generateParallelSuggestions = async (req, res) => {
             return res.json({ suggestions: cachedSuggestions });
         }
 
+        const prompt = buildAssistantSuggestionPrompt(context);
+
         console.log("Making parallel requests to both APIs...");
         const [mistralSuggestions, openAISuggestions] = await Promise.all([
             retryWithExponentialBackoff(async () => {
-                return await makeAPIRequest(
-                    'https://api.mistral.ai/v1/chat/completions',
-                    process.env.MISTRAL_API_KEY,
-                    systemPrompt,
-                    context
-                );
+                return await mistralChatCompletion(prompt);
             }).catch(error => ({ error: error.message })),
             
             retryWithExponentialBackoff(async () => {
-                return await makeAPIRequest(
-                    'https://api.openai.com/v1/chat/completions',
-                    process.env.OPENAI_API_KEY,
-                    systemPrompt,
-                    context
-                );
+                return await openAIChatCompletion(prompt);
             }).catch(error => ({ error: error.message }))
         ]);
 
@@ -232,6 +233,11 @@ export const generateSuggestionsViaLocal = async (req, res) => {
             });
         }
 
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         console.log('Generate Suggestions via Local Mistral...');
         const suggestions = await generateLocalSuggestions(context);
         
@@ -259,6 +265,160 @@ export const generateSuggestionsViaLocal = async (req, res) => {
                 }
             });
         }
+    }
+};
+
+export const generateSuggestionsWithFallback = async (req, res) => {
+    try {
+        console.log("Generate Suggestions with Local LLM and Mistral fallback...");
+        const { context } = req.body;
+
+        if (!context) {
+            return res.status(400).json({ error: 'Context is required' });
+        }
+
+        const validation = validateContext(context);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
+        // Generate hash for caching
+        const contextHash = generateContextHash(context);
+        
+        // Check cache first
+        const cachedSuggestions = getCachedSuggestions(contextHash);
+        if (cachedSuggestions) {
+            console.log("Returning cached suggestions");
+            return res.json({ suggestions: cachedSuggestions });
+        }
+
+        // Try local LLM first
+        try {
+            console.log("Attempting to generate suggestions with Local LLM...");
+            const localSuggestions = await generateLocalSuggestions(context);
+            if (localSuggestions) {
+                console.log("Successfully generated suggestions with Local LLM");
+                setCachedSuggestions(contextHash, localSuggestions);
+                return res.json({ suggestions: localSuggestions });
+            }
+        } catch (localError) {
+            console.warn("Local LLM failed, falling back to Mistral:", localError.message);
+        }
+
+        const prompt = buildAssistantSuggestionPrompt(context);
+
+        // Fallback to Mistral if local LLM fails
+        console.log("Falling back to Mistral API...");
+        const mistralSuggestions = await retryWithExponentialBackoff(async () => {
+            return await mistralChatCompletion(prompt);
+        });
+
+        // Cache the suggestions
+        setCachedSuggestions(contextHash, mistralSuggestions);
+        
+        console.log("Successfully generated suggestions with Mistral fallback");
+        res.json({ suggestions: mistralSuggestions });
+    } catch (error) {
+        console.error('Error generating suggestions:', error);
+        res.status(error.status || 500).json({ 
+            error: error.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+};
+
+// Stream conversation as server-sent events (SSE)
+export const streamSuggestions = async (req, res) => {
+    const { cid } = req.params;
+    // Set SSE headers
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive'
+    });
+    res.flushHeaders();
+    try {
+      // Fetch prior conversation + build prompt
+      const memory = await fetchConversation(cid);
+      const context = await fetchConversationContext(cid);      
+      const messages = buildAssistantSuggestionPrompt(memory, context);
+
+      const promptTokens = estimateTokens(messages);
+      console.log("Prompt tokens", promptTokens);
+
+      if(promptTokens > SUGGESTION_MAX_TOKENS){
+        return res.status(400).json({ error: 'Context exceeds maximum length of ' + SUGGESTION_MAX_TOKENS + ' tokens' });
+      }
+  
+      // Call Mistral with streaming
+      let stream;
+      try {
+        stream = await mistralStreamChatCompletion(messages);
+      } catch (streamErr) {
+        console.error('Mistral streaming error', streamErr);
+        res.write(`data: ERROR ${streamErr.message}\n\n`);
+        return res.end();
+      }
+  
+      // Pipe Mistral's SSE directly to client
+      stream.on('data', chunk => {
+        res.write(chunk);
+      });
+      stream.on('end', () => {
+        res.end();
+      });
+      stream.on('error', err => {
+        console.error('Stream error', err);
+        res.end();
+      });
+    } catch (err) {
+      console.error('Streaming failed', err);
+      res.end();
+    }
+  };
+  
+export const saveSuggestions = async (req, res) => {
+    try {
+        const { session_id, conversation_id, suggestions } = req.body;
+        if (!session_id || !Array.isArray(suggestions)) {
+            return res.status(400).json({ error: 'session_id and suggestions array are required' });
+        }
+        // Remove existing suggestions for this session and conversation
+        await supabase.from('suggestions').delete().match({ session_id, conversation_id: conversation_id || null });
+        // Insert updated suggestions JSON
+        const { error: insertError } = await supabase.from('suggestions').insert({
+            session_id,
+            conversation_id: conversation_id || null,
+            suggestions_json: suggestions
+        });
+        if (insertError) throw insertError;
+        res.json({ message: 'Suggestions saved successfully' });
+    } catch (error) {
+        console.error('Error saving suggestions:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+};
+
+export const loadSuggestions = async (req, res) => {
+    try {
+        const { session_id, conversation_id } = req.query;
+        if (!session_id) {
+            return res.status(400).json({ error: 'session_id is required' });
+        }
+        let query = supabase.from('suggestions').select('suggestions_json');
+        query = query.eq('session_id', session_id);
+        if (conversation_id) {
+            query = query.eq('conversation_id', conversation_id);
+        }
+        const { data, error } = await query.order('created_at', { ascending: true }).maybeSingle();
+        if (error) throw error;
+        if (!data) {
+            return res.json({ suggestions: [] });
+        }
+        res.json({ suggestions: data.suggestions_json });
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 };
   

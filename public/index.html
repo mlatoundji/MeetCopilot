@@ -6,13 +6,22 @@
   <title>Virtual Meeting Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="pages/css/meeting-responsive.css">
+  <link rel="stylesheet" href="pages/css/HomePageHistory.css">
 </head>
 <body>
-  <div class="container">
-    <!-- HEADER -->
-    <header class="header">
-      <h1>Virtual Meeting Assistant</h1>
-      <div class="header-controls">
+  <div class="app-layout-vertical">
+    <!-- Horizontal header at the top -->
+    <div class="header-horizontal">
+      <button id="collapseSidebar" class="menu-toggle" title="Menu" style="margin-right:1rem;">
+        <img src="icons/menu.png" alt="Menu" style="width:24px;height:24px;" />
+      </button>
+      <a href="#home" class="logo-link" data-nav="home" style="display:flex;align-items:center;gap:8px;text-decoration:none;" aria-label="Go to home">
+        <img src="icons/ai-mi-algorithm-svgrepo-com.png" alt="Logo" style="width:28px;height:28px;" />
+        <span class="logo-text" data-i18n="logoText">Meet Copilot</span>
+      </a>
+      <div class="header-controls" style="margin-left:auto;">
+        <select id="langSelect" class="lang-select" title="Language"></select>
         <button id="themeToggle" class="button-icon" title="Toggle Theme">
           <span class="theme-icon">🌙</span>
         </button>
@@ -20,160 +29,52 @@
           <span class="profile-icon">👤</span>
         </button>
       </div>
-    </header>
-    
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h3>Controls</h3>
-        <button id="collapseSidebar" class="button-icon">☰</button>
+    </div>
+    <!-- Main flex row: sidebar + main content -->
+    <div class="main-row">
+      <aside class="sidebar" id="main-sidebar">
+        <nav class="sidebar-nav">
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="dashboard" data-hash="dashboard">
+              <span class="sidebar-bar" aria-label="Dashboard">🏠</span>
+              <span class="sidebar-label" data-i18n="navDashboardLink">Dashboard</span>
+            </li>
+            <li class="sidebar-item" data-nav="sessions" data-hash="sessions">
+              <span class="sidebar-bar" aria-label="History">🧾</span>
+              <span class="sidebar-label" data-i18n="navSessionsLink">Sessions</span>
+            </li>
+          </ul>
+          <div class="sidebar-separator"></div>
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="settings" data-hash="settings">
+              <span class="sidebar-bar" aria-label="Settings">⚙️</span>
+              <span class="sidebar-label" data-i18n="navSettingsLink">Settings</span>
+            </li>
+          </ul>
+          <div class="sidebar-separator"></div>
+          <ul class="sidebar-menu">
+            <li class="sidebar-item" data-nav="profile" data-hash="profile">
+              <span class="sidebar-bar" aria-label="Profile">🙍‍♂️</span>
+              <span class="sidebar-label" data-i18n="navProfileLink">Profile</span>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <main class="main-content" id="main-content"></main>
+    </div>
+    <!-- MODAL + OVERLAY -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;"></div>
+    <div id="meetingModal" class="meeting-modal" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-modal="true" tabindex="-1">
+      <h2 id="modalTitle" data-i18n="modalTitle">Add Meeting Infos</h2>
+      <div id="dynamicFields"></div>
+      <div class="modal-nav">
+        <button id="saveMeetingInfosButton" class="button-primary">Validate</button>
+        <button id="startSessionButton" class="button-primary" style="display: none;">Start</button>
+        <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
       </div>
-      <div class="sidebar-content">
-        <!-- Éléments de la page d'accueil - toujours visibles -->
-        <div id="home-controls">
-          <button id="sessionControlButton" class="button">
-            <span class="button-icon">🚀</span>
-            Démarrer une session
-          </button>
-        </div>
-        
-        <!-- Sidebar navigation links -->
-        <div class="sidebar-nav">
-          <button class="button sidebar-link" data-hash="home">🏠 Dashboard</button>
-          <button class="button sidebar-link" data-hash="history">📜 History</button>
-          <button class="button sidebar-link" data-hash="settings">⚙️ Settings</button>
-        </div>
-        
-        <!-- Éléments spécifiques à la page Meeting - masqués par défaut -->
-        <div id="meeting-controls" class="meeting-controls" style="display: none;">
-          <div class="capture-controls">
-            <button id="systemCaptureButton" class="button">Start System Capture</button>
-            <button id="micCaptureButton" class="button">Start Mic Capture</button>
-          </div>
-          <div class="suggestions-controls">
-            <button id="suggestionButton" class="button">Generate Suggestions</button>
-          </div>
-          <div class="meeting-actions">
-            <button id="saveAndQuitButton" class="button primary">Save and Quit</button>
-            <button id="quitButton" class="button secondary">Quit</button>
-          </div>
-        </div>
-      </div>
-    </aside>
-    
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-      <nav class="tabs">
-        <button class="tab active" data-tab="dashboard" style="display: block;">Dashboard</button>
-        <button class="tab" data-tab="current-meeting" style="display: none;">Current Meeting</button>
-        <button class="tab" data-tab="history" style="display: none;">History</button>
-        <button class="tab" data-tab="settings" style="display: none;">Settings</button>
-      </nav>
-      
-      <div class="tab-content">
-        <section id="dashboard" class="tab-pane active">
-          <div class="dashboard-grid">
-            <div class="stats-card">
-              <h3>Meeting Statistics</h3>
-              <div class="stats-content">
-                <!-- Stats will be populated by JavaScript -->
-              </div>
-            </div>
-            <div class="recent-summaries">
-              <h3>Recent Summaries</h3>
-              <div class="summaries-list">
-                <!-- Recent summaries will be populated by JavaScript -->
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        <section id="current-meeting" class="tab-pane">
-          <div class="suggestions-container">
-            <section id="suggestions" class="suggestions">
-              Suggestions will appear here...
-            </section>
-            <section id="screen-capture-section">
-              <video id="screen-capture" class="video" autoplay muted></video>
-            </section>
-          </div>
-        </section>
-        
-        <section id="history" class="tab-pane">
-          <div class="search-bar">
-            <input type="text" placeholder="Search past meetings..." class="search-input">
-            <button class="search-button">🔍</button>
-          </div>
-          <div class="meetings-list">
-            <!-- Past meetings will be populated by JavaScript -->
-          </div>
-        </section>
-        
-        <section id="settings" class="tab-pane">
-          <div class="settings-grid">
-            <div class="settings-section">
-              <h3>Appearance</h3>
-              <div class="setting-item">
-                <label>Theme</label>
-                <select id="themeSelect" class="setting-select">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="system">System</option>
-                </select>
-              </div>
-            </div>
-            <div class="settings-section">
-              <h3>Language Settings</h3>
-              <div class="setting-item">
-                <label for="langSelect">Interface Language</label>
-                <select id="langSelect" class="setting-select dropdown-languages"></select>
-              </div>
-            </div>
-            <div class="settings-section">
-              <h3>Audio Settings</h3>
-              <div class="setting-item">
-                <label>Input Device</label>
-                <select id="audioInputSelect" class="setting-select"></select>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
-
-    <!-- TRANSCRIPTION AREA -->
-    <aside class="transcription" style="display: none;">
-      <div class="transcription-header">
-        <h3>Transcription</h3>
-        <button id="moveTranscription" class="button-icon" title="Move Transcription">↔️</button>
-      </div>
-      <div id="transcription" class="transcription-box">
-        Transcription will appear here...
-      </div>
-    </aside>
-  </div>
-
-  <!-- MODAL + OVERLAY -->
-  <div id="modalOverlay" class="modal-overlay"></div>
-  <div id="meetingModal" class="meeting-modal">
-    <h2>Add Meeting Infos</h2>
-    <div id="dynamicFields"></div>
-    <div class="modal-buttons">
-      <button id="saveMeetingInfosButton" class="button">Validate</button>
-      <button id="closeMeetingInfosButton" class="button-secondary">Close</button>
     </div>
   </div>
-  <div id="saveMethodModal" class="meeting-modal">
-    <h2>Choose Save Method</h2>
-    <div class="save-methods">
-      <input type="text" id="saveTitleInput" placeholder="Enter a title for the meeting">
-      <button id="localSaveButton" class="button primary">Save Locally</button>
-      <button id="supabaseSaveButton" class="button primary">Save to Supabase</button>
-    </div>
-    <div class="modal-buttons">
-      <button id="closeSaveMethodButton" class="button-secondary">Cancel</button>
-    </div>
-  </div>
+  <script>window.BACKEND_BASE_URL='http://localhost:3000';</script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

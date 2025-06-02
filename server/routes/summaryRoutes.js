@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateSummaryViaMistral, generateBatchSummaries } from '../controllers/summaryController.js';
+import { generateSummaryViaMistral, generateBatchSummaries, generateDetailedSummary, loadDetailedSummary } from '../controllers/summaryController.js';
 import { getCacheStats, clearAllCaches } from '../utils/cache.js';
 import { generateLocalSuggestions, generateLocalBatchSuggestions } from '../services/localLLMService.js';
 
@@ -36,11 +36,18 @@ router.post('/batch', async (req, res) => {
     }
 });
 
+// Detailed summary route (triggered at end of session)
+router.post('/detailed', generateDetailedSummary);
+
+// GET previously generated detailed summary
+router.get('/detailed', loadDetailedSummary);
+
 // Cache monitoring routes
 router.get('/cache/stats', (req, res) => {
     res.json(getCacheStats());
 });
 
+// Protected cache clearing endpoint
 router.post('/cache/clear', (req, res) => {
     clearAllCaches();
     res.json({ message: 'All caches cleared successfully' });

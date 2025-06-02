@@ -1,0 +1,551 @@
+/* Meeting Page Responsive CSS */
+
+:root {
+  /* Light theme variables */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #333333;
+  --sidebar-hover: #004488;
+  --border-color: #e0e0e0;
+  --main-bg: #f5f5f5;
+  --card-bg: #ffffff;
+  --card-header-bg: #f9f9f9;
+  --button-hover: #e0e0e0;
+  --primary-color: #2196F3;
+  --button-bg: #e0e0e0;
+  --success-color: #4CAF50;
+  --transcription-text-color: #424242;
+  --transcription-timestamp-color: #607D8B;
+}
+
+[data-theme="dark"] {
+  /* Dark theme overrides */
+  --sidebar-bg: #2d2d2d;
+  --sidebar-text: #fff;
+  --sidebar-hover: #333333;
+  --border-color: #444;
+  --main-bg: #2a2a2a;
+  --card-bg: #2a2a2a;
+  --card-header-bg: #1a1a1a;
+  --button-hover: #333333;
+  --button-bg: #333333;
+  --primary-color: #2196F3;
+  --success-color: #4CAF50;
+  --transcription-text-color: #fff;
+  --transcription-timestamp-color: #fff;
+}
+
+/* Container principal */
+.meeting-page-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.meeting-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+  background-color: var(--sidebar-bg, #2a2a2a);
+  color: var(--sidebar-text, #fff);
+  transition: width 0.3s ease;
+  position: relative;
+  z-index: 10;
+}
+
+.meeting-sidebar.collapsed {
+  width: 60px;
+}
+
+.toggle-sidebar-btn {
+  position: absolute;
+  right: -12px;
+  top: 20px;
+  width: 24px;
+  height: 24px;
+  background-color: var(--sidebar-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 11;
+}
+
+.toggle-sidebar-btn .toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: 10px;
+  color: var(--sidebar-text, #fff);
+}
+
+.meeting-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.meeting-sidebar-menu {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.meeting-sidebar-menu li {
+  margin-bottom: 5px;
+}
+
+.meeting-control-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 15px;
+  border: none;
+  background: transparent;
+  color: var(--sidebar-text, #fff);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.meeting-control-btn:hover {
+  background-color: var(--sidebar-hover, #3a3a3a);
+}
+
+.meeting-icon {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+/* Masquer les textes des boutons en mode réduit */
+.meeting-sidebar.collapsed .meeting-label {
+  display: none;
+}
+
+.meeting-sidebar.collapsed .meeting-icon {
+  margin-right: 0;
+}
+
+/* Grille de contenu principal */
+.meeting-content-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  overflow: auto;
+  background-color: var(--main-bg, #f5f5f5);
+  position: relative;
+}
+
+/* Positionnement par défaut des zones */
+.suggestions-area {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.screen-capture-area {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.transcription-area {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Style des zones de contenu */
+.content-area {
+  background-color: var(--card-bg, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 100px;
+  min-width: 200px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--card-header-bg, #f0f0f0);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.area-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.area-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.area-control {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.area-control:hover {
+  background-color: var(--button-hover, #e0e0e0);
+}
+
+.area-control.capture-button {
+  color: var(--primary-color, #2196F3);
+}
+
+.area-control.capture-button:hover {
+  background-color: var(--primary-color, #2196F3);
+  color: #fff;
+}
+
+.area-control.capture-button:focus {
+  outline: 2px solid var(--primary-color, #2196F3);
+}
+
+.area-content {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+/* Thumbnail for captured images */
+.capture-thumbnail {
+  display: block;
+  max-width: 100%;
+  max-height: 150px;
+  margin-top: 10px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 4px;
+}
+
+/* Style for image analysis description */
+.analysis-description {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--transcription-text-color, #424242);
+  background-color: var(--main-bg, #f5f5f5);
+  padding: 8px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+
+/* Style pour la vidéo */
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #000;
+}
+
+/* Gestion des zones masquées */
+.content-area.hidden {
+  display: none;
+}
+
+/* Zone en plein écran */
+.content-area.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  border-radius: 0;
+}
+
+/* Presets d'agencement */
+.layout-presets-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.toggle-presets-btn {
+  padding: 8px 15px;
+  background-color: var(--primary-color, #2196F3);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.layout-presets-panel {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  width: 250px;
+  background-color: var(--card-bg, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  margin-bottom: 10px;
+  display: none;
+}
+
+.layout-presets-panel.active {
+  display: block;
+}
+
+.layout-presets-panel h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.preset-btn {
+  padding: 6px 10px;
+  background-color: var(--button-bg, #e0e0e0);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.preset-btn.active {
+  background-color: var(--primary-color, #2196F3);
+  color: white;
+}
+
+.save-layout-btn {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--success-color, #4CAF50);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+/* Zones ajustables */
+.content-area.resizing {
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.content-area.dragging {
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 99;
+}
+
+/* Media Queries pour le responsive */
+@media (max-width: 1200px) {
+  .meeting-content-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .meeting-sidebar {
+    width: 200px;
+  }
+  
+  .meeting-content-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  
+  .suggestions-area {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  
+  .screen-capture-area {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .transcription-area {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 600px) {
+  .meeting-sidebar {
+    width: 60px;
+  }
+  
+  .meeting-label {
+    display: none;
+  }
+  
+  .meeting-icon {
+    margin-right: 0;
+  }
+  
+  .content-area {
+    min-height: 150px;
+  }
+  
+  .layout-presets-container {
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  .toggle-presets-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Additional sidebar states and conversation context header */
+
+/* Sidebar full collapsed: invisible */
+.meeting-sidebar.full-collapsed {
+  width: 0 !important;
+  overflow: visible !important; /* allow toggle button to show */
+}
+.meeting-sidebar.full-collapsed .meeting-sidebar-nav,
+.meeting-sidebar.full-collapsed #conversationContextHeader {
+  display: none !important;
+}
+
+/* Toggle icons for full collapse */
+.toggle-sidebar-btn .toggle-icon-alt {
+  display: none;
+  font-size: 10px;
+  color: var(--sidebar-text, #fff);
+}
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon {
+  display: none;
+}
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block;
+}
+
+/* Sidebar expanded (half page) */
+.meeting-sidebar.expanded {
+  width: 50% !important;
+}
+
+/* Conversation Context Header in sidebar */
+.conversation-context-header {
+  padding: 12px 15px;
+  border-top: 1px solid var(--border-color, #444);
+  background-color: var(--sidebar-bg, #2a2a2a);
+  color: var(--sidebar-text, #fff);
+  font-size: 14px;
+  max-height: none !important;
+  flex: 1;
+  overflow-y: auto;
+  margin-left: 10px;
+}
+
+/* Utility class to hide elements */
+.hidden {
+  display: none !important;
+}
+
+/* Sidebar content container layout */
+.sidebar-content-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+/* Always show both toggle icons */
+.toggle-sidebar-btn .toggle-icon,
+.toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block !important;
+}
+
+/* Override collapsing rules to keep icons visible */
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon,
+.meeting-sidebar.full-collapsed .toggle-sidebar-btn .toggle-icon-alt {
+  display: inline-block !important;
+}
+
+/* Full-extend toggle (within content grid) */
+.meeting-content-grid .toggle-sidebar-full-btn {
+  position: absolute;
+  left: -12px;
+  top: 20px;
+  width: 24px;
+  height: 24px;
+  background-color: var(--sidebar-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 11;
+}
+
+/* Toggle icons styling unchanged */
+.toggle-sidebar-full-btn .toggle-icon-full {
+  font-size: 10px;
+  color: var(--sidebar-text, #fff);
+}
+
+/* When fully collapsed, keep right arrow visible */
+.meeting-sidebar.full-collapsed + .meeting-content-grid .toggle-sidebar-full-btn {
+  display: flex !important;
+}
+
+/* Transcription cards styling */
+.transcription-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transcription-card {
+  background-color: var(--card-bg, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  flex: 1 1 300px;
+  min-width: 200px;
+  margin-bottom: 8px;
+}
+
+.speaker-name {
+  font-weight: 700;
+  color: var(--primary-color, #2196F3);
+  margin-bottom: 4px;
+}
+
+.message-timestamp {
+  font-size: 0.8em;
+  color: var(--transcription-timestamp-color, #607D8B);
+  margin-bottom: 8px;
+}
+
+.message-text {
+  font-size: 1em;
+  color: var(--transcription-text-color, #424242);
+} 

@@ -106,3 +106,21 @@ Note: Replace `base64_encoded_audio_data` with actual base64-encoded audio data 
 
 - **Author**: MMyster 
 - **Contributions**: Open to pull requests.  
+
+## Keyboard Shortcuts / Raccourcis clavier
+
+Below are the default keyboard shortcuts available on the meeting page:
+
+| Win/Linux          | macOS              | Action / Action (FR)                                           |
+|--------------------|--------------------|----------------------------------------------------------------|
+| Ctrl + Alt + S     | ⌘ + Option + S     | Start/Stop System Capture / Démarrer/Arrêter capture système   |
+| Ctrl + Alt + M     | ⌘ + Option + M     | Start/Stop Mic Capture / Démarrer/Arrêter capture micro        |
+| Ctrl + Alt + I     | ⌘ + Option + I     | Capture Image / Capture d'écran                                |
+| Ctrl + Alt + G     | ⌘ + Option + G     | Generate Suggestions / Générer des suggestions                 |
+| Ctrl + Alt + E     | ⌘ + Option + E     | Save & Quit Meeting / Sauvegarder et quitter la réunion        |
+| Ctrl + Alt + Q     | ⌘ + Option + Q     | Quit Meeting / Quitter la réunion                             |
+| Ctrl + Alt + B     | ⌘ + Option + B     | Toggle Sidebar / Afficher/Cacher la meeting-sidebar            |
+| Ctrl + Alt + F     | ⌘ + Option + F     | Toggle Full Sidebar / Basculer en sidebar "plein"              |
+| Ctrl + Alt + P     | ⌘ + Option + P     | Open/Close Layout Presets Panel / Ouvrir/Fermer les presets    |
+| Ctrl + Alt + T     | ⌘ + Option + T     | Toggle Transcription Area / Afficher/Cacher la transcription   |
+| Ctrl + Alt + U     | ⌘ + Option + U     | Toggle Suggestions Area / Afficher/Cacher les suggestions      |

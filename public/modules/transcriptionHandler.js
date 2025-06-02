@@ -5,12 +5,19 @@ import { callApi } from '../utils.js';
  */
 
 export class TranscriptionHandler {
-  constructor(transcriptionApiUrl) {
-    this.transcriptionApiUrl = transcriptionApiUrl;
+  constructor(transcriptionApiUrlOrApiHandler, provider = 'assemblyai') {
+    if (typeof transcriptionApiUrlOrApiHandler === 'string') {
+      this.transcriptionApiUrl = transcriptionApiUrlOrApiHandler;
+      this.apiHandler = null;
+    } else {
+      this.apiHandler = transcriptionApiUrlOrApiHandler;
+      this.transcriptionApiUrl = null;
+    }
     this.model = 'whisper-1';
     this.language = 'fr';
     this.mimeType = 'audio/wav';
     this.fileName = 'audio.wav';
+    this.provider = provider;
   }
 
   async applyTranslation(langCode) {
@@ -26,17 +33,27 @@ export class TranscriptionHandler {
    */
   async transcribeAudio(audioBlob) {
     const formData = new FormData();
-    formData.append('audio', audioBlob);
+    formData.append('file', audioBlob);
     formData.append('langCode', this.language);
     formData.append('model', this.model);
     formData.append('mimeType', this.mimeType);
-    formData.append('fileName', this.fileName);
+    formData.append('filename', this.fileName);
 
     try {
-      const response = await callApi(this.transcriptionApiUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      let response;
+      if (this.apiHandler) {
+        response = await this.apiHandler.transcribeAudio(audioBlob, this.provider, {
+          langCode: this.language,
+          model: this.model,
+          mimeType: this.mimeType,
+          filename: this.fileName
+        });
+      } else {
+        response = await callApi(this.transcriptionApiUrl, {
+          method: 'POST',
+          body: formData,
+        });
+      }
       return response.transcription || '';
     } catch (error) {
       console.error('Error during transcription:', error.message || error);

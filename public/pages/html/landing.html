@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetCopilot • Landing Page</title>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Styles -->
+  <style>
+    :root {
+      --primary-blue: #2196F3;
+      --light-gray: #F5F5F5;
+      --dark-gray: #424242;
+      --white: #FFFFFF;
+      --max-width: 1200px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      color: var(--dark-gray);
+      background: var(--white);
+      line-height: 1.6;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* Header */
+    header {
+      width: 100%;
+      background: var(--white);
+      border-bottom: 1px solid var(--light-gray);
+    }
+    .nav-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Montserrat', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-blue);
+    }
+    .nav-links ul {
+      list-style: none;
+      display: flex;
+      gap: 1.5rem;
+    }
+    .nav-links li {
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cta-btn {
+      background: var(--primary-blue);
+      color: var(--white);
+      padding: 0.5rem 1.5rem;
+      border-radius: 4px;
+      font-weight: 700;
+      transition: background 0.3s;
+    }
+    .cta-btn:hover { background: #1e88e5; }
+
+    /* Hero */
+    .hero {
+      background: url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1500&q=80') center/cover no-repeat;
+      height: 75vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--white);
+      position: relative;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      padding: 0 1rem;
+    }
+    .hero h1 {
+      font-family: 'Montserrat', Arial, sans-serif;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    .hero p { font-size: 1.2rem; margin-bottom: 2rem; }
+
+    /* Sections */
+    section { padding: 4rem 1rem; }
+    .section-title {
+      text-align: center;
+      font-family: 'Montserrat', Arial, sans-serif;
+      font-size: 2rem;
+      margin-bottom: 2rem;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: var(--light-gray);
+      border-radius: 8px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); }
+    .feature-icon {
+      font-size: 3rem;
+      color: var(--primary-blue);
+      margin-bottom: 1rem;
+    }
+    .feature-title {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Testimonials */
+    .testimonials {
+      background: var(--light-gray);
+    }
+    .testimonial-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: grid;
+      gap: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+    .testimonial {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .testimonial p { margin-bottom: 1rem; }
+    .testimonial .author {
+      font-weight: 700;
+      color: var(--primary-blue);
+    }
+
+    /* Footer */
+    footer {
+      background: var(--dark-gray);
+      color: var(--white);
+      padding: 2rem 1rem;
+    }
+    .footer-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+    }
+    .footer-links a { color: var(--white); }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="logo" data-i18n="logoTitle">MeetCopilot</a>
+      <nav class="nav-links">
+        <ul>
+          <li><a href="#features" data-i18n="navFeaturesLink">Fonctionnalités</a></li>
+          <li><a href="#testimonials" data-i18n="navTestimonialsLink">Témoignages</a></li>
+          <li><a href="#login" class="cta-btn" data-hash="login" data-i18n="navSignUpLink">S'inscrire</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 data-i18n="landingHeroTitle">Optimisez vos réunions avec MeetCopilot</h1>
+      <p data-i18n="landingHeroSubtitle">Transcription en temps réel, résumés automatiques et suggestions intelligentes, le tout au même endroit.</p>
+      <a href="#login" class="cta-btn" data-hash="login" data-i18n="landingHeroCTA">Commencer</a>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <h2 class="section-title" data-i18n="featuresSectionTitle">Fonctionnalités Clés</h2>
+    <div class="features">
+      <div class="feature-card">
+        <span class="material-icons feature-icon">mic</span>
+        <h3 class="feature-title" data-i18n="featureRealTimeTranscription">Transcription en temps réel</h3>
+        <p>Convertissez instantanément les paroles en texte pour gagner du temps et ne rien manquer.</p>
+      </div>
+      <div class="feature-card">
+        <span class="material-icons feature-icon">summarize</span>
+        <h3 class="feature-title" data-i18n="featureAutomatedSummaries">Résumés automatiques</h3>
+        <p>Obtenez des résumés concis de vos réunions sans effort supplémentaire.</p>
+      </div>
+      <div class="feature-card">
+        <span class="material-icons feature-icon">lightbulb</span>
+        <h3 class="feature-title" data-i18n="featureContextualSuggestions">Suggestions contextuelles</h3>
+        <p>Bénéficiez de recommandations en fonction du contexte de la conversation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section id="testimonials" class="testimonials">
+    <h2 class="section-title" data-i18n="testimonialSectionTitle">Ce que disent nos utilisateurs</h2>
+    <div class="testimonial-container">
+      <blockquote class="testimonial">
+        <p>« MeetCopilot a révolutionné notre façon de collaborer en réunion. Les résumés automatiques sont incroyables ! »</p>
+        <span class="author">Emily Carter — Product Manager, InnovateTech</span>
+      </blockquote>
+      <blockquote class="testimonial">
+        <p>« Les suggestions contextuelles nous aident à rester concentrés sur l'essentiel. Un outil indispensable. »</p>
+        <span class="author">Marc Duval — Chef de Projet, Nexa</span>
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- SIGNUP CTA -->
+  <section id="signup">
+    <h2 class="section-title" data-i18n="signupSectionTitle">Rejoignez MeetCopilot dès aujourd'hui</h2>
+    <div style="text-align:center;">
+      <a href="#login" class="cta-btn" data-hash="login" data-i18n="signupCTAAllInOne">S'inscrire / Se connecter</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-container">
+      <div>© 2024 MeetCopilot, Inc.</div>
+      <div class="footer-links">
+        <a href="#">Politique de confidentialité</a>
+        <a href="#">Conditions d'utilisation</a>
+        <a href="#">Support</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html> 
