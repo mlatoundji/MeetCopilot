@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 let REDIS_URL;
-if (process.env.PROD !== 'true' || !process.env.REDIS_URL) {
+if (process.env.NODE_ENV !== 'production' || !process.env.REDIS_URL) {
   REDIS_URL = 'redis://127.0.0.1:6379';
 }
 else {

@@ -25,8 +25,6 @@ class App {
     this.sessionActive = false; 
     
     this.currentLanguage = 'fr';
-    this.initializeLanguage();
-
     // Set up router
     this.router = new Router(this);
     this.router.initialize();

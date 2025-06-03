@@ -10,6 +10,8 @@
     "routes": [
       { "handle": "filesystem" },
       { "src": "/api/(.*)", "dest": "/api/$1" },
+      { "src": "/pages/js/(.*)", "dest": "/pages/js/$1" },
+      { "src": "/resources/i18n/(.*)", "dest": "/resources/i18n/$1" },
       { "src": "^/(.*)$", "dest": "/index.html" }
     ]
   } 

@@ -2,125 +2,115 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import transcriptionRoutes from './routes/transcriptionRoutes.js';
-import suggestionRoutes from './routes/suggestionRoutes.js';
-import summaryRoutes from './routes/summaryRoutes.js';
-import imageAnalysisRoutes from './routes/imageAnalysisRoutes.js';
-import { initializeLocalLLM, cleanupLocalLLM } from './services/localLLMService.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { metricsMiddleware } from './middleware/metricsMiddleware.js';
-import conversationRouter from './routes/conversationRoutes.js';
-import authRoutes from './routes/authRoutes.js';
 import compression from 'compression';
 import http2 from 'http2';
 import fs from 'fs';
 import { register } from 'prom-client';
 import cron from 'node-cron';
 import redis from './utils/redisClient.js';
-import { fetchConversation, persistConversation } from './controllers/conversationController.js';
-import { estimateTokens } from './utils/tokenEstimator.js';
-import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
-import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
+import { initializeLocalLLM, cleanupLocalLLM } from './services/localLLMService.js';
+import conversationRouter from './routes/conversationRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import transcriptionRoutes from './routes/transcriptionRoutes.js';
+import suggestionRoutes from './routes/suggestionRoutes.js';
+import summaryRoutes from './routes/summaryRoutes.js';
+import imageAnalysisRoutes from './routes/imageAnalysisRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
 import sessionsRoutes from './routes/sessionsRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import { fetchConversation, persistConversation } from './controllers/conversationController.js';
+import { estimateTokens } from './utils/tokenEstimator.js';
+import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
+import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
-let __dirname;
-if (process.env.NODE_ENV === 'test') {
-  __dirname = path.resolve();
-} else {
-  __dirname = path.dirname(fileURLToPath(import.meta.url));
-}
+const __dirname = process.env.NODE_ENV === 'test'
+  ? path.resolve()
+  : path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
+const WINDOW_MAX_TURNS = process.env.WINDOW_MAX_TURNS || 10; // Define WINDOW_MAX_TURNS
 
 // CORS Configuration
+// CORS Configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
+  'http://localhost:8000',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://meet-copilot-mourad-latoundjis-projects.vercel.app',
+  'https://meet-copilot-git-develop-mourad-latoundjis-projects.vercel.app'
+];
+const allowedOriginPattern = /^https:\/\/meet-copilot-[^/]+-mourad-latoundjis-projects\.vercel\.app$/;
+
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
-        'http://localhost:8000',
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://[::]:8000',
-        'http://[::]:5173',
-        'https://meet-copilot-git-develop-mourad-latoundjis-projects.vercel.app',
-        'https://meet-copilot-mourad-latoundjis-projects.vercel.app'
-    ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || allowedOriginPattern.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 204
 };
 
-// Middleware
 app.use(cors(corsOptions));
+
+// 👇 Gère manuellement les requêtes OPTIONS (préflight)
+app.options('*', cors(corsOptions));
+
+// Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
-
-// Add metrics instrumentation
 app.use(metricsMiddleware);
 
-// Only compress non-SSE responses to keep EventSource working
+// Compression middleware
 const shouldCompress = (req, res) => {
-  // Do not compress server-sent events
   if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
     return false;
   }
-  // Fallback to default filter function
   return compression.filter(req, res);
 };
 
-// Add compression middleware for transport optimization
 app.use(compression({
   filter: shouldCompress,
   brotli: { enabled: true, zlib: {} },
   threshold: 512
 }));
 
-// Additional CORS headers for extra compatibility
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (corsOptions.origin.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Credentials', true);
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,PATCH,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization');
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    next();
-});
-
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Initialize Local LLM
 console.log('Initializing Local LLM...');
 initializeLocalLLM().then(initialized => {
-    if (initialized) {
-        console.log('Local LLM initialized successfully');
-    } else {
-        console.error('Failed to initialize Local LLM. API fallback will be used.');
-    }
+  if (initialized) {
+    console.log('Local LLM initialized successfully');
+  } else {
+    console.error('Failed to initialize Local LLM. API fallback will be used.');
+  }
 }).catch(error => {
-    console.error('Error during Local LLM initialization:', error);
+  console.error('Error during Local LLM initialization:', error);
 });
 
 // Basic root route for testing
 app.get('/', (req, res) => {
-    res.json({ message: 'API is running' });
+  res.json({ message: 'API is running' });
 });
 
-// API Routes with and without /api prefix for backward compatibility
+// API Routes
 const apiPrefix = '/api';
 
-// Route de test
 app.get(apiPrefix + '/ping', (req, res) => {
-    res.json({ status: 'ok', version: process.env.npm_package_version || 'dev' });
+  res.json({ status: 'ok', version: process.env.npm_package_version || 'dev' });
 });
 
 app.use(apiPrefix + '/suggestions', suggestionRoutes);
@@ -134,33 +124,28 @@ app.use(apiPrefix + '/chatbot', chatbotRoutes);
 app.use(apiPrefix + '/settings', settingsRoutes);
 app.use(apiPrefix + '/profile', profileRoutes);
 
-// Prometheus metrics endpoint (moved above error handler)
+// Prometheus metrics endpoint
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
 
-// Function to sanitize URL for logging
-function sanitizeUrl(url) {
-  return url.replace(/[^\w\s-]/g, '');
-}
-
 // Error handling middleware
-app.use((req, res, next) => {
-    console.log(`404 - Not Found: ${req.method} ${sanitizeUrl(req.originalUrl)}`);
-    res.status(404).json({ 
-        error: 'Not Found',
-        path: req.originalUrl,
-        method: req.method
-    });
+app.use((req, res) => {
+  console.log(`404 - Not Found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    error: 'Not Found',
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ 
-        error: 'Something went wrong!',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Something went wrong!',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // Shared async function to handle cleanup with timeout
@@ -200,43 +185,43 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Auto-tuning cron: every hour, compress long conversations
 if (process.env.NODE_ENV !== 'test' && process.env.AUTO_TUNER === 'true') {
-cron.schedule('0 * * * *', async () => {
-  console.log('Auto-tuner: running memory check...');
-  try {
-    const keys = await redis.keys('conv:*');
-    for (const key of keys) {
-      const cid = key.split(':')[1];
-      let memory;
-      try {
-        memory = await fetchConversation(cid);
-      } catch (err) {
-        console.error(`Auto-tuner fetch failed for ${cid}:`, err.message);
-        continue;
-      }
-      const summaryTokens = estimateTokens(memory.summary);
-      const messageTokens = estimateTokens(memory.messages);
-      const totalTokens = summaryTokens + messageTokens;
-      if (totalTokens > 50000) {
-        console.log(`Compressing conversation ${cid}: ${totalTokens} tokens`);
-        const chunkToSummarise = memory.messages.slice(0, -WINDOW_MAX_TURNS);
-        if (chunkToSummarise.length) {
-          try {
-            const prompt = buildAssistantSummaryPrompt(chunkToSummarise);
-            const newSummary = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
-            memory.summary = newSummary;
-            memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
-            await persistConversation(cid, memory, null);
-            console.log(`Conversation ${cid} compressed successfully`);
-          } catch (err) {
-            console.error(`Auto-tuner compression failed for ${cid}:`, err.message);
+  cron.schedule('0 * * * *', async () => {
+    console.log('Auto-tuner: running memory check...');
+    try {
+      const keys = await redis.keys('conv:*');
+      for (const key of keys) {
+        const cid = key.split(':')[1];
+        let memory;
+        try {
+          memory = await fetchConversation(cid);
+        } catch (err) {
+          console.error(`Auto-tuner fetch failed for ${cid}:`, err.message);
+          continue;
+        }
+        const summaryTokens = estimateTokens(memory.summary);
+        const messageTokens = estimateTokens(memory.messages);
+        const totalTokens = summaryTokens + messageTokens;
+        if (totalTokens > 50000) {
+          console.log(`Compressing conversation ${cid}: ${totalTokens} tokens`);
+          const chunkToSummarise = memory.messages.slice(0, -WINDOW_MAX_TURNS);
+          if (chunkToSummarise.length) {
+            try {
+              const prompt = buildAssistantSummaryPrompt(chunkToSummarise);
+              const newSummary = await mistralChatCompletion(prompt, { model: 'mistral-medium', max_tokens: 250, temperature: 0.4 });
+              memory.summary = newSummary;
+              memory.messages = memory.messages.slice(-WINDOW_MAX_TURNS);
+              await persistConversation(cid, memory, null);
+              console.log(`Conversation ${cid} compressed successfully`);
+            } catch (err) {
+              console.error(`Auto-tuner compression failed for ${cid}:`, err.message);
+            }
           }
         }
       }
+    } catch (err) {
+      console.error('Auto-tuner job failed:', err.message);
     }
-  } catch (err) {
-    console.error('Auto-tuner job failed:', err.message);
-  }
-});
+  });
 }
 
 export default app;

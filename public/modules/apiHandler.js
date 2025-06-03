@@ -1,4 +1,5 @@
-import { encode as cborEncode } from 'cbor-x';
+// Stub CBOR encoding in browser context (actual CBOR only on server)
+const cborEncode = () => { throw new Error('CBOR encoding not supported in browser'); };
 
 /**
  * Gère les appels aux différentes API externes.
