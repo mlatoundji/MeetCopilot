@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "node ./server/main.js",
+    "docker-redis": "node ./server/scripts/docker-redis.js",
+    "start": "npm run docker-redis && node ./server/main.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -39,6 +40,7 @@
     "mocha": "^11.1.0",
     "sinon": "^20.0.0",
     "supertest": "^6.3.4",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-static-copy": "^3.0.0"
   }
 }

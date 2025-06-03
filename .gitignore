@@ -49,3 +49,5 @@ scripts/
 server/vercel.json
 
 .vercel
+.vercelignore
+server/vercel-manifest.json

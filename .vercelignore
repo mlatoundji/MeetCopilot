@@ -1,20 +1,40 @@
-   node_modules
-   .git
-   .cache
-   .next
-   dist
-   build
-   coverage
-   tmp
-   logs
-   *.zip
-   *.tar
-   *.tar.gz
-   *.mp4
-   *.mov
-   *.avi
-   *.mkv
-   *.iso
-   *.exe
-   *.dmg
-   models/
+node_modules/
+.git
+.cache
+.next
+dist
+build
+coverage
+tmp
+logs
+*.zip
+*.tar
+*.tar.gz
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.iso
+*.exe
+*.dmg
+models/
+
+# Exclure les variables d'environnement et configs locaux
+.env
+.env.local
+.env.*.local
+.mcp.json
+
+# Exclure les dossiers d'IDE et fichiers système
+.vscode/
+.idea/
+.DS_Store
+
+# Exclure les dossiers de tests
+__tests__/
+tests/
+
+# Ignorer les fichiers de logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

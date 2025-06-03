@@ -4,7 +4,9 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-    "start": "node main.js"
+    "build": "echo \"no build step required\"",
+    "start": "node main.js",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.9",
