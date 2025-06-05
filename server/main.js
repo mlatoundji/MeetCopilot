@@ -26,6 +26,7 @@ import { fetchConversation, persistConversation } from './controllers/conversati
 import { estimateTokens } from './utils/tokenEstimator.js';
 import { buildAssistantSummaryPrompt } from './services/promptBuilder.js';
 import { chatCompletion as mistralChatCompletion } from './services/mistralService.js';
+import { initMongo } from './utils/mongoClient.js';
 
 // Determine __dirname differently in test environment to avoid import.meta.url errors
 const __dirname = process.env.NODE_ENV === 'test'
@@ -34,6 +35,7 @@ const __dirname = process.env.NODE_ENV === 'test'
 
 // Configuration
 dotenv.config();
+initMongo();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const WINDOW_MAX_TURNS = process.env.WINDOW_MAX_TURNS || 10; // Define WINDOW_MAX_TURNS
