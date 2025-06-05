@@ -1,4 +1,5 @@
 import Image from "next/image";
+import StyledButton from '../components/StyledButton';
 
 export default function Home() {
   return (
@@ -50,6 +51,7 @@ export default function Home() {
             Read our docs
           </a>
         </div>
+        <StyledButton>Styled Component Button</StyledButton>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
         <a

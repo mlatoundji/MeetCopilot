@@ -31,6 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{ zIndex: 0 }}
       >
         <div className="app-layout-vertical">
           <Header />
