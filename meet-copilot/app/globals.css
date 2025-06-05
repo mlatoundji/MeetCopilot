@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #ffffff;
@@ -23,4 +25,24 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sidebar collapse */
+#main-sidebar {
+  width: 240px;
+  transition: width 0.3s ease;
+}
+#main-sidebar.collapsed {
+  width: 64px;
+}
+/* Layout flex */
+.main-row {
+  display: flex;
+}
+/* Adjust main content when sidebar collapsed */
+#main-sidebar + #main-content {
+  transition: margin-left 0.3s ease;
+}
+#main-sidebar.collapsed + #main-content {
+  margin-left: 0;
 }
