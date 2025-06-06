@@ -1,5 +1,5 @@
 import HomePageSessionsHistoryPage from './HomePageSessionsHistoryPage.js';
-import HomePageDashboard from './HomePageDashBoard.js';
+import HomePageDashboard from './HomePageDashboard.js';
 
 export class HomePage {
   constructor(app) {

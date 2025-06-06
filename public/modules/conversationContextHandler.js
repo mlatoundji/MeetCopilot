@@ -39,7 +39,7 @@ export class ConversationContextHandler {
         try {
             delta = this.unsentMessages.splice(0, this.unsentMessages.length);
             console.log("Sending unsent messages", delta);
-            const res = await this.apiHandler.sendConversationMessagesCbor(this.conversationId, delta);
+            const res = await this.apiHandler.sendConversationMessages(this.conversationId, delta);
             console.log("Conversation delta sent", res.cid);
         } catch(err){
             console.error('Failed to push conversation delta', err);

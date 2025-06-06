@@ -1,8 +1,9 @@
-import { LlamaModel, LlamaContext, LlamaChatSession } from 'node-llama-cpp';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { LLMConfig } from '../config/llmConfig.js';
 import fs from 'fs';
+
+let LlamaModel, LlamaContext, LlamaChatSession;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MODEL_PATH = path.join(__dirname, LLMConfig.modelPath);
@@ -31,6 +32,22 @@ export const initializeLocalLLM = async () => {
 
     initializationPromise = (async () => {
         try {
+            if (process.env.USE_LOCAL_LLM !== 'true') {
+                console.log('Local LLM disabled by env');
+                return false;
+            }
+            // Import dynamique
+            let llama;
+            try {
+                llama = await import('node-llama-cpp');
+            } catch (e) {
+                console.error('Local LLM not available (node-llama-cpp not installed):', e);
+                return false;
+            }
+            LlamaModel = llama.LlamaModel;
+            LlamaContext = llama.LlamaContext;
+            LlamaChatSession = llama.LlamaChatSession;
+
             console.log('Initializing Local Mistral LLM...');
             console.log(`Model path: ${MODEL_PATH}`);
             

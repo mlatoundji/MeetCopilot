@@ -1,4 +1,5 @@
-import { encode as cborEncode } from 'cbor-x';
+// Stub CBOR encoding in browser context (actual CBOR only on server)
+const cborEncode = () => { throw new Error('CBOR encoding not supported in browser'); };
 
 /**
  * Gère les appels aux différentes API externes.
@@ -12,6 +13,9 @@ export class APIHandler {
     // Determine backend base URL:
     // 1. Use explicit override if provided (e.g. <script>window.BACKEND_BASE_URL='https://localhost:3000'</script>)
     // 2. Else derive from current page protocol and host
+    this.baseURL = import.meta.env.VITE_API_BASE_URL
+    console.log("VITE_API_BASE_URL", this.baseURL);
+    if (!this.baseURL) {
     if (typeof window !== 'undefined' && window.BACKEND_BASE_URL) {
       this.baseURL = window.BACKEND_BASE_URL.replace(/\/$/, '');
     } else if (typeof window !== 'undefined' && window.location && window.location.protocol && window.location.host) {
@@ -20,8 +24,11 @@ export class APIHandler {
       this.baseURL = `${window.location.protocol}//${window.location.host}`;
     } else {
       // fallback for non-browser or unknown context
-      this.baseURL = 'http://localhost:3000';
+        this.baseURL = 'http://localhost:3000';
+      }
     }
+
+    console.log("baseURL", this.baseURL);
   }
 
   /**

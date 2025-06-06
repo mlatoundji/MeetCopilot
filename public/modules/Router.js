@@ -3,6 +3,8 @@ import { MeetingPage } from '../pages/js/MeetingPage.js';
 import { LandingPage } from '../pages/js/LandingPage.js';
 import AuthPage from '../pages/js/AuthPage.js';
 import { HomePageSessionDetailsPage } from '../pages/js/HomePageSessionDetailsPage.js';
+import SettingsPage from '../pages/js/HomePageSettingsPage.js';
+import ProfilePage from '../pages/js/HomePageProfile.js';
 
 export class Router {
   constructor(app) {
@@ -10,7 +12,15 @@ export class Router {
     this.apiHandler = this.app?.apiHandler;
     this.sessions_api_url = `${this.apiHandler?.baseURL || 'http://localhost:3000'}/api/sessions`;
     this.currentPage = null;
-    this.pageModules = {}; // Cache for loaded page modules
+    this.pageModules = {
+      landing: LandingPage,
+      home: HomePage,
+      meeting: MeetingPage,
+      login: AuthPage,
+      register: AuthPage,
+      settings: SettingsPage,
+      profile: ProfilePage
+    };
     
     // Define routes with HTML and JS paths
     this.routes = {
@@ -163,6 +173,15 @@ export class Router {
    * @returns {Promise<boolean>} - Success/failure of navigation
    */
   async navigate(pageName, pushState = true) {
+    // Cleanup any existing auth or landing roots and restore app layout
+    const loginRoot = document.getElementById('login-root');
+    if (loginRoot) loginRoot.remove();
+    const landingRoot = document.getElementById('landing-root');
+    if (landingRoot) landingRoot.remove();
+    // Show main app layout if hidden
+    const appLayout = document.querySelector('.app-layout-vertical');
+    if (appLayout) appLayout.style.display = '';
+    document.body.classList.remove('no-global-ui');
     // Authentication guard: restrict access if not authenticated
     const publicRoutes = ['landing', 'login', 'register'];
     const token = localStorage.getItem('jwt');
@@ -191,44 +210,16 @@ export class Router {
         console.warn('Router: .main-content not found');
       }
 
-      if (route.jsPath) {
-        let PageClass;
-        if (this.pageModules[pageName]) {
-          // Cached PageClass
-          PageClass = this.pageModules[pageName];
-        } else {
-          try {
-            const module = await import(`../${route.jsPath}`);
-            // Determine the export: Named Page class or default
-            const namedExport = pageName.charAt(0).toUpperCase() + pageName.slice(1) + 'Page';
-            if (module[namedExport]) {
-              PageClass = module[namedExport];
-            } else if (module.default) {
-              PageClass = module.default;
-            } else {
-              console.error(`Module for page '${pageName}' does not have expected export`);
-              return false;
-            }
-            // Cache the PageClass for future navigations
-            this.pageModules[pageName] = PageClass;
-          } catch (error) {
-            console.error(`Error importing module for page '${pageName}':`, error);
-            return false;
-          }
-        }
-        try {
-          this.currentPage = new PageClass(this.app);
-        } catch (instErr) {
-          console.error(`Error instantiating page '${pageName}':`, instErr);
-          return false;
-        }
-        if (this.currentPage && typeof this.currentPage.init === 'function') {
+      // Instantiate and initialize the page using static mapping
+      const PageClass = this.pageModules[pageName];
+      if (PageClass) {
+        this.currentPage = new PageClass(this.app);
+        if (this.currentPage.init) {
           await this.currentPage.init();
         }
-        // Apply UI translations for newly loaded page content
+        // Apply UI translations for loaded page
         this.app.uiHandler.translateUI(this.app.currentLanguage);
-        // Apply static translations if provided by the page
-        if (this.currentPage && typeof this.currentPage.translateStatic === 'function') {
+        if (typeof this.currentPage.translateStatic === 'function') {
           this.currentPage.translateStatic();
         }
       }
