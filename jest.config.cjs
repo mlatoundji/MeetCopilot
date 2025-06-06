@@ -1,10 +1,20 @@
 module.exports = {
-  testEnvironment: 'node',
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  roots: ['<rootDir>/meet-copilot', '<rootDir>/server'],
+  testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)'],
   transform: {
-    '^.+\\.js$': 'babel-jest'
+    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.jsx?$': 'babel-jest',
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill)/)'
-  ],
-  testMatch: ['**/server/__tests__/**/*.test.js']
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/meet-copilot/$1',
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: '<rootDir>/meet-copilot/tsconfig.json'
+    }
+  },
 }; 

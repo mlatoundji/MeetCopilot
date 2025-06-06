@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "test": "jest --config ../jest.config.cjs --runInBand tests/",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -19,6 +20,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   web:
     build:
-      context: ./meet-copilot
+      context: ./
       dockerfile: Dockerfile
     ports:
       - '3000:3000'

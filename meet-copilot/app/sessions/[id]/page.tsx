@@ -1,11 +1,8 @@
 import React from 'react';
+import type { PageProps } from 'next';
 import MainContent from '../../../components/MainContent';
 
-interface SessionPageProps {
-  params: { id: string };
-}
-
-export default function SessionPage({ params }: SessionPageProps) {
+export default function SessionPage({ params }: PageProps<{ id: string }>) {
   const { id } = params;
 
   return (

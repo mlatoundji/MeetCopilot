@@ -27,6 +27,7 @@ const ThemeToggle: React.FC = () => {
       id="themeToggle"
       className="button-icon"
       title="Toggle Theme"
+      aria-label="Toggle Theme"
       onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
     >
       {theme === 'light' ? '🌙' : '☀️'}
