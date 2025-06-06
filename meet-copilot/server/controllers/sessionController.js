@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-import { extractUserId } from '../../server/utils/extractUserId.js';
+import { extractUserId } from '../utils/extractUserId.js';
 
 dotenv.config();
 

@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "test": "jest --config ../jest.config.cjs --runInBand tests/",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run --config-file cypress.config.js",
+    "coverage": "nyc npm test",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

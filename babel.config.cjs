@@ -6,7 +6,7 @@ module.exports = api => {
         targets: { node: 'current' },
         modules: isTest ? 'commonjs' : false
       }],
-      '@babel/preset-react',
+      ['@babel/preset-react', { runtime: 'automatic' }],
       '@babel/preset-typescript'
     ]
   };
