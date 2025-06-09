@@ -13,7 +13,12 @@ export class APIHandler {
     // Determine backend base URL:
     // 1. Use explicit override if provided (e.g. <script>window.BACKEND_BASE_URL='https://localhost:3000'</script>)
     // 2. Else derive from current page protocol and host
-    this.baseURL = import.meta.env.VITE_API_BASE_URL
+    // Read VITE_API_BASE_URL if defined (in Vite environment)
+    let viteBase = '';
+    try {
+      viteBase = import.meta.env.VITE_API_BASE_URL;
+    } catch (_e) {}
+    this.baseURL = viteBase;
     console.log("VITE_API_BASE_URL", this.baseURL);
     if (!this.baseURL) {
     if (typeof window !== 'undefined' && window.BACKEND_BASE_URL) {

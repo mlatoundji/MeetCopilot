@@ -1,17 +1,15 @@
-import { PrismaClient } from '@prisma/client';
-// import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { extractUserId } from '../utils/extractUserId.js';
 
 dotenv.config();
 
-// Initialize Prisma Client for database operations
-const prisma = new PrismaClient();
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
-// );
+// Use service role key to bypass row-level security for backend operations
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
+);
 
 /**
     try {
@@ -43,17 +41,12 @@ export const createSession = async (req, res) => {
       start_time: new Date().toISOString(),
       status: 'pending',
     };
-    const { data, error } = await prisma.sessions.create({
-      data: sessionData,
-      select: {
-        id: true,
-        conversation_id: true,
-        start_time: true,
-        status: true,
-      },
-    });
+    const { data, error } = await supabase
+      .from('sessions')
+      .insert([sessionData])
+      .select();
     if (error) throw error;
-    const session = data;
+    const session = data[0];
 
     // Create host participant for the session
     const participantHostRecord = {
@@ -62,12 +55,10 @@ export const createSession = async (req, res) => {
       name: sessionData.host_name,
       role: 'host',
     };
-    const { data: participants, error: participantError } = await prisma.participants.create({
-      data: participantHostRecord,
-      select: {
-        id: true,
-      },
-    });
+    const { data: participants, error: participantError } = await supabase
+      .from('participants')
+      .insert([participantHostRecord])
+      .select();
     if (participantError) throw participantError;
     const participant = participants[0];
 
@@ -77,12 +68,10 @@ export const createSession = async (req, res) => {
       speaker_id: participant.id,
       memory_json: {},
     };
-    const { data: conversations, error: convError } = await prisma.conversations.create({
-      data: conversationRecord,
-      select: {
-        id: true,
-      },
-    });
+    const { data: conversations, error: convError } = await supabase
+      .from('conversations')
+      .insert([conversationRecord])
+      .select();
     if (convError) throw convError;
     const conversation = conversations[0];
 
@@ -91,14 +80,14 @@ export const createSession = async (req, res) => {
       conversation_id: conversation.id,
       context: metadata || {},
     };
-    const { error: contextError } = await prisma.conversation_context.create({
-      data: contextRecord,
-    });
+    const { error: contextError } = await supabase
+      .from('conversation_context')
+      .insert([contextRecord]);
     if (contextError) throw contextError;
 
     return res.status(201).json({
       session_id: session.id,
-      conversation_id: session.conversation_id,
+      conversation_id: conversation.id,
       start_time: session.start_time,
       status: session.status,
     });
@@ -115,16 +104,11 @@ export const listSessions = async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { status } = req.query;
-    let query = prisma.sessions.findMany({
-      where: {
-        user_id: userId,
-        status: status ? status : undefined,
-      },
-      orderBy: {
-        start_time: 'desc',
-      },
-    });
-    const { data, error } = await query;
+    let query = supabase.from('sessions').select('*').eq('user_id', userId);
+    if (status) {
+      query = query.eq('status', status);
+    }
+    const { data, error } = await query.order('start_time', { ascending: false });
     if (error) throw error;
     return res.json({ data });
   } catch (error) {
@@ -143,17 +127,13 @@ export const getSession = async (req, res) => {
 
     const session = await fetchSession(id, userId);
     // Fetch the associated conversation ID
-    const { data: conv, error: convError } = await prisma.conversations.findFirst({
-      where: {
-        session_id: id,
-      },
-      orderBy: {
-        created_at: 'asc',
-      },
-      select: {
-        id: true,
-      },
-    });
+    const { data: conv, error: convError } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('session_id', session.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
     if (convError) throw convError;
     session.conversation_id = conv?.id || null;
 
@@ -166,20 +146,14 @@ export const getSession = async (req, res) => {
 
 export const fetchSession = async (sessionId, userId) => {
   try {
-    const session = await prisma.sessions.findUnique({
-      where: {
-        id: sessionId,
-        user_id: userId,
-      },
-      select: {
-        id: true,
-        conversation_id: true,
-        start_time: true,
-        status: true,
-      },
-    });
-    if (!session) throw new Error('Session not found');
-    return session;
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error fetching session:', error);
     return null;
@@ -215,19 +189,12 @@ export const updateSession = async (req, res) => {
     if (session_title !== undefined) updates.session_title = session_title;
     if (description !== undefined) updates.description = description;
     if (host_name !== undefined) updates.host_name = host_name;
-    const { data, error } = await prisma.sessions.update({
-      where: {
-        id: id,
-        user_id: userId,
-      },
-      data: updates,
-      select: {
-        id: true,
-        conversation_id: true,
-        start_time: true,
-        status: true,
-      },
-    });
+    const { data, error } = await supabase
+      .from('sessions')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
     if (error) {
       if (error.code === 'PGRST116') {
         return res.status(404).json({ error: 'Session not found' });
@@ -248,12 +215,11 @@ export const deleteSession = async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { id } = req.params;
-    const { error } = await prisma.sessions.delete({
-      where: {
-        id: id,
-        user_id: userId,
-      },
-    });
+    const { error } = await supabase
+      .from('sessions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
     if (error) {
       if (error.code === 'PGRST116') {
         return res.status(404).json({ error: 'Session not found' });
