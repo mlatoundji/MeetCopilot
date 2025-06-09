@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "test": "jest --config ../jest.config.cjs --runInBand tests/",
+    "test": "npx jest --config jest.config.cjs --runInBand",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --config-file cypress.config.js",
     "coverage": "nyc npm test",
@@ -42,6 +42,14 @@
     "prettier": "^3.5.3",
     "prisma": "^6.9.0",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5"
+    "typescript": "^5",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "babel-jest": "^29.1.0",
+    "jest-environment-jsdom": "^29.1.0",
+    "@babel/core": "^7.21.5",
+    "@babel/preset-env": "^7.21.5",
+    "@babel/preset-react": "^7.21.5",
+    "@babel/preset-typescript": "^7.21.5"
   }
 }

@@ -15,3 +15,4 @@ if (process.env.SILENCE_CONSOLE === 'true') {
 }
 
 // Global test helpers can be added below 
+import '@testing-library/jest-dom'; 
