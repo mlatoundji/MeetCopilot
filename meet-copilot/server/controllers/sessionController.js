@@ -115,17 +115,15 @@ export const listSessions = async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { status } = req.query;
-    let query = prisma.sessions.findMany({
+    const data = await prisma.session.findMany({
       where: {
         user_id: userId,
-        status: status ? status : undefined,
+        status: status || undefined,
       },
       orderBy: {
         start_time: 'desc',
       },
     });
-    const { data, error } = await query;
-    if (error) throw error;
     return res.json({ data });
   } catch (error) {
     console.error('Error listing sessions:', error);

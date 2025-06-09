@@ -11,18 +11,7 @@ import { validate } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
-// Define validation schemas for sessions
-const createSessionSchema = z.object({
-  user_id: z.string().uuid(),
-  host_name: z.string().optional(),
-  session_title: z.string().optional(),
-  description: z.string().optional(),
-  custom_context: z.any().optional(),
-  start_time: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date' }),
-  end_time: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date' }).optional(),
-  status: z.string().optional(),
-});
-
+// Validation schema for updating sessions
 const updateSessionSchema = z.object({
   host_name: z.string().optional(),
   session_title: z.string().optional(),
@@ -34,7 +23,7 @@ const updateSessionSchema = z.object({
 });
 
 // POST   /api/sessions                -> create a new session
-router.post('/', validate(createSessionSchema), createSession);
+router.post('/', createSession);
 // GET    /api/sessions?status=...     -> list sessions (optionally by status)
 router.get('/', listSessions);
 // GET    /api/sessions/:id            -> get session details
