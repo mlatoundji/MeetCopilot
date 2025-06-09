@@ -72,5 +72,7 @@ jobs:
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push backend image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/meetcopilot-backend:latest .
+          docker build -f meet-copilot/Dockerfile.backend \
+            -t ghcr.io/${{ github.repository_owner }}/meetcopilot-backend:latest \
+            meet-copilot
           docker push ghcr.io/${{ github.repository_owner }}/meetcopilot-backend:latest 
