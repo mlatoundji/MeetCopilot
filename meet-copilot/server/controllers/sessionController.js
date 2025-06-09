@@ -28,8 +28,12 @@ const prisma = new PrismaClient();
  * Create a new session (status = pending)
  */
 export const createSession = async (req, res) => {
+  // Authentication guard
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
-    const userId = extractUserId(req);
     const { mode, metadata } = req.body;
     if (!mode) {
       return res.status(400).json({ error: 'Mode is required' });
@@ -112,8 +116,12 @@ export const createSession = async (req, res) => {
  * List sessions for the current user, optionally filtered by status
  */
 export const listSessions = async (req, res) => {
+  // Authentication guard
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
-    const userId = extractUserId(req);
     const { status } = req.query;
     const data = await prisma.session.findMany({
       where: {
@@ -135,8 +143,12 @@ export const listSessions = async (req, res) => {
  * Get a specific session by ID
  */
 export const getSession = async (req, res) => {
+  // Authentication guard
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
-    const userId = extractUserId(req);
     const { id } = req.params;
 
     const session = await fetchSession(id, userId);
@@ -188,8 +200,12 @@ export const fetchSession = async (sessionId, userId) => {
  * Update a session (e.g., mark completed)
  */
 export const updateSession = async (req, res) => {
+  // Authentication guard
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
-    const userId = extractUserId(req);
     const { id } = req.params;
     const { status, custom_context, session_title, description, host_name } = req.body;
     if (!status && custom_context === undefined) {
@@ -243,8 +259,12 @@ export const updateSession = async (req, res) => {
  * Delete a session and all related data
  */
 export const deleteSession = async (req, res) => {
+  // Authentication guard
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
-    const userId = extractUserId(req);
     const { id } = req.params;
     const { error } = await prisma.sessions.delete({
       where: {
