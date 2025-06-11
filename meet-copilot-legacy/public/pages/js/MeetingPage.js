@@ -76,6 +76,20 @@ export class MeetingPage {
     this.meetingContentGrid = document.getElementById('meetingContentGrid');
     this.meetingSidebar = document.getElementById('meetingSidebar');
     this.captureButton = document.getElementById('captureButton');
+    // Conversation Language selector in meeting sidebar
+    this.conversationLangSelectMeeting = document.getElementById('conversationLangSelectMeeting');
+    if (this.conversationLangSelectMeeting && this.app.uiHandler.supportedLangs) {
+      this.conversationLangSelectMeeting.innerHTML = '';
+      this.app.uiHandler.supportedLangs.forEach(lang => {
+        const opt = document.createElement('option');
+        opt.value = lang.code;
+        opt.textContent = lang.label;
+        this.conversationLangSelectMeeting.appendChild(opt);
+      });
+      // Set initial value from saved settings or current language
+      const savedConvLang = localStorage.getItem('conversationLanguage') || this.app.currentLanguage;
+      this.conversationLangSelectMeeting.value = savedConvLang;
+    }
 
     // Masquer la sidebar principale dans la page meeting
     const mainSidebar = document.querySelector('.sidebar');
@@ -83,6 +97,12 @@ export class MeetingPage {
   }
 
   bindEvents() {
+    // Handle conversation language change in meeting page
+    if (this.conversationLangSelectMeeting) {
+      this.conversationLangSelectMeeting.addEventListener('change', (e) => {
+        this.app.applyConversationTranslation(e.target.value);
+      });
+    }
     if (this.systemCaptureButton) {
       this.systemCaptureButton.addEventListener('click', () => this.toggleSystemCapture());
     }

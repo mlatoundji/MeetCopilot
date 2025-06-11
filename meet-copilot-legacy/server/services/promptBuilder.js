@@ -1,15 +1,28 @@
-export const buildAssistantSuggestionPrompt= (conversation, context=null) => {
-  const systemPrompt = `
-  Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
-  suggestions de réponses d'utilisateurs dans une conversation.
-  Fournissez 2 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
-  Basez vos suggestions sur la conversation ci-dessous :
-`;
+export const buildAssistantSuggestionPrompt= (conversation, context=null, language='fr') => {
+
+  const languagePrompt = language === 'fr' ? 'français' : 'anglais';
+  const systemPrompt = 
+  {
+    'fr': `
+    Vous êtes un assistant IA spécialisé dans la synthèse et la génération de
+    suggestions de réponses d'utilisateurs dans une conversation.
+    Fournissez 2 suggestions de réponses potentielles (100-200 mots max chacune) sous forme de liste à puces à la dernière question détectée.
+    Utilisez le langage ${languagePrompt} pour vos suggestions.
+    Basez vos suggestions sur la conversation ci-dessous :
+  `,
+    'en': `
+    You are an AI assistant specialized in synthesizing and generating user response suggestions in a conversation.
+    Provide 2 potential response suggestions (100-200 words max each) in bullet points to the last detected question.
+    Use the language ${languagePrompt} for your suggestions.
+    Base your suggestions on the conversation below :
+  `
+  }
+  
   if (typeof conversation == 'object') {
     const { summary = '', messages = [] } = conversation;
     const lastTurns = messages.slice(-6);
     let promptMessages = [];
-  promptMessages.push({ role: 'system', content: systemPrompt });
+  promptMessages.push({ role: 'system', content: systemPrompt[language] });
   if (context) {
     const contextText = Object.entries(context)
       .filter(([_, value]) => value != null && value !== '')

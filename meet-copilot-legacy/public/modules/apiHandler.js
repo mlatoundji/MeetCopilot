@@ -252,8 +252,8 @@ export class APIHandler {
    * @param {string} cid - conversation id
    * @returns {Promise<Object>} - Les suggestions générées
    */
-  async startSuggestionsStreaming(cid) {
-    const url = `${this.baseURL}${this.apiPrefix}/suggestions/${encodeURIComponent(cid)}/stream`;
+  async startSuggestionsStreaming(cid, language='fr') {
+    const url = `${this.baseURL}${this.apiPrefix}/suggestions/${encodeURIComponent(cid)}/stream?language=${encodeURIComponent(language)}`;
     const eventSource = new EventSource(url);
     eventSource.onmessage = (e) => {
       const data = e.data;

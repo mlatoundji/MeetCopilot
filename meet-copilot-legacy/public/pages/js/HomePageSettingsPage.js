@@ -114,10 +114,15 @@ export default class SettingsPage {
         });
       }
       const convSelect = document.getElementById('conversationLangSelectSettings');
+      if (convSelect) {
+        convSelect.addEventListener('change', (e) => {
+          this.app.applyConversationTranslation(e.target.value);
+        });
+      }
       saveBtn.addEventListener('click', async () => {
         const themeSelect = document.getElementById('themeSelect');
         const languageSelect = document.querySelector('.main-content #langSelect');
-        const conversationSelect = document.getElementById('conversationLangSelectSettings');
+        const conversationSelect = convSelect;
         const audioSelect = document.getElementById('audioInputSelect');
 
         const theme = themeSelect ? themeSelect.value : null;
@@ -145,7 +150,7 @@ export default class SettingsPage {
           if (language && this.app.handleLanguageChange) {
             this.app.handleLanguageChange(language);
           }
-          // Apply conversation language change immediately
+          // Apply conversation language change and persist locally
           if (conversationSelect && this.app.transcriptionHandler) {
             this.app.transcriptionHandler.applyTranslation(conversationSelect.value);
             localStorage.setItem('conversationLanguage', conversationSelect.value);

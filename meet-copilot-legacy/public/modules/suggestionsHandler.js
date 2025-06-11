@@ -10,6 +10,11 @@ export class SuggestionsHandler {
     this.suggestionsApiUrl = this.apiHandler.getEndpoint('suggestions', 'mistral') || "http://localhost:3000/api/suggestions/mistral";
     this.eventSource = null;
     this.suggestionsMessage = '';
+    this.language = 'fr';
+  }
+
+  applyTranslation(lang) {
+    this.language = lang;
   }
 
   /**
@@ -39,7 +44,7 @@ export class SuggestionsHandler {
 
   async startSuggestionsStreaming(cid) {
     try {
-      const eventSource = await this.apiHandler.startSuggestionsStreaming(cid);
+      const eventSource = await this.apiHandler.startSuggestionsStreaming(cid, this.language);
       this.eventSource = eventSource;
       return this.eventSource;
     } catch (error) {

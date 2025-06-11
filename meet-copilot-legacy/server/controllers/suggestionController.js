@@ -330,6 +330,7 @@ export const generateSuggestionsWithFallback = async (req, res) => {
 // Stream conversation as server-sent events (SSE)
 export const streamSuggestions = async (req, res) => {
     const { cid } = req.params;
+    const { language } = req.query;
     // Set SSE headers
     res.set({
       'Content-Type': 'text/event-stream',
@@ -341,10 +342,10 @@ export const streamSuggestions = async (req, res) => {
       // Fetch prior conversation + build prompt
       const memory = await fetchConversation(cid);
       const context = await fetchConversationContext(cid);      
-      const messages = buildAssistantSuggestionPrompt(memory, context);
+      const messages = buildAssistantSuggestionPrompt(memory, context, language);
 
       const promptTokens = estimateTokens(messages);
-      console.log("Prompt tokens", promptTokens);
+      
 
       if(promptTokens > SUGGESTION_MAX_TOKENS){
         return res.status(400).json({ error: 'Context exceeds maximum length of ' + SUGGESTION_MAX_TOKENS + ' tokens' });
@@ -365,6 +366,9 @@ export const streamSuggestions = async (req, res) => {
         res.write(chunk);
       });
       stream.on('end', () => {
+        console.log("Stream ended");
+        console.log("Prompt tokens", promptTokens);
+        console.log("Language", language);
         res.end();
       });
       stream.on('error', err => {

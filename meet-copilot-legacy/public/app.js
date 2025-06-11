@@ -44,8 +44,6 @@ class App {
     if (this.uiHandler.langSelect) {
       this.uiHandler.langSelect.value = lang;
     }
-    this.conversationContextHandler.translateContext(lang);
-    this.transcriptionHandler.applyTranslation(lang);
     
     // Mettre à jour l'interface utilisateur via le router si nécessaire
     if (this.router && this.router.currentPage) {
@@ -57,6 +55,12 @@ class App {
         this.router.currentPage.translateStatic();
       }
     }
+  }
+
+  applyConversationTranslation(lang) {
+    this.conversationContextHandler.translateContext(lang);
+    this.suggestionsHandler.applyTranslation(lang);
+    this.transcriptionHandler.applyTranslation(lang);
   }
 
   async initializeLanguage() {
