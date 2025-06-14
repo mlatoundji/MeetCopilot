@@ -51,3 +51,6 @@ server/vercel.json
 .vercel
 .vercelignore
 server/vercel-manifest.json
+
+bolt-meet-copilot-poc
+docs/

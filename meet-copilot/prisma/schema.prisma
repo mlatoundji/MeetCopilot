@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String        @id @default(uuid()) @map("id")
+  user_id       String        @map("user_id")
+  host_name     String?       @map("host_name")
+  session_title String?       @map("session_title")
+  description   String?       @map("description")
+  custom_context Json?        @map("custom_context")
+  start_time    DateTime      @map("start_time")
+  end_time      DateTime?     @map("end_time")
+  status        String        @map("status")
+  created_at    DateTime      @default(now()) @map("created_at")
+  updated_at    DateTime      @updatedAt @map("updated_at")
+
+  participants  Participant[]
+  conversations Conversation[]
+
+  @@map("sessions")
+}
+
+model Participant {
+  id           String   @id @default(uuid()) @map("id")
+  session_id   String   @map("session_id")
+  user_id      String?  @map("user_id")
+  name         String   @map("name")
+  role         String   @map("role")
+  joined_at    DateTime @default(now()) @map("joined_at")
+  left_at      DateTime? @map("left_at")
+
+  session      Session  @relation(fields: [session_id], references: [id])
+
+  @@map("participants")
+}
+
+model Conversation {
+  id            String                  @id @default(uuid()) @map("id")
+  session_id    String                  @map("session_id")
+  speaker_id    String?                 @map("speaker_id")
+  memory_json   Json?                   @map("memory_json")
+  content       String?                 @map("content")
+  created_at    DateTime                @default(now()) @map("created_at")
+
+  session       Session                 @relation(fields: [session_id], references: [id])
+  contexts      ConversationContext[]
+
+  @@map("conversations")
+}
+
+model ConversationContext {
+  id              String      @id @default(uuid()) @map("id")
+  conversation_id String      @map("conversation_id")
+  context         Json        @map("context")
+  created_at      DateTime    @default(now()) @map("created_at")
+
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+
+  @@map("conversation_context")
+}
