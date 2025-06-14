@@ -1,9 +1,7 @@
-import type { NextConfig } from "next";
+import { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  compiler: {
-    styledComponents: true,
-  },
+  reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
